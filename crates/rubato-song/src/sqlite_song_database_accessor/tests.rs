@@ -1021,3 +1021,40 @@ fn test_y2038_date_round_trip() {
         "adddate must survive round-trip without i32 truncation"
     );
 }
+
+/// Defense-in-depth: SQL strings longer than MAX_COURSE_SQL_LENGTH (4096) must
+/// be rejected early with empty results, preventing abuse via oversized
+/// WHERE clauses from .lr2crs course files.
+#[test]
+fn test_song_datas_by_sql_rejects_oversized_sql() {
+    let (accessor, _tmpdir, score_path, scorelog_path) = setup_authorizer_test();
+
+    // A SQL string just at the limit should still work
+    let at_limit = format!("level = 5 {}", " ".repeat(4096 - "level = 5 ".len()));
+    assert_eq!(at_limit.len(), 4096);
+    let results = accessor.song_datas_by_sql(
+        &at_limit,
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert_eq!(
+        results.len(),
+        1,
+        "SQL at exactly 4096 chars should still execute"
+    );
+
+    // A SQL string exceeding the limit should return empty results
+    let over_limit = format!("level = 5 {}", " ".repeat(4097 - "level = 5 ".len()));
+    assert_eq!(over_limit.len(), 4097);
+    let results = accessor.song_datas_by_sql(
+        &over_limit,
+        &score_path.to_string_lossy(),
+        &scorelog_path.to_string_lossy(),
+        None,
+    );
+    assert!(
+        results.is_empty(),
+        "SQL exceeding 4096 chars should return empty results"
+    );
+}

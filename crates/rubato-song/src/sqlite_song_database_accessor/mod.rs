@@ -519,6 +519,26 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         remove_invalid_elements_vec(songs)
     }
 
+    /// Query song data using a raw SQL WHERE clause from course files (.lr2crs).
+    ///
+    /// # Attack surface
+    ///
+    /// The `sql` parameter is interpolated directly into a WHERE clause. This raw SQL
+    /// originates from `.lr2crs` course definition files, matching Java beatoraja behavior.
+    ///
+    /// Defense layers:
+    /// - **Read-only authorizer** (primary): A SQLite authorizer callback is installed before
+    ///   executing the query, blocking all write operations (INSERT, UPDATE, DELETE, DROP,
+    ///   ALTER, CREATE, ATTACH, DETACH, REINDEX). Only SELECT/READ operations are permitted.
+    /// - **SQL length limit** (defense-in-depth): Rejects SQL strings exceeding 4096 characters.
+    ///   Legitimate course file WHERE clauses are short; oversized strings are likely malformed
+    ///   or malicious.
+    ///
+    /// # Known limitations
+    ///
+    /// - Reading from attached databases (scoredb, scorelogdb, infodb) is permitted by design.
+    /// - A crafted WHERE clause could read arbitrary data from these attached databases.
+    /// - This matches Java beatoraja behavior, which has the same exposure.
     fn song_datas_by_sql(
         &self,
         sql: &str,
@@ -526,6 +546,21 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
         scorelog: &str,
         info: Option<&str>,
     ) -> Vec<SongData> {
+        // Defense-in-depth: reject oversized SQL from course files.
+        // Legitimate .lr2crs WHERE clauses are typically short (< 500 chars).
+        const MAX_COURSE_SQL_LENGTH: usize = 4096;
+        if sql.len() > MAX_COURSE_SQL_LENGTH {
+            log::warn!(
+                "Rejecting oversized course SQL ({} chars, limit {}): {:?}",
+                sql.len(),
+                MAX_COURSE_SQL_LENGTH,
+                &sql[..80.min(sql.len())]
+            );
+            return Vec::new();
+        }
+
+        log::debug!("song_datas_by_sql: executing course SQL: {:?}", sql);
+
         let conn = lock_or_recover(&self.conn);
 
         // Track which databases are attached so we can detach them on any exit path.
