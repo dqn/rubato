@@ -350,9 +350,9 @@ impl SQLiteSongDatabaseAccessor {
                 "judge" => rusqlite::types::Value::Integer(sd.chart.judge as i64),
                 "feature" => rusqlite::types::Value::Integer(sd.chart.feature as i64),
                 "content" => rusqlite::types::Value::Integer(sd.chart.content as i64),
-                "date" => rusqlite::types::Value::Integer(sd.chart.date as i64),
+                "date" => rusqlite::types::Value::Integer(sd.chart.date),
                 "favorite" => rusqlite::types::Value::Integer(sd.favorite as i64),
-                "adddate" => rusqlite::types::Value::Integer(sd.chart.adddate as i64),
+                "adddate" => rusqlite::types::Value::Integer(sd.chart.adddate),
                 "notes" => rusqlite::types::Value::Integer(sd.chart.notes as i64),
                 "charthash" => match &sd.file.charthash {
                     Some(h) => rusqlite::types::Value::Text(h.clone()),
@@ -383,8 +383,8 @@ impl SQLiteSongDatabaseAccessor {
                 "banner" => rusqlite::types::Value::Text(fd.banner.clone()),
                 "parent" => rusqlite::types::Value::Text(fd.parent.clone()),
                 "type" => rusqlite::types::Value::Integer(fd.folder_type as i64),
-                "date" => rusqlite::types::Value::Integer(fd.date as i64),
-                "adddate" => rusqlite::types::Value::Integer(fd.adddate as i64),
+                "date" => rusqlite::types::Value::Integer(fd.date),
+                "adddate" => rusqlite::types::Value::Integer(fd.adddate),
                 "max" => rusqlite::types::Value::Integer(fd.max as i64),
                 _ => rusqlite::types::Value::Null,
             }

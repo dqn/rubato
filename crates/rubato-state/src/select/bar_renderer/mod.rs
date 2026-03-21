@@ -253,7 +253,7 @@ impl BarRenderer {
                     {
                         let data = fb.folder_data();
                         songstatus = if data.is_none()
-                            || now_secs > data.expect("data").adddate() as i64 + 3600 * 24
+                            || now_secs > data.expect("data").adddate() + 3600 * 24
                         {
                             4 // FolderBar(normal)
                         } else {

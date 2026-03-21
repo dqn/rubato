@@ -2614,7 +2614,7 @@ fn hcn_release_mid_hold_decreases_gauge() {
 
     // Release key at 1.5s
     let release_time = 1_500_000i64;
-    let mut keys_released = vec![false; key_count];
+    let keys_released = vec![false; key_count];
     let mut key_times_released = vec![i64::MIN; key_count];
     key_times_released[0] = release_time;
     jm.update(

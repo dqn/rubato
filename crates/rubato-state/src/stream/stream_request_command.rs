@@ -236,7 +236,10 @@ mod tests {
 
     /// Helper: create a MusicSelector with a TestSongDb that returns the
     /// given songs for any hash lookup, and set max_request_count on its config.
-    fn make_selector_with_db(songs: Vec<SongData>, max_request_count: i32) -> Arc<Mutex<MusicSelector>> {
+    fn make_selector_with_db(
+        songs: Vec<SongData>,
+        max_request_count: i32,
+    ) -> Arc<Mutex<MusicSelector>> {
         let mut selector = MusicSelector::new();
         selector.songdb = Box::new(
             TestSongDb::new()
