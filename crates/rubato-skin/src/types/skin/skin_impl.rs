@@ -300,33 +300,28 @@ impl Skin {
             if !self.objects[i].validate() {
                 remove_indices.push(i);
             } else {
-                let draw_conds = self.objects[i].draw_condition();
-                let _bp: Vec<Box<dyn BooleanProperty>> = Vec::new();
+                // Java: rebuild draw condition array, dropping static-true conditions
+                // and removing the object entirely if any static condition is false.
+                let draw_conds = std::mem::take(&mut self.objects[i].data_mut().dstdraw);
                 let mut should_remove = false;
+                let mut kept: Vec<Box<dyn BooleanProperty>> = Vec::new();
 
-                // We need to work with the draw conditions
-                // Java code checks isStatic and get for each condition
-                // This is complex with borrowing, so we collect results first
-                let mut static_results: Vec<(bool, bool)> = Vec::new();
                 for cond in draw_conds {
-                    let is_static = cond.is_static(state);
-                    let get_val = cond.get(state);
-                    static_results.push((is_static, get_val));
-                }
-
-                // Now we need to rebuild the draw conditions
-                // We can't move out of the borrowed vec directly, so we use swap logic
-                // For simplicity in the translation, we just mark for removal
-                for (is_static, get_val) in static_results.iter() {
-                    if *is_static && !get_val {
-                        should_remove = true;
+                    if cond.is_static(state) {
+                        if !cond.get(state) {
+                            should_remove = true;
+                            break;
+                        }
+                        // static-true: prune (do not keep)
+                    } else {
+                        kept.push(cond);
                     }
-                    // Non-static conditions would be kept, but we can't easily move them
-                    // This is handled via set_draw_condition below
                 }
 
                 if should_remove {
                     remove_indices.push(i);
+                } else {
+                    self.objects[i].set_draw_condition(kept);
                 }
 
                 // Check options

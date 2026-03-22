@@ -20,6 +20,57 @@ impl BooleanProperty for AlwaysTrue {
     }
 }
 
+/// Static property that always returns true. Should be pruned during prepare().
+struct StaticTrueProp;
+
+impl BooleanProperty for StaticTrueProp {
+    fn is_static(&self, _state: &dyn MainState) -> bool {
+        true
+    }
+
+    fn get(&self, _state: &dyn MainState) -> bool {
+        true
+    }
+
+    fn get_id(&self) -> i32 {
+        9990
+    }
+}
+
+/// Static property that always returns false. Object should be removed during prepare().
+struct StaticFalseProp;
+
+impl BooleanProperty for StaticFalseProp {
+    fn is_static(&self, _state: &dyn MainState) -> bool {
+        true
+    }
+
+    fn get(&self, _state: &dyn MainState) -> bool {
+        false
+    }
+
+    fn get_id(&self) -> i32 {
+        9991
+    }
+}
+
+/// Non-static property. Should be kept during prepare().
+struct NonStaticProp;
+
+impl BooleanProperty for NonStaticProp {
+    fn is_static(&self, _state: &dyn MainState) -> bool {
+        false
+    }
+
+    fn get(&self, _state: &dyn MainState) -> bool {
+        true
+    }
+
+    fn get_id(&self) -> i32 {
+        9992
+    }
+}
+
 struct RecordingSkinRenderContext {
     timer: crate::reexports::Timer,
     state_type: MainStateType,
@@ -958,5 +1009,93 @@ fn test_draw_all_objects_includes_note_object() {
     assert!(
         !batch.vertices().is_empty(),
         "Note object must produce vertices when drawn through draw_all_objects()"
+    );
+}
+
+// =========================================================================
+// Skin::prepare() static-true draw condition pruning
+// =========================================================================
+
+/// Verify that prepare() prunes static-true conditions from dstdraw while
+/// keeping non-static ones. This matches Java Skin.prepare() which rebuilds
+/// the draw condition array, dropping any condition where isStatic()==true
+/// and get()==true.
+#[test]
+fn test_prepare_prunes_static_true_draw_conditions() {
+    use crate::skin_bar_object::SkinBarObject;
+
+    let mut skin = make_test_skin();
+
+    // Use Bar object (passes validate() via wildcard arm)
+    let mut bar = SkinBarObject::new(0);
+    bar.data.dstdraw = vec![
+        Box::new(StaticTrueProp),
+        Box::new(NonStaticProp),
+        Box::new(StaticTrueProp),
+    ];
+    skin.add(SkinObject::Bar(bar));
+
+    let state = crate::test_helpers::MockMainState::default();
+    skin.prepare(&state);
+
+    // Object should survive (static-true conditions are true, so no removal)
+    assert_eq!(skin.objects.len(), 1, "object should not be removed");
+
+    // Only the non-static condition should remain in dstdraw
+    let remaining = skin.objects[0].draw_condition();
+    assert_eq!(
+        remaining.len(),
+        1,
+        "static-true conditions should be pruned, only non-static kept"
+    );
+    assert_eq!(
+        remaining[0].get_id(),
+        9992,
+        "the remaining condition should be the NonStaticProp"
+    );
+}
+
+/// Verify that prepare() removes objects with static-false conditions
+/// (existing behavior, regression guard).
+#[test]
+fn test_prepare_removes_object_with_static_false_condition() {
+    use crate::skin_bar_object::SkinBarObject;
+
+    let mut skin = make_test_skin();
+
+    let mut bar = SkinBarObject::new(0);
+    bar.data.dstdraw = vec![Box::new(StaticFalseProp), Box::new(NonStaticProp)];
+    skin.add(SkinObject::Bar(bar));
+
+    let state = crate::test_helpers::MockMainState::default();
+    skin.prepare(&state);
+
+    assert_eq!(
+        skin.objects.len(),
+        0,
+        "object with static-false condition should be removed"
+    );
+}
+
+/// Verify that an object with only static-true conditions ends up with
+/// an empty dstdraw after prepare() (all pruned, object kept).
+#[test]
+fn test_prepare_all_static_true_results_in_empty_dstdraw() {
+    use crate::skin_bar_object::SkinBarObject;
+
+    let mut skin = make_test_skin();
+
+    let mut bar = SkinBarObject::new(0);
+    bar.data.dstdraw = vec![Box::new(StaticTrueProp), Box::new(StaticTrueProp)];
+    skin.add(SkinObject::Bar(bar));
+
+    let state = crate::test_helpers::MockMainState::default();
+    skin.prepare(&state);
+
+    assert_eq!(skin.objects.len(), 1, "object should survive");
+    assert_eq!(
+        skin.objects[0].draw_condition().len(),
+        0,
+        "all static-true conditions should be pruned"
     );
 }
