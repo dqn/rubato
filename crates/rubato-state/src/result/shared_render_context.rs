@@ -418,6 +418,20 @@ pub fn integer_value(
         // Java: songdata.getLevel()
         96 => songdata.map_or(i32::MIN, |s| s.chart.level),
 
+        // ---- Song BPM (NUMBER_MAXBPM / NUMBER_MINBPM / NUMBER_MAINBPM: 90/91/92) ----
+        // Java: songdata.getMaxbpm() / songdata.getMinbpm() / SongInformation.getMainbpm()
+        90 => songdata.map_or(i32::MIN, |s| s.chart.maxbpm),
+        91 => songdata.map_or(i32::MIN, |s| s.chart.minbpm),
+        // mainbpm: prefer SongInformation.mainbpm when available.
+        // Java returns Integer.MIN_VALUE when SongInformation is absent,
+        // signaling "no data" so skin renderers hide the value.
+        92 => songdata.map_or(i32::MIN, |s| {
+            s.info
+                .as_ref()
+                .map(|i| i.mainbpm as i32)
+                .unwrap_or(i32::MIN)
+        }),
+
         // Unhandled IDs: return i32::MIN so SkinNumber hides the element.
         // Java IntegerPropertyFactory returns null for unrecognized IDs,
         // and SkinNumber.prepare() treats null as Integer.MIN_VALUE (hide).

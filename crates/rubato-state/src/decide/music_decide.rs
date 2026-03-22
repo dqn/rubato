@@ -167,7 +167,32 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
     }
 
     fn float_value(&self, id: i32) -> f32 {
-        self.default_float_value(id)
+        match id {
+            // Volume (0.0-1.0) from audio config
+            // Java: FloatPropertyFactory mastervolume/keyvolume/bgmvolume
+            17 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                    a.systemvolume
+                }),
+            18 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                    a.keyvolume
+                }),
+            19 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                    a.bgvolume
+                }),
+            _ => self.default_float_value(id),
+        }
     }
 
     fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
@@ -176,6 +201,38 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
 
     fn integer_value(&self, id: i32) -> i32 {
         match id {
+            // Volume (0-100 scale) from audio config
+            // Java: IntegerPropertyFactory volume_system/volume_key/volume_background
+            57 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                        a.systemvolume
+                    })
+                    * 100.0) as i32
+            }
+            58 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                        a.keyvolume
+                    })
+                    * 100.0) as i32
+            }
+            59 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                        a.bgvolume
+                    })
+                    * 100.0) as i32
+            }
             // Song BPM from songdata
             90 => self
                 .resource
@@ -411,7 +468,31 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
     }
 
     fn float_value(&self, id: i32) -> f32 {
-        self.default_float_value(id)
+        match id {
+            // Volume (0.0-1.0) from audio config
+            17 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                    a.systemvolume
+                }),
+            18 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                    a.keyvolume
+                }),
+            19 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                    a.bgvolume
+                }),
+            _ => self.default_float_value(id),
+        }
     }
 
     fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
@@ -420,6 +501,37 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
 
     fn integer_value(&self, id: i32) -> i32 {
         match id {
+            // Volume (0-100 scale) from audio config
+            57 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                        a.systemvolume
+                    })
+                    * 100.0) as i32
+            }
+            58 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                        a.keyvolume
+                    })
+                    * 100.0) as i32
+            }
+            59 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(rubato_types::audio_config::DEFAULT_AUDIO_VOLUME, |a| {
+                        a.bgvolume
+                    })
+                    * 100.0) as i32
+            }
             90 => self
                 .resource
                 .songdata()

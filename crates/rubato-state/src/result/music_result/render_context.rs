@@ -1,4 +1,5 @@
 use rubato_core::timer_manager::TimerManager;
+use rubato_types::audio_config::DEFAULT_AUDIO_VOLUME;
 
 use super::MusicResult;
 use crate::result::abstract_result::AbstractResultData;
@@ -154,15 +155,45 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        let playtime = self.resource.player_data().playtime;
-        shared_render_context::integer_value(
-            self.data,
-            self.timer.boot_time_millis(),
-            playtime,
-            self.resource.songdata(),
-            Some(self.resource.player_data()),
-            id,
-        )
+        match id {
+            // Volume (0-100 scale) from audio config
+            // Java: IntegerPropertyFactory volume_system/volume_key/volume_background
+            57 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.systemvolume)
+                    * 100.0) as i32
+            }
+            58 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.keyvolume)
+                    * 100.0) as i32
+            }
+            59 => {
+                (self
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume)
+                    * 100.0) as i32
+            }
+            _ => {
+                let playtime = self.resource.player_data().playtime;
+                shared_render_context::integer_value(
+                    self.data,
+                    self.timer.boot_time_millis(),
+                    playtime,
+                    self.resource.songdata(),
+                    Some(self.resource.player_data()),
+                    id,
+                )
+            }
+        }
     }
 
     fn ranking_score_clear_type(&self, slot: i32) -> i32 {
@@ -176,6 +207,23 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
     fn float_value(&self, id: i32) -> f32 {
         match id {
             1107 => shared_render_context::gauge_value(self.resource),
+            // Volume (0.0-1.0) from audio config
+            // Java: FloatPropertyFactory mastervolume/keyvolume/bgmvolume
+            17 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.systemvolume),
+            18 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.keyvolume),
+            19 => self
+                .main
+                .config()
+                .audio_config()
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume),
             _ => shared_render_context::float_value(self.data, id)
                 .unwrap_or_else(|| self.default_float_value(id)),
         }
@@ -416,15 +464,47 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     }
 
     fn integer_value(&self, id: i32) -> i32 {
-        let playtime = self.result.resource.player_data().playtime;
-        shared_render_context::integer_value(
-            &self.result.data,
-            self.timer.boot_time_millis(),
-            playtime,
-            self.result.resource.songdata(),
-            Some(self.result.resource.player_data()),
-            id,
-        )
+        match id {
+            // Volume (0-100 scale) from audio config
+            57 => {
+                (self
+                    .result
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.systemvolume)
+                    * 100.0) as i32
+            }
+            58 => {
+                (self
+                    .result
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.keyvolume)
+                    * 100.0) as i32
+            }
+            59 => {
+                (self
+                    .result
+                    .main
+                    .config()
+                    .audio_config()
+                    .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume)
+                    * 100.0) as i32
+            }
+            _ => {
+                let playtime = self.result.resource.player_data().playtime;
+                shared_render_context::integer_value(
+                    &self.result.data,
+                    self.timer.boot_time_millis(),
+                    playtime,
+                    self.result.resource.songdata(),
+                    Some(self.result.resource.player_data()),
+                    id,
+                )
+            }
+        }
     }
 
     fn ranking_score_clear_type(&self, slot: i32) -> i32 {
@@ -438,6 +518,25 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
     fn float_value(&self, id: i32) -> f32 {
         match id {
             1107 => shared_render_context::gauge_value(&self.result.resource),
+            // Volume (0.0-1.0) from audio config
+            17 => self
+                .result
+                .main
+                .config()
+                .audio_config()
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.systemvolume),
+            18 => self
+                .result
+                .main
+                .config()
+                .audio_config()
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.keyvolume),
+            19 => self
+                .result
+                .main
+                .config()
+                .audio_config()
+                .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume),
             _ => shared_render_context::float_value(&self.result.data, id)
                 .unwrap_or_else(|| self.default_float_value(id)),
         }
