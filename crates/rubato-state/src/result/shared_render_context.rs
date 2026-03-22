@@ -544,6 +544,12 @@ pub fn float_value(data: &AbstractResultData, id: i32) -> Option<f32> {
 #[inline]
 pub fn boolean_value(data: &AbstractResultData, course_score: Option<&ScoreData>, id: i32) -> bool {
     match id {
+        // OPTION_GAUGE_GROOVE (42): gauge type <= 2 (AssistEasy/Easy/Normal)
+        // Java: ((AbstractResult) state).getGaugeType() <= 2
+        42 => data.gauge_type != i32::MIN && data.gauge_type <= 2,
+        // OPTION_GAUGE_HARD (43): gauge type >= 3 (Hard/ExHard/Hazard)
+        // Java: ((AbstractResult) state).getGaugeType() >= 3
+        43 => data.gauge_type != i32::MIN && data.gauge_type >= 3,
         // Clear result: current play's clear != Failed AND course aggregate (if present) != Failed
         90 => {
             data.score
@@ -560,6 +566,9 @@ pub fn boolean_value(data: &AbstractResultData, course_score: Option<&ScoreData>
                 .is_none_or(|s| s.clear == ClearType::Failed.id())
                 || course_score.is_some_and(|cs| cs.clear == ClearType::Failed.id())
         }
+        // OPTION_GAUGE_EX (1046): non-standard gauge types
+        // Java: type == 0 || type == 1 || type == 4 || type == 5 || type == 7 || type == 8
+        1046 => data.gauge_type != i32::MIN && matches!(data.gauge_type, 0 | 1 | 4 | 5 | 7 | 8),
         _ => false,
     }
 }

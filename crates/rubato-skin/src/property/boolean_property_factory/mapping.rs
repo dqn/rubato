@@ -137,10 +137,10 @@ pub(super) fn get_boolean_type_property(id: i32) -> Option<Box<dyn BooleanProper
         | OPTION_LIFT1_ON
         | OPTION_HIDDEN1_ON
         | OPTION_1P_BORDER_OR_MORE => Some(Box::new(DelegateBooleanProperty { id })),
-        // Gauge range
+        // Gauge range (Java: TYPE_STATIC_ON_RESULT -- static on result screens)
         OPTION_1P_0_9 | OPTION_1P_10_19 | OPTION_1P_20_29 | OPTION_1P_30_39 | OPTION_1P_40_49
         | OPTION_1P_50_59 | OPTION_1P_60_69 | OPTION_1P_70_79 | OPTION_1P_80_89
-        | OPTION_1P_90_99 | OPTION_1P_100 => Some(Box::new(DelegateBooleanProperty { id })),
+        | OPTION_1P_90_99 | OPTION_1P_100 => Some(Box::new(StaticOnResultProperty { id })),
         // Result update conditions
         OPTION_UPDATE_SCORE
         | OPTION_DRAW_SCORE

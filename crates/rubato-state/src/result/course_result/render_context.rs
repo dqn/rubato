@@ -239,7 +239,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
 
     fn boolean_value(&self, id: i32) -> bool {
         match id {
-            90 | 91 => shared_render_context::boolean_value(
+            42 | 43 | 90 | 91 | 1046 => shared_render_context::boolean_value(
                 self.data,
                 self.resource.course_score_data(),
                 id,
@@ -591,7 +591,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
 
     fn boolean_value(&self, id: i32) -> bool {
         match id {
-            90 | 91 => shared_render_context::boolean_value(
+            42 | 43 | 90 | 91 | 1046 => shared_render_context::boolean_value(
                 &self.result.data,
                 self.result.resource.course_score_data(),
                 id,

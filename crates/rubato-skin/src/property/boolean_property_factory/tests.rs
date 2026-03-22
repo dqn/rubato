@@ -435,3 +435,26 @@ fn test_all_boolean_type_ids_return_some() {
         );
     }
 }
+
+#[test]
+fn test_gauge_range_static_on_result() {
+    // OPTION_1P_0_9 through OPTION_1P_100 (230-240) should be TYPE_STATIC_ON_RESULT
+    // Java: GaugeDrawCondition uses TYPE_STATIC_ON_RESULT
+    let result_state = BoolMockState::new(std::collections::HashMap::new()).with_result_state();
+    let play_state = BoolMockState::new(std::collections::HashMap::new());
+
+    for id in OPTION_1P_0_9..=OPTION_1P_100 {
+        let prop =
+            boolean_property(id).unwrap_or_else(|| panic!("gauge range id {} should exist", id));
+        assert!(
+            prop.is_static(&result_state),
+            "gauge range id {} should be static on result screen",
+            id
+        );
+        assert!(
+            !prop.is_static(&play_state),
+            "gauge range id {} should not be static during play",
+            id
+        );
+    }
+}

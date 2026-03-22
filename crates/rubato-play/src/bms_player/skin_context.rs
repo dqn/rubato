@@ -374,6 +374,12 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
                 self.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay
                     || self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
             }
+            // OPTION_GAUGE_GROOVE (42): gauge type <= 2 (AssistEasy/Easy/Normal)
+            // Java: ((BMSPlayer) state).getGauge().getType() <= 2
+            42 => self.gauge.is_some_and(|g| g.gauge_type() <= 2),
+            // OPTION_GAUGE_HARD (43): gauge type >= 3 (Hard/ExHard/Hazard)
+            // Java: ((BMSPlayer) state).getGauge().getType() >= 3
+            43 => self.gauge.is_some_and(|g| g.gauge_type() >= 3),
             // Loading state (OPTION_LOADING1 = 80)
             80 => self.state == PlayState::Preload,
             // OPTION_LOADED (Java: 81)
@@ -382,24 +388,53 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             82 => self.play_mode.mode != rubato_core::bms_player_mode::Mode::Replay,
             // OPTION_REPLAY_PLAYING (Java: 84)
             84 => self.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay,
+            // OPTION_1P_0_9 through OPTION_1P_100 (Java: 230-240)
+            // Java: GaugeDrawCondition -- gauge value in [low*max, high*max)
+            230..=240 => self.gauge.is_some_and(|g| {
+                let bucket = id - 230;
+                let gauge = g.gauge();
+                let max = gauge.property().max;
+                let low = bucket as f32 * 0.1 * max;
+                let high = (bucket + 1) as f32 * 0.1 * max;
+                gauge.value() >= low && gauge.value() < high
+            }),
+            // OPTION_1P_PERFECT (241): nowJudge == 1 (PGreat/Perfect)
+            // Java: NowJudgeDrawCondition(0, 0) -> judge.getNowJudge(0) == 1
+            241 => self.judge.now_judge(0) == 1,
+            // OPTION_2P_PERFECT (261): NowJudgeDrawCondition(1, 0)
+            261 => self.judge.now_judge(1) == 1,
             // OPTION_LANECOVER1_ON (Java: 271)
             271 => self.live_lanecover > 0.0,
             // OPTION_LIFT1_ON (Java: 272)
             272 => self.live_lift > 0.0,
             // OPTION_HIDDEN1_ON (Java: 273)
             273 => self.live_hidden > 0.0,
+            // OPTION_3P_PERFECT (361): NowJudgeDrawCondition(2, 0)
+            361 => self.judge.now_judge(2) == 1,
+            // OPTION_GAUGE_EX (1046): non-standard gauge types
+            // Java: type == 0 || type == 1 || type == 4 || type == 5 || type == 7 || type == 8
+            // (AssistEasy, Easy, ExHard, Hazard, ExClass, ExHardClass)
+            1046 => self
+                .gauge
+                .is_some_and(|g| matches!(g.gauge_type(), 0 | 1 | 4 | 5 | 7 | 8)),
             // OPTION_STATE_PRACTICE (Java: 1080)
             1080 => self.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
-            // OPTION_1P_0_9 through OPTION_1P_100 (Java: 230-240)
-            // Gauge value falls within the corresponding 10-unit range (max=100)
-            230..=240 => self.gauge.is_some_and(|g| {
-                let bucket = id - 230;
-                let low = bucket as f32 * 10.0;
-                let high = (bucket + 1) as f32 * 10.0;
-                g.value() >= low && g.value() < high
-            }),
             // OPTION_1P_BORDER_OR_MORE (Java: 1240) -- gauge >= clear threshold
             1240 => self.gauge.is_some_and(|g| g.is_qualified()),
+            // OPTION_1P_EARLY (1242): nowJudge > 1 && recentJudgeTiming > 0
+            // Java: NowJudgeDrawCondition(0, 1)
+            1242 => self.judge.now_judge(0) > 1 && self.judge.recent_judge_timing(0) > 0,
+            // OPTION_1P_LATE (1243): nowJudge > 1 && recentJudgeTiming < 0
+            // Java: NowJudgeDrawCondition(0, 2)
+            1243 => self.judge.now_judge(0) > 1 && self.judge.recent_judge_timing(0) < 0,
+            // OPTION_2P_EARLY (1262): NowJudgeDrawCondition(1, 1)
+            1262 => self.judge.now_judge(1) > 1 && self.judge.recent_judge_timing(1) > 0,
+            // OPTION_2P_LATE (1263): NowJudgeDrawCondition(1, 2)
+            1263 => self.judge.now_judge(1) > 1 && self.judge.recent_judge_timing(1) < 0,
+            // OPTION_3P_EARLY (1362): NowJudgeDrawCondition(2, 1)
+            1362 => self.judge.now_judge(2) > 1 && self.judge.recent_judge_timing(2) > 0,
+            // OPTION_3P_LATE (1363): NowJudgeDrawCondition(2, 2)
+            1363 => self.judge.now_judge(2) > 1 && self.judge.recent_judge_timing(2) < 0,
             _ => self.default_boolean_value(id),
         }
     }
@@ -883,10 +918,36 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Autoplay
                     || self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay
             }
+            // OPTION_GAUGE_GROOVE (42): gauge type <= 2
+            42 => self
+                .player
+                .gauge
+                .as_ref()
+                .is_some_and(|g| g.gauge_type() <= 2),
+            // OPTION_GAUGE_HARD (43): gauge type >= 3
+            43 => self
+                .player
+                .gauge
+                .as_ref()
+                .is_some_and(|g| g.gauge_type() >= 3),
             80 => self.player.state == PlayState::Preload,
             81 => self.player.state != PlayState::Preload,
             82 => self.player.play_mode.mode != rubato_core::bms_player_mode::Mode::Replay,
             84 => self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Replay,
+            // OPTION_1P_0_9 through OPTION_1P_100 (Java: 230-240)
+            // Java: GaugeDrawCondition -- gauge value in [low*max, high*max)
+            230..=240 => self.player.gauge.as_ref().is_some_and(|g| {
+                let bucket = id - 230;
+                let gauge = g.gauge();
+                let max = gauge.property().max;
+                let low = bucket as f32 * 0.1 * max;
+                let high = (bucket + 1) as f32 * 0.1 * max;
+                gauge.value() >= low && gauge.value() < high
+            }),
+            // OPTION_1P_PERFECT (241): nowJudge == 1
+            241 => self.player.judge.now_judge(0) == 1,
+            // OPTION_2P_PERFECT (261): NowJudgeDrawCondition(1, 0)
+            261 => self.player.judge.now_judge(1) == 1,
             271 => self
                 .player
                 .lanerender
@@ -902,16 +963,41 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                 .lanerender
                 .as_ref()
                 .is_some_and(|lr| lr.hidden_cover() > 0.0),
+            // OPTION_3P_PERFECT (361): NowJudgeDrawCondition(2, 0)
+            361 => self.player.judge.now_judge(2) == 1,
+            // OPTION_GAUGE_EX (1046): non-standard gauge types
+            1046 => self
+                .player
+                .gauge
+                .as_ref()
+                .is_some_and(|g| matches!(g.gauge_type(), 0 | 1 | 4 | 5 | 7 | 8)),
             1080 => self.player.play_mode.mode == rubato_core::bms_player_mode::Mode::Practice,
-            // OPTION_1P_0_9 through OPTION_1P_100 (Java: 230-240)
-            230..=240 => self.player.gauge.as_ref().is_some_and(|g| {
-                let bucket = id - 230;
-                let low = bucket as f32 * 10.0;
-                let high = (bucket + 1) as f32 * 10.0;
-                g.value() >= low && g.value() < high
-            }),
             // OPTION_1P_BORDER_OR_MORE (Java: 1240) -- gauge >= clear threshold
             1240 => self.player.gauge.as_ref().is_some_and(|g| g.is_qualified()),
+            // OPTION_1P_EARLY (1242): nowJudge > 1 && recentJudgeTiming > 0
+            1242 => {
+                self.player.judge.now_judge(0) > 1 && self.player.judge.recent_judge_timing(0) > 0
+            }
+            // OPTION_1P_LATE (1243): nowJudge > 1 && recentJudgeTiming < 0
+            1243 => {
+                self.player.judge.now_judge(0) > 1 && self.player.judge.recent_judge_timing(0) < 0
+            }
+            // OPTION_2P_EARLY (1262): NowJudgeDrawCondition(1, 1)
+            1262 => {
+                self.player.judge.now_judge(1) > 1 && self.player.judge.recent_judge_timing(1) > 0
+            }
+            // OPTION_2P_LATE (1263): NowJudgeDrawCondition(1, 2)
+            1263 => {
+                self.player.judge.now_judge(1) > 1 && self.player.judge.recent_judge_timing(1) < 0
+            }
+            // OPTION_3P_EARLY (1362): NowJudgeDrawCondition(2, 1)
+            1362 => {
+                self.player.judge.now_judge(2) > 1 && self.player.judge.recent_judge_timing(2) > 0
+            }
+            // OPTION_3P_LATE (1363): NowJudgeDrawCondition(2, 2)
+            1363 => {
+                self.player.judge.now_judge(2) > 1 && self.player.judge.recent_judge_timing(2) < 0
+            }
             _ => self.default_boolean_value(id),
         }
     }
