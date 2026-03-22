@@ -802,14 +802,23 @@ impl LR2SelectSkinLoaderState {
                     return;
                 }
                 let font_idx = values[2] as usize;
-                if font_idx < self.csv.fontlist.len()
+                let bartext = if font_idx < self.csv.fontlist.len()
                     && let Some(source) = self.csv.fontlist[font_idx].clone()
                 {
                     let text = crate::skin_text_image::SkinTextImage::new(source);
-                    let idx = values[1] as usize;
-                    if idx < self.bartext.len() {
-                        self.bartext[idx] = Some(crate::skin_text::SkinTextEnum::Image(text));
-                    }
+                    crate::skin_text::SkinTextEnum::Image(text)
+                } else {
+                    let text = crate::text::skin_text_font::SkinTextFont::new(
+                        "skin/default/VL-Gothic-Regular.ttf",
+                        0,
+                        48,
+                        2,
+                    );
+                    crate::skin_text::SkinTextEnum::Font(text)
+                };
+                let idx = values[1] as usize;
+                if idx < self.bartext.len() {
+                    self.bartext[idx] = Some(bartext);
                 }
             }
             "DST_BAR_TITLE" => {

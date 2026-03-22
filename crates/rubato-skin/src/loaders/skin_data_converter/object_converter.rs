@@ -9,7 +9,9 @@ use crate::graphs::skin_hit_error_visualizer::SkinHitErrorVisualizer;
 use crate::graphs::skin_note_distribution_graph::SkinNoteDistributionGraph;
 use crate::graphs::skin_timing_distribution_graph::SkinTimingDistributionGraph;
 use crate::graphs::skin_timing_visualizer::SkinTimingVisualizer;
-use crate::json::json_skin_loader::{SkinNumberOffset, SkinObjectType, SourceData};
+use crate::json::json_skin_loader::{
+    SkinNumberOffset, SkinObjectType, SourceData, get_path_with_filemap,
+};
 use crate::json::json_skin_object_loader::source_image;
 use crate::objects::skin_bga_object::SkinBgaObject;
 use crate::objects::skin_gauge::SkinGauge;
@@ -631,6 +633,7 @@ fn convert_image(
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
         let movie_path = format!("{}/{}", parent, data_path);
+        let movie_path = get_path_with_filemap(&movie_path, filemap);
         let movie_source = crate::skin_source_movie::SkinSourceMovie::new(&movie_path);
         return Some(SkinObject::Image(SkinImage::new_with_movie(movie_source)));
     }
