@@ -109,7 +109,7 @@ fn make_test_skin() -> Skin {
 #[test]
 fn test_timer_only_main_state_returns_expected_values() {
     let timer = crate::reexports::Timer::with_timers(1000, 1_000_000, Vec::new());
-    let adapter = TimerOnlyMainState::from_timer(&timer);
+    let adapter = TimerOnlyMainState::from_timer(&timer, None);
     let state: &dyn MainState = &adapter;
     assert_eq!(state.now_time(), 1000);
     assert_eq!(state.now_micro_time(), 1_000_000);
@@ -217,7 +217,7 @@ fn test_timer_manager_values_flow_through_to_skin_adapter() {
     assert!(!tm.is_timer_on(rubato_types::timer_id::TimerId::new(20))); // Timer 20 was never set
 
     // Create adapter from TimerManager (the path SkinDrawable takes)
-    let adapter = TimerOnlyMainState::from_timer(&tm);
+    let adapter = TimerOnlyMainState::from_timer(&tm, None);
     let state: &dyn MainState = &adapter;
 
     // Timer 10 should be ON through the adapter

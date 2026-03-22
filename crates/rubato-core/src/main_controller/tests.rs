@@ -594,7 +594,7 @@ impl SkinDrawable for MockSkinDrawable {
         _y: i32,
     ) {
     }
-    fn prepare_skin(&mut self) {}
+    fn prepare_skin(&mut self, _state_type: Option<rubato_types::main_state_type::MainStateType>) {}
     fn dispose_skin(&mut self) {}
     fn fadeout(&self) -> i32 {
         0
@@ -718,7 +718,11 @@ fn test_skin_offsets_populated_from_skin_drawable() {
             _y: i32,
         ) {
         }
-        fn prepare_skin(&mut self) {}
+        fn prepare_skin(
+            &mut self,
+            _state_type: Option<rubato_types::main_state_type::MainStateType>,
+        ) {
+        }
         fn dispose_skin(&mut self) {}
         fn skin_offsets(&self) -> HashMap<i32, SkinOffset> {
             self.offsets.clone()
@@ -829,7 +833,11 @@ fn test_render_skin_called_once_per_frame() {
             _y: i32,
         ) {
         }
-        fn prepare_skin(&mut self) {}
+        fn prepare_skin(
+            &mut self,
+            _state_type: Option<rubato_types::main_state_type::MainStateType>,
+        ) {
+        }
         fn dispose_skin(&mut self) {}
         fn fadeout(&self) -> i32 {
             0
@@ -944,7 +952,7 @@ impl SkinDrawable for VertexGeneratingSkinDrawable {
         _y: i32,
     ) {
     }
-    fn prepare_skin(&mut self) {}
+    fn prepare_skin(&mut self, _state_type: Option<rubato_types::main_state_type::MainStateType>) {}
     fn dispose_skin(&mut self) {}
     fn fadeout(&self) -> i32 {
         0
@@ -2173,7 +2181,7 @@ impl SkinDrawable for DisposableSkinDrawable {
         _y: i32,
     ) {
     }
-    fn prepare_skin(&mut self) {}
+    fn prepare_skin(&mut self, _state_type: Option<rubato_types::main_state_type::MainStateType>) {}
     fn dispose_skin(&mut self) {
         *self.dispose_count.lock().unwrap() += 1;
     }

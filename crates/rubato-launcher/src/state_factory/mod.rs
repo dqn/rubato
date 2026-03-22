@@ -557,7 +557,11 @@ mod tests {
             _y: i32,
         ) {
         }
-        fn prepare_skin(&mut self) {}
+        fn prepare_skin(
+            &mut self,
+            _state_type: Option<rubato_types::main_state_type::MainStateType>,
+        ) {
+        }
         fn dispose_skin(&mut self) {}
         fn fadeout(&self) -> i32 {
             0
@@ -610,7 +614,11 @@ mod tests {
             ctx.change_state(MainStateType::SkinConfig);
         }
 
-        fn prepare_skin(&mut self) {}
+        fn prepare_skin(
+            &mut self,
+            _state_type: Option<rubato_types::main_state_type::MainStateType>,
+        ) {
+        }
         fn dispose_skin(&mut self) {}
         fn fadeout(&self) -> i32 {
             0

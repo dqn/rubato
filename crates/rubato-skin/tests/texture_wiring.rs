@@ -278,7 +278,7 @@ fn compute_note_draw_commands_produces_commands() {
 
     // Run Skin::prepare() (as prepare_skin does with NullTimer)
     // This is the step that builds objectarray_indices and may remove objects
-    skin.prepare_skin();
+    skin.prepare_skin(None);
 
     // Verify Note survives prepare
     assert!(

@@ -300,8 +300,9 @@ impl MainController {
             .set_boot_time_millis(self.play_time());
 
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
+        let st = new_state.state_type();
         if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
-            skin.prepare_skin();
+            skin.prepare_skin(st);
         }
 
         // Set as current

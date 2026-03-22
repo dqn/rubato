@@ -11,13 +11,16 @@ struct TimerOnlyMainState<'a> {
 }
 
 impl<'a> TimerOnlyMainState<'a> {
-    fn from_timer(timer: &'a dyn rubato_types::timer_access::TimerAccess) -> Self {
+    fn from_timer(
+        timer: &'a dyn rubato_types::timer_access::TimerAccess,
+        state_type: Option<rubato_types::main_state_type::MainStateType>,
+    ) -> Self {
         static EMPTY: std::sync::LazyLock<HashMap<i32, TextureRegion>> =
             std::sync::LazyLock::new(HashMap::new);
         Self {
             timer: Some(timer),
             ctx: None,
-            state_type: None,
+            state_type,
             image_registry: &EMPTY,
         }
     }
@@ -448,9 +451,9 @@ impl crate::reexports::MainState for TimerOnlyMainState<'_> {
 }
 
 impl rubato_core::main_state::SkinDrawable for Skin {
-    fn prepare_skin(&mut self) {
+    fn prepare_skin(&mut self, state_type: Option<rubato_types::main_state_type::MainStateType>) {
         let null_timer = rubato_types::timer_access::NullTimer;
-        let adapter = TimerOnlyMainState::from_timer(&null_timer);
+        let adapter = TimerOnlyMainState::from_timer(&null_timer, state_type);
         self.prepare(&adapter);
     }
 
@@ -934,7 +937,7 @@ mod skin_drawable_delegation_tests {
     #[test]
     fn test_timer_only_mode_returns_defaults_for_all_methods() {
         let timer = rubato_types::timer_access::NullTimer;
-        let adapter = TimerOnlyMainState::from_timer(&timer);
+        let adapter = TimerOnlyMainState::from_timer(&timer, None);
 
         assert!(adapter.replay_option_data().is_none());
         assert!(adapter.target_score_data().is_none());

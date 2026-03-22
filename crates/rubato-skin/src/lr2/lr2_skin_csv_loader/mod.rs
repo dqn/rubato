@@ -306,7 +306,7 @@ SCENETIME,9999\n\
         );
 
         state.apply_to_skin(&mut skin);
-        skin.prepare_skin();
+        skin.prepare_skin(None);
 
         assert_eq!(
             skin.objects().len(),

@@ -705,7 +705,9 @@ fn test_render_skin_draws_ecfn_songlist_bitmap_bartext_quads() {
         .skin
         .as_mut()
         .expect("ECFN select skin should load")
-        .prepare_skin();
+        .prepare_skin(Some(
+            rubato_types::main_state_type::MainStateType::MusicSelect,
+        ));
     assert!(
         matches!(
             selector
@@ -1276,7 +1278,7 @@ impl rubato_core::main_state::SkinDrawable for ChangeStateSkin {
     ) {
     }
 
-    fn prepare_skin(&mut self) {}
+    fn prepare_skin(&mut self, _state_type: Option<rubato_types::main_state_type::MainStateType>) {}
     fn dispose_skin(&mut self) {}
     fn fadeout(&self) -> i32 {
         0

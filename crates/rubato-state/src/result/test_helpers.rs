@@ -44,7 +44,7 @@ impl SkinDrawable for ExecuteEventSkin {
     ) {
     }
 
-    fn prepare_skin(&mut self) {}
+    fn prepare_skin(&mut self, _state_type: Option<rubato_types::main_state_type::MainStateType>) {}
 
     fn dispose_skin(&mut self) {}
 
@@ -108,7 +108,7 @@ impl SkinDrawable for PlayerConfigMutatingSkin {
     ) {
     }
 
-    fn prepare_skin(&mut self) {}
+    fn prepare_skin(&mut self, _state_type: Option<rubato_types::main_state_type::MainStateType>) {}
 
     fn dispose_skin(&mut self) {}
 
