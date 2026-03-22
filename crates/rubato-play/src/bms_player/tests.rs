@@ -4262,7 +4262,7 @@ fn play_render_context_existing_ids_unchanged() {
     assert!((ctx.float_value(1107)).abs() < f32::EPSILON);
     // unknown IDs return i32::MIN (hide sentinel for SkinNumber)
     assert_eq!(ctx.integer_value(9999), i32::MIN);
-    assert!((ctx.float_value(9999)).abs() < f32::EPSILON);
+    assert_eq!(ctx.float_value(9999), f32::MIN);
 }
 
 #[test]

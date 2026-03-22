@@ -436,7 +436,7 @@ pub trait SkinRenderContext: TimerAccess {
                 .song_data_ref()
                 .and_then(|s| s.info.as_ref())
                 .map_or(f32::MIN, |i| i.total as f32),
-            _ => 0.0,
+            _ => f32::MIN,
         }
     }
 
