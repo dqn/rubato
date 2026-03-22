@@ -20,15 +20,15 @@ struct DrawTextGlyphsParams<'a> {
 }
 
 /// Compute the x position for text based on alignment within a region.
-/// Java SkinTextFont uses GlyphLayout alignment within the destination rectangle.
+/// Java SkinTextFont uses anchor-relative alignment:
 ///   - LEFT (0): text starts at region.x
-///   - CENTER (1): text centered within region width
-///   - RIGHT (2): text right-aligned within region width
-fn compute_aligned_x(align: i32, region_x: f32, region_width: f32, layout_width: f32) -> f32 {
+///   - CENTER (1): region.x is the center anchor: x = region.x - region.width / 2
+///   - RIGHT (2): region.x is the right anchor: x = region.x - region.width
+fn compute_aligned_x(align: i32, region_x: f32, region_width: f32) -> f32 {
     match align {
-        2 => region_x + region_width - layout_width, // RIGHT
-        1 => region_x + (region_width - layout_width) / 2.0, // CENTER
-        _ => region_x,                               // LEFT (default)
+        2 => region_x - region_width,       // RIGHT
+        1 => region_x - region_width / 2.0, // CENTER
+        _ => region_x,                      // LEFT (default)
     }
 }
 
@@ -158,8 +158,12 @@ impl SkinTextFont {
         let original_scale = font.scale();
         font.scale = region.height;
 
-        // Java: sprite.setType(SkinObjectRenderer.TYPE_LINEAR)
-        sprite.obj_type = SkinObjectRenderer::TYPE_LINEAR;
+        // Java: sprite.setType(getFilter() != 0 ? SkinObjectRenderer.TYPE_LINEAR : SkinObjectRenderer.TYPE_NORMAL)
+        sprite.obj_type = if self.text_data.data.filter() != 0 {
+            SkinObjectRenderer::TYPE_LINEAR
+        } else {
+            SkinObjectRenderer::TYPE_NORMAL
+        };
 
         // Measure text layout to get width for alignment
         let text = self.text_data.text().to_string();
@@ -168,7 +172,7 @@ impl SkinTextFont {
 
         // Compute x position based on alignment
         let align = self.text_data.align();
-        let x = compute_aligned_x(align, region.x, region.width, layout_width);
+        let x = compute_aligned_x(align, region.x, region.width);
 
         sprite.blend = self.text_data.data.blend();
 
@@ -446,10 +450,27 @@ mod tests {
     // ---- Renderer type test ----
 
     #[test]
-    fn test_renderer_type_set_to_linear() {
-        // Java: sprite.setType(SkinObjectRenderer.TYPE_LINEAR)
+    fn test_renderer_type_normal_when_filter_zero() {
+        // Java: sprite.setType(getFilter() != 0 ? TYPE_LINEAR : TYPE_NORMAL)
+        // filter defaults to 0 => TYPE_NORMAL
         let mut stf = make_font(30);
         stf.text_data.data.draw = true;
+        stf.text_data.data.region = Rectangle::new(0.0, 0.0, 500.0, 30.0);
+        stf.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        stf.text_data.set_text("X".to_string());
+
+        let mut renderer = SkinObjectRenderer::new();
+        stf.draw_with_offset(&mut renderer, 0.0, 0.0);
+        assert_eq!(renderer.toast_type(), SkinObjectRenderer::TYPE_NORMAL);
+    }
+
+    #[test]
+    fn test_renderer_type_linear_when_filter_nonzero() {
+        // Java: sprite.setType(getFilter() != 0 ? TYPE_LINEAR : TYPE_NORMAL)
+        // filter != 0 => TYPE_LINEAR
+        let mut stf = make_font(30);
+        stf.text_data.data.draw = true;
+        stf.text_data.data.dstfilter = 1;
         stf.text_data.data.region = Rectangle::new(0.0, 0.0, 500.0, 30.0);
         stf.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
         stf.text_data.set_text("X".to_string());
@@ -518,24 +539,24 @@ mod tests {
     fn test_compute_x_left_align() {
         // align=0 (LEFT): x = region.x
         let region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
-        let x = compute_aligned_x(0, region.x, region.width, 80.0);
+        let x = compute_aligned_x(0, region.x, region.width);
         assert_eq!(x, 100.0);
     }
 
     #[test]
     fn test_compute_x_center_align() {
-        // align=1 (CENTER): x = region.x + (region.width - layout_width) / 2
+        // align=1 (CENTER): x = region.x - region.width / 2
         let region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
-        let x = compute_aligned_x(1, region.x, region.width, 80.0);
-        assert_eq!(x, 160.0); // 100 + (200 - 80) / 2 = 100 + 60 = 160
+        let x = compute_aligned_x(1, region.x, region.width);
+        assert_eq!(x, 0.0); // 100 - 200 / 2 = 100 - 100 = 0
     }
 
     #[test]
     fn test_compute_x_right_align() {
-        // align=2 (RIGHT): x = region.x + region.width - layout_width
+        // align=2 (RIGHT): x = region.x - region.width
         let region = Rectangle::new(100.0, 50.0, 200.0, 30.0);
-        let x = compute_aligned_x(2, region.x, region.width, 80.0);
-        assert_eq!(x, 220.0); // 100 + 200 - 80 = 220
+        let x = compute_aligned_x(2, region.x, region.width);
+        assert_eq!(x, -100.0); // 100 - 200 = -100
     }
 
     // ---- Shadow offset positioning test ----
