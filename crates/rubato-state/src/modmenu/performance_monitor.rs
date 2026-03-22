@@ -76,21 +76,8 @@ impl PerformanceMonitor {
                             ui.checkbox(&mut sort, "Sort by duration");
                             *lock_or_recover(&SORT_BY_DURATION) = sort;
                         });
-                        // Render root events
-                        if let Some(roots) = tree.get(&0) {
-                            let sort_by_duration = *lock_or_recover(&SORT_BY_DURATION);
-                            let mut events: Vec<_> = roots.iter().collect();
-                            if sort_by_duration {
-                                events.sort_unstable_by(|a, b| b.duration.cmp(&a.duration));
-                            }
-                            for event in &events {
-                                ui.label(format!(
-                                    "{}: {:.2}ms",
-                                    event.name,
-                                    event.duration as f64 / 1_000_000.0
-                                ));
-                            }
-                        }
+                        // Render event tree recursively
+                        render_event_tree_ui(ui, tree, 0, threshold);
                     } else {
                         ui.label("No event data");
                     }
@@ -116,79 +103,37 @@ impl PerformanceMonitor {
     }
 }
 
-#[allow(dead_code)]
-fn render_watch_data() {
-    let watch_data = lock_or_recover(&WATCH_DATA);
-    for (name, data) in watch_data.iter() {
-        let _text1 = name.clone();
-        let _text2 = format!("avg = {:.1}us, std = {:.1}us", data.avg, data.std);
-        // ImGui.text(text1);
-        // ImGui.text(text2);
+/// Render events for the given parent group as a recursive collapsible tree.
+fn render_event_tree_ui(
+    ui: &mut egui::Ui,
+    tree: &HashMap<u64, Vec<EventResult>>,
+    group_id: u64,
+    threshold: f32,
+) {
+    let Some(group) = tree.get(&group_id) else {
+        return;
+    };
+    let sort_by_duration = *lock_or_recover(&SORT_BY_DURATION);
+    let mut events: Vec<_> = group.iter().collect();
+    if sort_by_duration {
+        events.sort_unstable_by(|a, b| b.duration.cmp(&a.duration));
     }
-}
-
-#[allow(dead_code)]
-fn render_event_table() {
-    let threshold = *lock_or_recover(&FILTER_SHORT_THRESHOLD);
-    // ImGui.setNextItemWidth(ImGui.getContentRegionAvail().x / 5.f);
-    // ImGui.sliderFloat("Filter short events", filterShortThreshold, 0.0f, 4.0f);
-
-    // if (ImGui.beginTable("event-table", 3, ImGuiTableFlags.ScrollY))
-    {
-        // ImGui.tableSetupColumn("Event", ...);
-        // ImGui.tableSetupColumn("Time", ...);
-        // ImGui.tableSetupColumn("Thread", ...);
-        // ImGui.tableHeadersRow();
-
-        // ImGui.tableNextRow();
-        // ImGui.tableNextColumn();
-
-        render_event_tree(0, threshold);
-
-        // ImGui.endTable();
-    }
-}
-
-#[allow(dead_code)]
-fn render_event_tree(group_id: u64, threshold: f32) {
-    let event_tree = lock_or_recover(&EVENT_TREE);
-    if let Some(ref tree) = *event_tree {
-        if !tree.contains_key(&group_id) {
-            return;
+    for event in &events {
+        let duration_ms = event.duration as f64 / 1_000_000.0;
+        if (duration_ms as f32) < threshold {
+            continue;
         }
-
-        if let Some(group) = tree.get(&group_id) {
-            let sort_by_duration = *lock_or_recover(&SORT_BY_DURATION);
-            let mut events: Vec<_> = group.iter().collect();
-            if sort_by_duration {
-                events.sort_unstable_by(|a, b| b.duration.cmp(&a.duration));
-            }
-            for event in &events {
-                let duration_ms = event.duration as f64 / 1_000_000.0;
-                if (duration_ms as f32) < threshold {
-                    continue;
-                }
-
-                let leaf = !tree.contains_key(&event.id);
-                let _flags = if leaf {
-                    // ImGuiTreeNodeFlags.Leaf | ImGuiTreeNodeFlags.NoTreePushOnOpen | ImGuiTreeNodeFlags.Bullet
-                    0
-                } else {
-                    0
-                };
-                // boolean open = ImGui.treeNodeEx(event.id(), flags, event.name());
-                // ImGui.tableNextColumn();
-                let _time_text = format!("{:9.2}ms", duration_ms);
-                // ImGui.text(time_text);
-                // ImGui.tableNextColumn();
-                let _thread_text = event.thread.to_string();
-                // ImGui.text(thread_text);
-                // ImGui.tableNextColumn();
-                // if (!leaf && open) {
-                //     renderEventTree(event.id());
-                //     ImGui.treePop();
-                // }
-            }
+        let label = format!("{}: {:.2}ms [{}]", event.name, duration_ms, event.thread);
+        let leaf = !tree.contains_key(&event.id);
+        if leaf {
+            ui.label(&label);
+        } else {
+            let id = egui::Id::new("perf_event").with(event.id);
+            egui::CollapsingHeader::new(&label)
+                .id_salt(id)
+                .show(ui, |ui| {
+                    render_event_tree_ui(ui, tree, event.id, threshold);
+                });
         }
     }
 }
