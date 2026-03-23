@@ -117,10 +117,40 @@ pub struct SkinBgaObject {
     practice_mode: bool,
     /// Reusable font for practice mode text rendering.
     /// Stored as a field to avoid per-frame allocation.
-    /// TODO: Initialize with a proper font source (e.g., default system font or skin config font)
-    /// so that practice mode text actually renders. Currently BitmapFont::new() has font: None,
-    /// which makes draw a no-op.
     practice_font: rubato_render::font::BitmapFont,
+}
+
+/// Practice mode font size matching Java's default BitmapFont (15px).
+const PRACTICE_FONT_SIZE: f32 = 15.0;
+
+/// Try to load a system TrueType font for practice mode text overlay.
+/// Java's `new BitmapFont()` uses LibGDX's built-in Arial. We try common system paths.
+fn try_load_practice_font() -> rubato_render::font::BitmapFont {
+    #[cfg(target_os = "macos")]
+    const FONT_PATHS: &[&str] = &[
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+    ];
+    #[cfg(target_os = "linux")]
+    const FONT_PATHS: &[&str] = &[
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    ];
+    #[cfg(target_os = "windows")]
+    const FONT_PATHS: &[&str] = &[
+        "C:\\Windows\\Fonts\\arial.ttf",
+        "C:\\Windows\\Fonts\\msgothic.ttc",
+    ];
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    const FONT_PATHS: &[&str] = &[];
+
+    for path in FONT_PATHS {
+        let font = rubato_render::font::BitmapFont::from_file(path, PRACTICE_FONT_SIZE);
+        if font.font().is_some() {
+            return font;
+        }
+    }
+    rubato_render::font::BitmapFont::new()
 }
 
 impl SkinBgaObject {
@@ -131,7 +161,7 @@ impl SkinBgaObject {
             bga_draw: None,
             practice_commands: Vec::new(),
             practice_mode: false,
-            practice_font: rubato_render::font::BitmapFont::new(),
+            practice_font: try_load_practice_font(),
         }
     }
 
