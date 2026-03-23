@@ -755,7 +755,7 @@ impl LR2SelectSkinLoaderState {
                 let dsth = safe_div_f32(self.csv.dst.height, self.csv.src.height);
                 self.bargraph_region = Rectangle::new(
                     values[3] as f32 * dstw,
-                    self.csv.dst.height - (values[4] + values[6]) as f32 * dsth,
+                    -(values[4] + values[6]) as f32 * dsth,
                     values[5] as f32 * dstw,
                     values[6] as f32 * dsth,
                 );
