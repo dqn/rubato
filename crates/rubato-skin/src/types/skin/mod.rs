@@ -229,7 +229,7 @@ impl SkinObject {
             SkinObject::Judge(o) => o.dispose(),
             SkinObject::Bga(o) => o.dispose(),
             SkinObject::Gauge(_) => {}
-            SkinObject::GaugeGraph(_) => {}
+            SkinObject::GaugeGraph(o) => o.dispose(),
             SkinObject::Hidden(_) => {}
         }
     }

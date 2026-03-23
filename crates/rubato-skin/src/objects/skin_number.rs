@@ -310,7 +310,7 @@ impl SkinNumber {
                         Some(image[blank_index].clone())
                     } else if self.zeropadding == 1 {
                         Some(image[0].clone())
-                    } else if self.mimage.is_some() {
+                    } else if self.mimage.is_some() && image.len() > 11 {
                         let next = &self.current_images[j + 1];
                         if next.is_some() && *next != Some(image[11].clone()) {
                             Some(image[11].clone())
@@ -984,6 +984,44 @@ mod tests {
             renderer.sprite.vertices().len(),
             18, // 3 quads (blank, blank, digit-5)
             "all keta slots should render when zeropadding=2 with positive value"
+        );
+    }
+
+    #[test]
+    fn test_skin_number_mimage_present_normal_sheet_10_elements_no_panic() {
+        // Regression: when mimage is present but value >= 0, the normal sheet is
+        // used. If the normal sheet has only 10 elements and zeropadding == 0,
+        // the code path at the `mimage.is_some()` branch previously accessed
+        // image[11] without bounds check, causing a panic.
+        let mut num = SkinNumber::new_with_int_timer(
+            make_plain_digit_images(), // 10-element normal sheet (no minus/blank slots)
+            Some(make_digit_images()), // 12-element mimage sheet
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 0, // triggers the else branch that checks mimage.is_some()
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
+        setup_data(&mut num.data, 0.0, 0.0, 24.0, 32.0);
+
+        let state = MockMainState::default();
+        // Positive value with keta > digits: leading slots enter the mimage.is_some() branch
+        // with image from the 10-element normal sheet.
+        num.prepare_with_value(0, &state, 5, 0.0, 0.0);
+        assert!(num.data.draw);
+
+        // Should not panic; leading digits become None (shifted out).
+        let mut renderer = SkinObjectRenderer::new();
+        num.draw(&mut renderer);
+        // Only 1 digit rendered (value=5, keta=3, zeropadding=0 -> 2 leading nulls)
+        assert_eq!(
+            renderer.sprite.vertices().len(),
+            6,
+            "only the ones digit should render when zeropadding=0 with 10-element sheet"
         );
     }
 }
