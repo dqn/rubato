@@ -172,6 +172,9 @@ use std::sync::Arc;
 pub struct BitmapFont {
     font: Option<Arc<ab_glyph::FontVec>>,
     pub scale: f32,
+    /// Optional X-axis scale override for non-uniform scaling (OVERFLOW_SHRINK).
+    /// When Some, horizontal metrics use this value while vertical metrics use `scale`.
+    pub scale_x: Option<f32>,
     color: [f32; 4],
     atlas: Option<GlyphAtlas>,
 }
@@ -181,6 +184,7 @@ impl Clone for BitmapFont {
         Self {
             font: self.font.clone(),
             scale: self.scale,
+            scale_x: self.scale_x,
             color: self.color,
             atlas: None, // Atlas is lazily rebuilt on clone
         }
@@ -210,6 +214,7 @@ impl BitmapFont {
         Self {
             font: None,
             scale: 16.0,
+            scale_x: None,
             color: [1.0, 1.0, 1.0, 1.0],
             atlas: None,
         }
@@ -224,8 +229,18 @@ impl BitmapFont {
         Self {
             font,
             scale: size,
+            scale_x: None,
             color: [1.0, 1.0, 1.0, 1.0],
             atlas: None,
+        }
+    }
+
+    /// Return the PxScale used for glyph metrics. When `scale_x` is set,
+    /// horizontal and vertical scales differ (Java setScale(scaleX, scaleY) parity).
+    pub fn px_scale(&self) -> ab_glyph::PxScale {
+        ab_glyph::PxScale {
+            x: self.scale_x.unwrap_or(self.scale),
+            y: self.scale,
         }
     }
 
@@ -289,7 +304,7 @@ impl BitmapFont {
         let Some(font) = self.font.as_ref() else {
             return GlyphLayout::default();
         };
-        let scaled = font.as_scaled(ab_glyph::PxScale::from(self.scale));
+        let scaled = font.as_scaled(self.px_scale());
 
         let mut width = 0.0f32;
         let mut prev_glyph: Option<ab_glyph::GlyphId> = None;
@@ -318,7 +333,7 @@ impl BitmapFont {
         let Some(font) = self.font.as_ref() else {
             return (vec![], 0.0, 0.0);
         };
-        let scaled = font.as_scaled(ab_glyph::PxScale::from(self.scale));
+        let scaled = font.as_scaled(self.px_scale());
 
         let mut glyphs = Vec::new();
         let mut cursor_x = 0.0f32;
@@ -354,10 +369,17 @@ impl BitmapFont {
             return (vec![], 0.0, 0.0);
         };
 
+        let px = self.px_scale();
         let atlas = self.atlas.get_or_insert_with(GlyphAtlas::new);
-        let scaled = font.as_scaled(ab_glyph::PxScale::from(self.scale));
+        let scaled = font.as_scaled(px);
         let ascent = scaled.ascent();
         let line_height = scaled.height();
+        // Ratio for scaling rasterized glyph bitmaps (rendered at Y scale) to X scale.
+        let x_ratio = if self.scale > 0.0 {
+            px.x / self.scale
+        } else {
+            1.0
+        };
 
         let mut cursor_x = 0.0f32;
         let mut prev_glyph: Option<ab_glyph::GlyphId> = None;
@@ -369,10 +391,11 @@ impl BitmapFont {
                 cursor_x += scaled.kern(prev, glyph_id);
             }
 
+            // Rasterize at Y scale for correct height; X scaling applied to positioning/width.
             if let Some(cached) = atlas.get_or_rasterize(&font, glyph_id, self.scale) {
                 cached_glyphs.push((
                     cached,
-                    cursor_x + cached.bearing_x,
+                    cursor_x + cached.bearing_x * x_ratio,
                     ascent + cached.bearing_y,
                 ));
             }
@@ -388,7 +411,7 @@ impl BitmapFont {
             .map(|(cached, x, y)| PositionedGlyphRegion {
                 x,
                 y,
-                width: cached.width as f32,
+                width: cached.width as f32 * x_ratio,
                 height: cached.height as f32,
                 region: atlas.texture_region(&cached),
             })

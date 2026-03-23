@@ -191,6 +191,7 @@ impl SkinTextBitmap {
         // Java parity: BitmapFont.getData().setScale(1)
         if let Some(f) = self.font.as_mut() {
             f.scale = 1.0;
+            f.scale_x = None;
         }
     }
 
@@ -270,9 +271,10 @@ impl SkinTextBitmap {
                         .or_else(|| {
                             self.font.as_mut().map(|font| {
                                 let current_scale = font.scale();
-                                font.scale = current_scale * region_width / actual_width;
+                                // Only shrink X axis, keeping Y (height) unchanged.
+                                font.scale_x = Some(current_scale * region_width / actual_width);
                                 let shrunk = font.measure(text);
-                                font.scale = current_scale;
+                                font.scale_x = None;
                                 shrunk
                             })
                         })

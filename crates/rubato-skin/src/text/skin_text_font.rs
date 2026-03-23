@@ -206,6 +206,7 @@ impl SkinTextFont {
         // Java: font.getData().setScale(1) — restore original scale
         if let Some(f) = self.font.as_mut() {
             f.scale = original_scale;
+            f.scale_x = None;
         }
     }
 
@@ -250,9 +251,10 @@ impl SkinTextFont {
                 let actual_width = measured.width;
                 if actual_width > region_width && region_width > 0.0 {
                     // Java: font.getData().setScale(scaleX * r.getWidth() / actualWidth, scaleY)
+                    // Only shrink X axis, keeping Y (height) unchanged.
                     if let Some(f) = self.font.as_mut() {
                         let current_scale = f.scale();
-                        f.scale = current_scale * region_width / actual_width;
+                        f.scale_x = Some(current_scale * region_width / actual_width);
                         let shrunk = f.measure(text);
                         if let Some(ref mut layout) = self.layout {
                             layout.width = shrunk.width;
@@ -560,6 +562,43 @@ mod tests {
     }
 
     // ---- Shadow offset positioning test ----
+
+    #[test]
+    fn test_overflow_shrink_preserves_height() {
+        // Java: setScale(scaleX * ratio, scaleY) -- only X axis shrinks.
+        // Height must remain unchanged after OVERFLOW_SHRINK.
+        let font_path = test_font_path();
+        if !std::path::Path::new(&font_path).exists() {
+            return; // Skip if font file is not available
+        }
+        let mut stf = make_loaded_font(32);
+        stf.text_data.data.region = Rectangle {
+            x: 0.0,
+            y: 0.0,
+            width: 50.0, // Narrow region to force shrink
+            height: 32.0,
+        };
+        stf.text_data.overflow = OVERFLOW_SHRINK;
+
+        // Measure a wide string that exceeds the 50px region
+        let font = stf.font.as_ref().unwrap();
+        font.measure("WWWWWWWW"); // warmup
+
+        let color = Color::new(1.0, 1.0, 1.0, 1.0);
+        // Set font scale to region height (as draw() does)
+        stf.font.as_mut().unwrap().scale = 32.0;
+        let before_height = stf.font.as_ref().unwrap().measure("WWWWWWWW").height;
+        let _width = stf.compute_layout_width("WWWWWWWW", &color, 50.0, 32.0);
+        let layout = stf.layout.as_ref().unwrap();
+        // Width should be shrunk to fit
+        assert!(layout.width <= 50.0 + 1.0, "width should be shrunk");
+        // Height must be preserved (within tolerance for rounding)
+        assert!(
+            (layout.height - before_height).abs() < 1.0,
+            "height should be preserved: before={before_height}, after={}",
+            layout.height
+        );
+    }
 
     #[test]
     fn test_shadow_offset_position() {
