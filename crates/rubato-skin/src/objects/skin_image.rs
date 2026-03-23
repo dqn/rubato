@@ -20,6 +20,46 @@ pub struct SkinImage {
     is_movie: bool,
 }
 
+/// Scope guard that sets `image_type` to a temporary value and restores the
+/// original on drop (including panic unwind). This prevents the FFmpeg shader
+/// type from leaking if `draw_image_at` panics.
+///
+/// Uses a raw pointer to avoid holding a `&mut` borrow on the field, which
+/// would conflict with subsequent method calls on the owning struct.
+///
+/// # Safety contract
+/// The guard must be stack-local and the pointee (`SkinObjectData.image_type`)
+/// must outlive the guard. This is always true when the guard is created from
+/// `&mut self.data.image_type` inside a `SkinImage` method.
+struct ImageTypeGuard {
+    target: *mut i32,
+    original: i32,
+}
+
+impl ImageTypeGuard {
+    /// Sets `*target` to `temporary` and returns a guard that will restore the
+    /// original value on drop.
+    ///
+    /// # Safety
+    /// The caller must ensure `target` outlives the guard and that no other
+    /// code invalidates the pointer while the guard is alive.
+    unsafe fn new(target: *mut i32, temporary: i32) -> Self {
+        let original = unsafe { *target };
+        unsafe { *target = temporary };
+        Self { target, original }
+    }
+}
+
+impl Drop for ImageTypeGuard {
+    fn drop(&mut self) {
+        // SAFETY: see `new()` contract -- target is alive and we are restoring
+        // the original value.
+        unsafe {
+            *self.target = self.original;
+        }
+    }
+}
+
 impl SkinImage {
     /// Create an empty SkinImage with no sources (used in tests).
     pub fn new_empty() -> Self {
@@ -292,7 +332,13 @@ impl SkinImage {
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
         if let Some(ref current_image) = self.current_image {
             if self.is_movie {
-                self.data.image_type = 3;
+                // SAFETY: self.data outlives _guard (both are stack-local in this method).
+                let _guard = unsafe {
+                    ImageTypeGuard::new(
+                        &mut self.data.image_type as *mut i32,
+                        SkinObjectRenderer::TYPE_FFMPEG,
+                    )
+                };
                 let region = self.data.region;
                 self.data.draw_image_at(
                     sprite,
@@ -302,7 +348,6 @@ impl SkinImage {
                     region.width,
                     region.height,
                 );
-                self.data.image_type = 0;
             } else {
                 let region = self.data.region;
                 self.data.draw_image_at(
@@ -325,7 +370,13 @@ impl SkinImage {
     ) {
         if let Some(ref current_image) = self.current_image {
             if self.is_movie {
-                self.data.image_type = 3;
+                // SAFETY: self.data outlives _guard (both are stack-local in this method).
+                let _guard = unsafe {
+                    ImageTypeGuard::new(
+                        &mut self.data.image_type as *mut i32,
+                        SkinObjectRenderer::TYPE_FFMPEG,
+                    )
+                };
                 let region = self.data.region;
                 self.data.draw_image_at(
                     sprite,
@@ -335,7 +386,6 @@ impl SkinImage {
                     region.width,
                     region.height,
                 );
-                self.data.image_type = 0;
             } else {
                 let region = self.data.region;
                 self.data.draw_image_at(
@@ -511,8 +561,9 @@ mod tests {
         let mut renderer = SkinObjectRenderer::new();
         img.draw(&mut renderer);
 
-        // After draw, imageType should be reset to 0 (Java behavior: setImageType(3) then setImageType(0))
-        assert_eq!(img.data.image_type, 0);
+        // After draw, imageType should be restored to its original value (TYPE_FFMPEG for movies).
+        // The guard temporarily sets TYPE_FFMPEG during draw and restores the original on drop.
+        assert_eq!(img.data.image_type, SkinObjectRenderer::TYPE_FFMPEG);
         // Renderer should have had TYPE_FFMPEG (3) set during draw
         assert_eq!(
             renderer.sprite.shader_type(),
@@ -607,8 +658,8 @@ mod tests {
         let mut renderer = SkinObjectRenderer::new();
         img.draw_with_offset(&mut renderer, 10.0, 5.0);
 
-        // After draw_with_offset for movie: imageType should be reset to 0
-        assert_eq!(img.data.image_type, 0);
+        // After draw_with_offset for movie: imageType should be restored to its original value.
+        assert_eq!(img.data.image_type, SkinObjectRenderer::TYPE_FFMPEG);
         assert_eq!(renderer.sprite.vertices().len(), 6);
         // Position: (100+10, 200+5) = (110, 205) + 0.01
         let v0 = &renderer.sprite.vertices()[0];
@@ -705,6 +756,43 @@ mod tests {
         // Width = x1 - x0, Height = y1 - y0
         assert!((x1 - x0 - 200.0).abs() < 0.02);
         assert!((y1 - y0 - 150.0).abs() < 0.02);
+    }
+
+    #[test]
+    fn test_image_type_guard_restores_on_drop() {
+        // Verify the guard restores the original value when dropped, which is the
+        // same path taken during panic unwind.
+        let mut value: i32 = 0;
+        let ptr = &mut value as *mut i32;
+        {
+            // SAFETY: value is stack-local and outlives the guard.
+            let _guard = unsafe { ImageTypeGuard::new(ptr, SkinObjectRenderer::TYPE_FFMPEG) };
+            assert_eq!(unsafe { *ptr }, SkinObjectRenderer::TYPE_FFMPEG);
+        }
+        assert_eq!(value, 0, "image_type must be restored after guard drop");
+    }
+
+    #[test]
+    fn test_image_type_guard_restores_on_panic() {
+        // Simulate a panic inside the guarded scope and verify image_type is
+        // restored via the guard's Drop impl during unwind.
+        use std::panic;
+
+        let mut value: i32 = 0;
+        let value_ptr = &mut value as *mut i32;
+
+        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+            // SAFETY: value outlives the catch_unwind scope and no other thread
+            // accesses it.
+            let _guard = unsafe { ImageTypeGuard::new(value_ptr, SkinObjectRenderer::TYPE_FFMPEG) };
+            panic!("simulated draw_image_at panic");
+        }));
+
+        assert!(result.is_err(), "should have caught the panic");
+        assert_eq!(
+            value, 0,
+            "image_type must be restored even after a panic inside the guarded scope"
+        );
     }
 
     /// Regression: prepare_with_value must early-return when image array is empty,
