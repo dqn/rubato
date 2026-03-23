@@ -46,8 +46,8 @@ pub(super) struct PlayRenderContext<'a> {
     /// When the chart explicitly defines LN types, this overrides the config setting
     /// for image_index_value ID 308.
     pub(super) lnmode_override: Option<i32>,
-    /// Global config reference for BGA mode and other skin property queries.
-    pub(super) config: &'a rubato_types::config::Config,
+    /// Global config reference for BGA mode, volume changes, and other skin property queries.
+    pub(super) config: &'a mut rubato_types::config::Config,
     /// Score data property for Lua skin accessors (rate, exscore, etc.).
     pub(super) score_data_property: &'a rubato_types::score_data_property::ScoreDataProperty,
     /// Song metadata for string property queries (title, artist, genre, etc.).
@@ -56,6 +56,8 @@ pub(super) struct PlayRenderContext<'a> {
     pub(super) song_data: Option<&'a rubato_types::song_data::SongData>,
     /// Skin offset values for positional adjustments during prepare().
     pub(super) offsets: &'a std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
+    /// Player statistics for skin property IDs 30-37, 333.
+    pub(super) player_data: Option<&'a rubato_types::player_data::PlayerData>,
     /// Cumulative playtime in seconds from PlayerData.
     /// Java: PlayerData.getPlaytime() -- total play time across all sessions.
     pub(super) cumulative_playtime_seconds: i64,
@@ -106,6 +108,16 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
 
     fn config_ref(&self) -> Option<&rubato_types::config::Config> {
         Some(self.config)
+    }
+
+    fn config_mut(&mut self) -> Option<&mut rubato_types::config::Config> {
+        Some(self.config)
+    }
+
+    fn notify_audio_config_changed(&mut self) {
+        if let Some(audio) = self.config.audio.clone() {
+            self.pending.pending_audio_config = Some(audio);
+        }
     }
 
     fn score_data_property(&self) -> &rubato_types::score_data_property::ScoreDataProperty {
@@ -333,6 +345,21 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
                     (progress * 100.0) as i32
                 }
             }
+            // Player statistics (IDs 30-37, 333)
+            30 => self.player_data.map_or(0, |pd| pd.playcount as i32),
+            31 => self.player_data.map_or(0, |pd| pd.clear as i32),
+            32 => self
+                .player_data
+                .map_or(0, |pd| (pd.playcount - pd.clear) as i32),
+            33 => self.player_data.map_or(0, |pd| pd.judge_count(0) as i32),
+            34 => self.player_data.map_or(0, |pd| pd.judge_count(1) as i32),
+            35 => self.player_data.map_or(0, |pd| pd.judge_count(2) as i32),
+            36 => self.player_data.map_or(0, |pd| pd.judge_count(3) as i32),
+            37 => self.player_data.map_or(0, |pd| pd.judge_count(4) as i32),
+            333 => self.player_data.map_or(0, |pd| {
+                let total: i64 = (0..=3).map(|judge| pd.judge_count(judge)).sum();
+                total.min(i32::MAX as i64) as i32
+            }),
             // IDs 20-26 (FPS, system date/time) handled by default_integer_value
             _ => self.default_integer_value(id),
         }
@@ -1084,6 +1111,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            player_data: None,
             offsets: &EMPTY_OFFSETS,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1147,6 +1175,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            player_data: None,
             offsets,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1318,6 +1347,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            player_data: None,
             offsets: &EMPTY_OFFSETS,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1425,6 +1455,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            player_data: None,
             offsets: &EMPTY_OFFSETS,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1509,6 +1540,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            player_data: None,
             offsets: &EMPTY_OFFSETS,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1570,6 +1602,7 @@ mod tests {
             score_data_property,
             song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
             song_data: None,
+            player_data: None,
             offsets: &EMPTY_OFFSETS,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1695,6 +1728,7 @@ mod tests {
             score_data_property,
             song_metadata,
             song_data: None,
+            player_data: None,
             offsets: &EMPTY_OFFSETS,
             cumulative_playtime_seconds: 0,
             current_duration: 0,
@@ -1758,6 +1792,153 @@ mod tests {
         let metadata = make_metadata("Test", "", "", "", "");
         let ctx = make_render_ctx_with_metadata(metadata);
         assert_eq!(ctx.string_value(999), "");
+    }
+
+    // ============================================================
+    // PlayRenderContext player statistics IDs 30-37, 333
+    // ============================================================
+
+    #[test]
+    fn play_render_context_player_stats_ids() {
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(crate::judge::manager::JudgeManager::new()));
+        let player_config = Box::leak(Box::new(PlayerConfig::default()));
+        let play_config = Box::leak(Box::new(rubato_types::play_config::PlayConfig::default()));
+        let option_info = Box::leak(Box::new(rubato_types::replay_data::ReplayData::new()));
+        let pd = Box::leak(Box::new(rubato_types::player_data::PlayerData {
+            playcount: 100,
+            clear: 80,
+            epg: 5000,
+            lpg: 4000,
+            egr: 3000,
+            lgr: 2000,
+            egd: 500,
+            lgd: 400,
+            ebd: 50,
+            lbd: 40,
+            epr: 10,
+            lpr: 5,
+            ..Default::default()
+        }));
+        static EMPTY_OFFSETS: std::sync::OnceLock<
+            std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
+        > = std::sync::OnceLock::new();
+        let ctx = PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            score_data: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::PLAY,
+            state: PlayState::Play,
+            media_load_finished: true,
+            audio_progress: 1.0,
+            bga_progress: 1.0,
+            bga_enabled: false,
+            live_hispeed: 1.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
+            now_bpm: 120.0,
+            min_bpm: 120.0,
+            max_bpm: 120.0,
+            main_bpm: 120.0,
+            system_volume: 0.5,
+            key_volume: 0.5,
+            bg_volume: 0.5,
+            is_mode_changed: false,
+            lnmode_override: None,
+            config: Box::leak(Box::new(rubato_types::config::Config::default())),
+            score_data_property: Box::leak(Box::new(
+                rubato_types::score_data_property::ScoreDataProperty::default(),
+            )),
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
+            song_data: None,
+            player_data: Some(pd),
+            offsets: EMPTY_OFFSETS.get_or_init(std::collections::HashMap::new),
+            cumulative_playtime_seconds: 0,
+            current_duration: 0,
+            pending: Box::leak(Box::new(PendingActions::new())),
+        };
+        assert_eq!(ctx.integer_value(30), 100); // playcount
+        assert_eq!(ctx.integer_value(31), 80); // clearcount
+        assert_eq!(ctx.integer_value(32), 20); // failcount (100 - 80)
+        assert_eq!(ctx.integer_value(33), 9000); // perfect (epg+lpg)
+        assert_eq!(ctx.integer_value(34), 5000); // great (egr+lgr)
+        assert_eq!(ctx.integer_value(35), 900); // good (egd+lgd)
+        assert_eq!(ctx.integer_value(36), 90); // bad (ebd+lbd)
+        assert_eq!(ctx.integer_value(37), 15); // poor (epr+lpr)
+        // 333 = notes = perfect + great + good + bad = 9000 + 5000 + 900 + 90
+        assert_eq!(ctx.integer_value(333), 14990);
+    }
+
+    // ============================================================
+    // PlayRenderContext config_mut() delegation test
+    // ============================================================
+
+    #[test]
+    fn play_render_context_config_mut_returns_some() {
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let timer = Box::leak(Box::new(TimerManager::new()));
+        let judge = Box::leak(Box::new(crate::judge::manager::JudgeManager::new()));
+        let player_config = Box::leak(Box::new(PlayerConfig::default()));
+        let play_config = Box::leak(Box::new(rubato_types::play_config::PlayConfig::default()));
+        let option_info = Box::leak(Box::new(rubato_types::replay_data::ReplayData::new()));
+        static EMPTY_OFFSETS2: std::sync::OnceLock<
+            std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset>,
+        > = std::sync::OnceLock::new();
+        let mut ctx = PlayRenderContext {
+            timer,
+            judge,
+            gauge: None,
+            player_config,
+            option_info,
+            play_config,
+            target_score: None,
+            score_data: None,
+            playtime: 0,
+            total_notes: 0,
+            play_mode: BMSPlayerMode::PLAY,
+            state: PlayState::Play,
+            media_load_finished: true,
+            audio_progress: 1.0,
+            bga_progress: 1.0,
+            bga_enabled: false,
+            live_hispeed: 1.0,
+            live_lanecover: 0.0,
+            live_lift: 0.0,
+            live_hidden: 0.0,
+            now_bpm: 120.0,
+            min_bpm: 120.0,
+            max_bpm: 120.0,
+            main_bpm: 120.0,
+            system_volume: 0.5,
+            key_volume: 0.5,
+            bg_volume: 0.5,
+            is_mode_changed: false,
+            lnmode_override: None,
+            config: Box::leak(Box::new(rubato_types::config::Config::default())),
+            score_data_property: Box::leak(Box::new(
+                rubato_types::score_data_property::ScoreDataProperty::default(),
+            )),
+            song_metadata: Box::leak(Box::new(rubato_types::song_data::SongMetadata::default())),
+            song_data: None,
+            player_data: None,
+            offsets: EMPTY_OFFSETS2.get_or_init(std::collections::HashMap::new),
+            cumulative_playtime_seconds: 0,
+            current_duration: 0,
+            pending: Box::leak(Box::new(PendingActions::new())),
+        };
+        assert!(
+            ctx.config_mut().is_some(),
+            "PlayRenderContext::config_mut() must return Some during prepare phase"
+        );
     }
 
     // ============================================================

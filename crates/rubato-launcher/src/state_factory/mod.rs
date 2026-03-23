@@ -269,10 +269,11 @@ impl StateFactory for LauncherStateFactory {
                     player.set_song_data(songdata.clone());
                 }
 
-                // Wire cumulative playtime from PlayerData for skin property IDs 17-19.
-                // Java: IntegerPropertyFactory reads state.main.getPlayerResource().getPlayerData().getPlaytime()
+                // Wire player data for skin property IDs 17-19 (playtime) and 30-37, 333 (statistics).
+                // Java: IntegerPropertyFactory reads state.main.getPlayerResource().getPlayerData()
                 if let Some(res) = resource {
                     player.set_cumulative_playtime(res.player_data().playtime);
+                    player.set_player_data(*res.player_data());
                 }
 
                 // Wire course constraints

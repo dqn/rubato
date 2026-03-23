@@ -4087,7 +4087,7 @@ fn make_play_render_context_with_bpm_volume<'a>(
         bg_volume: volume.2,
         is_mode_changed: false,
         lnmode_override: None,
-        config: DEFAULT_CONFIG.get_or_init(rubato_types::config::Config::default),
+        config: Box::leak(Box::new(rubato_types::config::Config::default())),
         score_data_property: DEFAULT_SCORE_DATA
             .get_or_init(rubato_types::score_data_property::ScoreDataProperty::default),
         song_metadata: {
@@ -4102,6 +4102,7 @@ fn make_play_render_context_with_bpm_volume<'a>(
             > = std::sync::OnceLock::new();
             EMPTY_OFFSETS.get_or_init(std::collections::HashMap::new)
         },
+        player_data: None,
         cumulative_playtime_seconds: 0,
         current_duration: 0,
         pending: Box::leak(Box::new(super::PendingActions::new())),

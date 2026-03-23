@@ -479,6 +479,10 @@ pub struct BMSPlayer {
     /// Set by the caller before create() via `set_song_data()`.
     /// Java: SongDataBooleanProperty accesses state.resource.getSongdata().
     song_data: Option<rubato_types::song_data::SongData>,
+    /// Player statistics (playcount, clear, judge counts, etc.) from PlayerData.
+    /// Set by the caller before create() via `set_player_data()`.
+    /// Java: IntegerPropertyFactory reads state.resource.getPlayerData() for IDs 30-37, 333.
+    player_data: Option<rubato_types::player_data::PlayerData>,
     /// Cumulative playtime in seconds from PlayerData.
     /// Java: PlayerData.getPlaytime() -- total play time across all sessions.
     /// Set by the caller before create() via `set_cumulative_playtime()`.

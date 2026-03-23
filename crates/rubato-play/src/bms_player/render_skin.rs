@@ -227,10 +227,11 @@ impl BMSPlayer {
                         != org
                 }),
                 lnmode_override: self.lnmode_override,
-                config: &self.config,
+                config: &mut self.config,
                 score_data_property: &self.main_state_data.score,
                 song_metadata: &self.song_metadata,
                 song_data: self.song_data.as_ref(),
+                player_data: self.player_data.as_ref(),
                 offsets: &self.main_state_data.offsets,
                 cumulative_playtime_seconds: self.cumulative_playtime_seconds,
                 current_duration: lr_ref.map_or(0, |lr| lr.current_duration()),

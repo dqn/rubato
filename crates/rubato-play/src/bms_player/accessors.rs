@@ -65,6 +65,7 @@ impl BMSPlayer {
             config: rubato_types::config::Config::default(),
             song_metadata: rubato_types::song_data::SongMetadata::default(),
             song_data: None,
+            player_data: None,
             offset_snapshot: Vec::new(),
             cumulative_playtime_seconds: 0,
             replay_key_state: ReplayKeyState::default(),
@@ -264,6 +265,12 @@ impl BMSPlayer {
     /// Java: SongDataBooleanProperty accesses state.resource.getSongdata().
     pub fn set_song_data(&mut self, song_data: rubato_types::song_data::SongData) {
         self.song_data = Some(song_data);
+    }
+
+    /// Set player data for skin integer property IDs 30-37 (player statistics) and 333.
+    /// Java: IntegerPropertyFactory reads state.resource.getPlayerData().
+    pub fn set_player_data(&mut self, data: rubato_types::player_data::PlayerData) {
+        self.player_data = Some(data);
     }
 
     /// Set cumulative playtime from PlayerData (in seconds).
