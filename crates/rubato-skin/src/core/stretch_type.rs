@@ -185,6 +185,13 @@ fn fit_width_trimmed(rectangle: &mut Rectangle, scale: f32, image: &mut TextureR
         let w = rectangle.width / scale;
         image.region_x = (cx - w * 0.5) as i32;
         image.region_width = w as i32;
+        // Recalculate horizontal UVs to match the trimmed region.
+        // In Java (LibGDX), setRegionX/setRegionWidth recalculate UVs internally.
+        if let Some(tex) = image.texture.as_ref().filter(|t| t.width > 0) {
+            let inv_w = 1.0 / tex.width as f32;
+            image.u = image.region_x as f32 * inv_w;
+            image.u2 = (image.region_x + image.region_width) as f32 * inv_w;
+        }
     } else {
         fit_width(rectangle, width);
     }
@@ -200,6 +207,13 @@ fn fit_height_trimmed(rectangle: &mut Rectangle, scale: f32, image: &mut Texture
         let h = rectangle.height / scale;
         image.region_y = (cy - h * 0.5) as i32;
         image.region_height = h as i32;
+        // Recalculate vertical UVs to match the trimmed region.
+        // In Java (LibGDX), setRegionY/setRegionHeight recalculate UVs internally.
+        if let Some(tex) = image.texture.as_ref().filter(|t| t.height > 0) {
+            let inv_h = 1.0 / tex.height as f32;
+            image.v = image.region_y as f32 * inv_h;
+            image.v2 = (image.region_y + image.region_height) as f32 * inv_h;
+        }
     } else {
         fit_height(rectangle, height);
     }
@@ -208,6 +222,7 @@ fn fit_height_trimmed(rectangle: &mut Rectangle, scale: f32, image: &mut Texture
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::reexports::Texture;
 
     #[test]
     fn stretch_rect_zero_region_width_does_not_produce_nan() {
@@ -306,6 +321,179 @@ mod tests {
                 rect.height.is_finite(),
                 "{variant:?} produced non-finite height with zero-size rect"
             );
+        }
+    }
+
+    fn make_texture(w: i32, h: i32) -> Texture {
+        Texture {
+            width: w,
+            height: h,
+            disposed: false,
+            path: None,
+            rgba_data: None,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn fit_width_trimmed_recalculates_uvs() {
+        // Image: 200x100 pixels in a 400x200 texture, starting at (100, 50)
+        let tex = make_texture(400, 200);
+        let mut image = TextureRegion::from_texture_region(tex, 100, 50, 200, 100);
+        // Initial UVs: u=100/400=0.25, u2=(100+200)/400=0.75
+        assert!((image.u - 0.25).abs() < 1e-6);
+        assert!((image.u2 - 0.75).abs() < 1e-6);
+
+        // Rectangle narrower than scaled image width triggers trimming branch
+        let mut rect = Rectangle::new(0.0, 0.0, 50.0, 200.0);
+        // scale=1.0, width = 1.0 * 200 = 200 > rect.width(50), so trimming happens
+        fit_width_trimmed(&mut rect, 1.0, &mut image);
+
+        // region_x and region_width should have changed
+        // cx = 100 + 200*0.5 = 200, w = 50/1.0 = 50
+        // region_x = (200 - 25) = 175, region_width = 50
+        assert_eq!(image.region_x, 175);
+        assert_eq!(image.region_width, 50);
+
+        // UVs must reflect the new region: u = 175/400, u2 = (175+50)/400 = 225/400
+        let expected_u = 175.0 / 400.0;
+        let expected_u2 = 225.0 / 400.0;
+        assert!(
+            (image.u - expected_u).abs() < 1e-6,
+            "u: expected {expected_u}, got {}",
+            image.u
+        );
+        assert!(
+            (image.u2 - expected_u2).abs() < 1e-6,
+            "u2: expected {expected_u2}, got {}",
+            image.u2
+        );
+    }
+
+    #[test]
+    fn fit_height_trimmed_recalculates_uvs() {
+        // Image: 100x200 pixels in a 200x400 texture, starting at (50, 100)
+        let tex = make_texture(200, 400);
+        let mut image = TextureRegion::from_texture_region(tex, 50, 100, 100, 200);
+        // Initial UVs: v=100/400=0.25, v2=(100+200)/400=0.75
+        assert!((image.v - 0.25).abs() < 1e-6);
+        assert!((image.v2 - 0.75).abs() < 1e-6);
+
+        // Rectangle shorter than scaled image height triggers trimming branch
+        let mut rect = Rectangle::new(0.0, 0.0, 200.0, 50.0);
+        // scale=1.0, height = 1.0 * 200 = 200 > rect.height(50), so trimming happens
+        fit_height_trimmed(&mut rect, 1.0, &mut image);
+
+        // region_y and region_height should have changed
+        // cy = 100 + 200*0.5 = 200, h = 50/1.0 = 50
+        // region_y = (200 - 25) = 175, region_height = 50
+        assert_eq!(image.region_y, 175);
+        assert_eq!(image.region_height, 50);
+
+        // UVs must reflect the new region: v = 175/400, v2 = (175+50)/400 = 225/400
+        let expected_v = 175.0 / 400.0;
+        let expected_v2 = 225.0 / 400.0;
+        assert!(
+            (image.v - expected_v).abs() < 1e-6,
+            "v: expected {expected_v}, got {}",
+            image.v
+        );
+        assert!(
+            (image.v2 - expected_v2).abs() < 1e-6,
+            "v2: expected {expected_v2}, got {}",
+            image.v2
+        );
+    }
+
+    #[test]
+    fn stretch_rect_trimmed_variants_update_uvs() {
+        // Test all 4 trimmed variants via stretch_rect to ensure UVs are updated
+        let tex = make_texture(400, 400);
+        let image = TextureRegion::from_texture_region(tex, 50, 50, 300, 300);
+        // Initial UVs: u=50/400=0.125, u2=350/400=0.875, v=0.125, v2=0.875
+
+        // FitOuterTrimmed: image 300x300, rect 100x100, scale_x=scale_y=0.333
+        // Since equal, goes to fit_height_trimmed branch
+        {
+            let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+            let mut trimmed = TextureRegion::default();
+            StretchType::KeepAspectRatioFitOuterTrimmed.stretch_rect(
+                &mut rect,
+                &mut trimmed,
+                &image,
+            );
+            // Trimming should have happened on at least one axis and UVs should match region
+            if let Some(ref tex) = trimmed.texture {
+                if tex.width > 0 {
+                    let expected_u = trimmed.region_x as f32 / tex.width as f32;
+                    let expected_u2 =
+                        (trimmed.region_x + trimmed.region_width) as f32 / tex.width as f32;
+                    assert!(
+                        (trimmed.u - expected_u).abs() < 1e-5,
+                        "FitOuterTrimmed u: expected {expected_u}, got {}",
+                        trimmed.u
+                    );
+                    assert!(
+                        (trimmed.u2 - expected_u2).abs() < 1e-5,
+                        "FitOuterTrimmed u2: expected {expected_u2}, got {}",
+                        trimmed.u2
+                    );
+                }
+                if tex.height > 0 {
+                    let expected_v = trimmed.region_y as f32 / tex.height as f32;
+                    let expected_v2 =
+                        (trimmed.region_y + trimmed.region_height) as f32 / tex.height as f32;
+                    assert!(
+                        (trimmed.v - expected_v).abs() < 1e-5,
+                        "FitOuterTrimmed v: expected {expected_v}, got {}",
+                        trimmed.v
+                    );
+                    assert!(
+                        (trimmed.v2 - expected_v2).abs() < 1e-5,
+                        "FitOuterTrimmed v2: expected {expected_v2}, got {}",
+                        trimmed.v2
+                    );
+                }
+            }
+        }
+
+        // NoResizeTrimmed: image 300x300, rect 100x100
+        {
+            let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+            let mut trimmed = TextureRegion::default();
+            StretchType::NoResizeTrimmed.stretch_rect(&mut rect, &mut trimmed, &image);
+            if let Some(ref tex) = trimmed.texture {
+                if tex.width > 0 {
+                    let expected_u = trimmed.region_x as f32 / tex.width as f32;
+                    let expected_u2 =
+                        (trimmed.region_x + trimmed.region_width) as f32 / tex.width as f32;
+                    assert!(
+                        (trimmed.u - expected_u).abs() < 1e-5,
+                        "NoResizeTrimmed u: expected {expected_u}, got {}",
+                        trimmed.u
+                    );
+                    assert!(
+                        (trimmed.u2 - expected_u2).abs() < 1e-5,
+                        "NoResizeTrimmed u2: expected {expected_u2}, got {}",
+                        trimmed.u2
+                    );
+                }
+                if tex.height > 0 {
+                    let expected_v = trimmed.region_y as f32 / tex.height as f32;
+                    let expected_v2 =
+                        (trimmed.region_y + trimmed.region_height) as f32 / tex.height as f32;
+                    assert!(
+                        (trimmed.v - expected_v).abs() < 1e-5,
+                        "NoResizeTrimmed v: expected {expected_v}, got {}",
+                        trimmed.v
+                    );
+                    assert!(
+                        (trimmed.v2 - expected_v2).abs() < 1e-5,
+                        "NoResizeTrimmed v2: expected {expected_v2}, got {}",
+                        trimmed.v2
+                    );
+                }
+            }
         }
     }
 
