@@ -17,6 +17,9 @@ struct DrawTextGlyphsParams<'a> {
     pub y: f32,
     pub _layout_width: f32,
     pub region_width: f32,
+    /// Horizontal shrink factor for OVERFLOW_SHRINK mode.
+    /// 1.0 = no shrink. < 1.0 = compress X axis only, preserving glyph height.
+    pub x_shrink: f32,
 }
 
 /// Compute the x position for text based on alignment within a region.
@@ -168,7 +171,8 @@ impl SkinTextFont {
         // Measure text layout to get width for alignment
         let text = self.text_data.text().to_string();
         let color = self.text_data.data.color;
-        let layout_width = self.compute_layout_width(&text, &color, region.width, region.height);
+        let (layout_width, x_shrink) =
+            self.compute_layout_width(&text, &color, region.width, region.height);
 
         // Compute x position based on alignment
         let align = self.text_data.align();
@@ -189,6 +193,7 @@ impl SkinTextFont {
                 y: region.y - shadow_offset.1 + offset_y + region.height,
                 _layout_width: layout_width,
                 region_width: region.width,
+                x_shrink,
             });
         }
 
@@ -201,6 +206,7 @@ impl SkinTextFont {
             y: region.y + offset_y + region.height,
             _layout_width: layout_width,
             region_width: region.width,
+            x_shrink,
         });
 
         // Restore scale to pre-draw state. Unlike SkinTextBitmap (which resets to 1),
@@ -213,16 +219,18 @@ impl SkinTextFont {
 
     /// Compute layout width applying overflow mode.
     /// Mirrors Java's setLayout() logic for measuring and applying shrink/truncate.
+    /// Returns (layout_width, x_shrink_factor). x_shrink_factor is 1.0 normally,
+    /// < 1.0 when OVERFLOW_SHRINK compresses text horizontally to fit region_width.
     fn compute_layout_width(
         &mut self,
         text: &str,
         _color: &Color,
         region_width: f32,
         _region_height: f32,
-    ) -> f32 {
+    ) -> (f32, f32) {
         let font = match self.font.as_ref() {
             Some(f) => f,
-            None => return 0.0,
+            None => return (0.0, 1.0),
         };
 
         if self.text_data.is_wrapping() {
@@ -231,7 +239,7 @@ impl SkinTextFont {
                 layout.width = measured.width;
                 layout.height = measured.height;
             }
-            return measured.width;
+            return (measured.width, 1.0);
         }
 
         match self.text_data.overflow() {
@@ -241,7 +249,7 @@ impl SkinTextFont {
                     layout.width = measured.width;
                     layout.height = measured.height;
                 }
-                measured.width
+                (measured.width, 1.0)
             }
             OVERFLOW_SHRINK => {
                 let measured = font.measure(text);
@@ -252,18 +260,14 @@ impl SkinTextFont {
                 let actual_width = measured.width;
                 if actual_width > region_width && region_width > 0.0 {
                     // Java: font.getData().setScale(scaleX * r.getWidth() / actualWidth, scaleY)
-                    if let Some(f) = self.font.as_mut() {
-                        let current_scale = f.scale();
-                        f.scale = current_scale * region_width / actual_width;
-                        let shrunk = f.measure(text);
-                        if let Some(ref mut layout) = self.layout {
-                            layout.width = shrunk.width;
-                            layout.height = shrunk.height;
-                        }
-                        return shrunk.width;
+                    // Only shrink X axis, preserving glyph height. Applied at draw time via x_shrink.
+                    let x_shrink = region_width / actual_width;
+                    if let Some(ref mut layout) = self.layout {
+                        layout.width = region_width;
                     }
+                    return (region_width, x_shrink);
                 }
-                actual_width
+                (actual_width, 1.0)
             }
             OVERFLOW_TRUNCATE => {
                 let measured = font.measure(text);
@@ -272,7 +276,7 @@ impl SkinTextFont {
                     layout.width = width;
                     layout.height = measured.height;
                 }
-                width
+                (width, 1.0)
             }
             _ => {
                 let measured = font.measure(text);
@@ -280,7 +284,7 @@ impl SkinTextFont {
                     layout.width = measured.width;
                     layout.height = measured.height;
                 }
-                measured.width
+                (measured.width, 1.0)
             }
         }
     }
@@ -294,6 +298,7 @@ impl SkinTextFont {
         let x = params.x;
         let y = params.y;
         let region_width = params.region_width;
+        let x_shrink = params.x_shrink;
         let font = match self.font.as_mut() {
             Some(f) => f,
             None => return,
@@ -309,9 +314,11 @@ impl SkinTextFont {
         let angle = self.text_data.data.angle;
 
         for glyph in &glyphs {
-            let gx = x + glyph.x;
+            // Apply x_shrink: compress X positions and widths while preserving height.
+            // Java: setScale(scaleX * ratio, scaleY) shrinks only the horizontal axis.
+            let gx = x + glyph.x * x_shrink;
             let gy = y + glyph.y;
-            let gw = glyph.width;
+            let gw = glyph.width * x_shrink;
             let gh = glyph.height;
 
             // Truncate: skip glyphs that extend beyond region width
