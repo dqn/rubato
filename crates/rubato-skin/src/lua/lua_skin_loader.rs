@@ -289,20 +289,32 @@ fn lua_to_json(value: &LuaValue) -> Option<serde_json::Value> {
                     }
                 }
                 if max_key == len as i64 {
-                    // Sequential integer keys exist — extract as array.
-                    // For mixed tables (e.g. {anim1, anim2, loop=300}), Java's
-                    // fromLuaValue extracts only the array portion; named keys
-                    // are ignored. This matches that behavior.
+                    if has_string_key {
+                        // Mixed table (e.g. {anim1, anim2, loop=300}): emit as JSON
+                        // object with both integer keys (as strings) and string keys.
+                        // Java's fromLuaValue iterates table.keys() which returns ALL
+                        // keys, so named properties are preserved alongside positional
+                        // elements.
+                        let mut map = serde_json::Map::new();
+                        for (key, val) in table.clone().pairs::<LuaValue, LuaValue>().flatten() {
+                            let key_str = match &key {
+                                LuaValue::String(s) => {
+                                    s.to_str().map(|s| s.to_string()).unwrap_or_default()
+                                }
+                                LuaValue::Integer(i) => i.to_string(),
+                                _ => continue,
+                            };
+                            if let Some(json_val) = lua_to_json(&val) {
+                                map.insert(key_str, json_val);
+                            }
+                        }
+                        return Some(serde_json::Value::Object(map));
+                    }
+                    // Pure sequential array — no string keys.
                     let mut arr = Vec::with_capacity(len);
                     for i in 1..=len {
                         let val: LuaValue = table.raw_get(i).unwrap_or(LuaValue::Nil);
                         arr.push(lua_to_json(&val).unwrap_or(serde_json::Value::Null));
-                    }
-                    if has_string_key {
-                        log::debug!(
-                            "lua_to_json: mixed table with {} sequential + string keys; extracting array",
-                            len
-                        );
                     }
                     return Some(serde_json::Value::Array(arr));
                 }
@@ -387,6 +399,27 @@ mod tests {
         assert_eq!(arr[0], 10);
         assert_eq!(arr[1], 20);
         assert_eq!(arr[2], 30);
+    }
+
+    #[test]
+    fn test_lua_to_json_mixed_table_preserves_string_keys() {
+        let lua = Lua::new();
+        // Mixed table: {item1, item2, loop=300}
+        let table = lua.create_table().unwrap();
+        table.raw_set(1, "anim1").unwrap();
+        table.raw_set(2, "anim2").unwrap();
+        table.set("loop", 300).unwrap();
+
+        let json = lua_to_json(&LuaValue::Table(table)).unwrap();
+        // Mixed table should be an object with both integer and string keys.
+        assert!(
+            json.is_object(),
+            "mixed table should be an object, got: {json}"
+        );
+        let obj = json.as_object().unwrap();
+        assert_eq!(obj["1"], "anim1");
+        assert_eq!(obj["2"], "anim2");
+        assert_eq!(obj["loop"], 300);
     }
 
     #[test]
