@@ -4,7 +4,7 @@ use crate::sources::skin_source::SkinSource;
 #[cfg(feature = "ffmpeg")]
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 #[cfg(feature = "ffmpeg")]
-use std::sync::{mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, mpsc};
 
 // ============================================================
 // MovieDecoder -- ffmpeg-backed video frame decoder

@@ -1298,7 +1298,9 @@ mod tests {
         dst_parts[11] = "255".to_string(); // b
         loader.process_select_command("DST_TEXT", &dst_parts);
 
-        let region = loader.search_text_region.expect("search_text_region should be set");
+        let region = loader
+            .search_text_region
+            .expect("search_text_region should be set");
         // Scale: dst/src = 1280/640 = 2.0 (w), 960/480 = 2.0 (h)
         assert!((region.x - 200.0).abs() < 0.1); // 100 * 2.0
         assert!((region.width - 600.0).abs() < 0.1); // 300 * 2.0
@@ -1331,12 +1333,20 @@ mod tests {
         loader.search_text_region = Some(Rectangle::new(10.0, 20.0, 100.0, 50.0));
 
         let mut header = crate::skin_header::SkinHeader::new();
-        header.set_source_resolution(Resolution { width: 640.0, height: 480.0 });
-        header.set_destination_resolution(Resolution { width: 1280.0, height: 960.0 });
+        header.set_source_resolution(Resolution {
+            width: 640.0,
+            height: 480.0,
+        });
+        header.set_destination_resolution(Resolution {
+            width: 1280.0,
+            height: 960.0,
+        });
         let mut skin = crate::skin::Skin::new(header);
         loader.assemble_objects(&mut skin);
 
-        let region = skin.search_text_region.expect("skin should have search_text_region");
+        let region = skin
+            .search_text_region
+            .expect("skin should have search_text_region");
         assert!((region.x - 10.0).abs() < f32::EPSILON);
         assert!((region.y - 20.0).abs() < f32::EPSILON);
         assert!((region.width - 100.0).abs() < f32::EPSILON);
