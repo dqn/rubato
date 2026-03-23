@@ -1897,4 +1897,91 @@ mod tests {
         // ID 29 = boot time seconds: (7_200_000 % 60_000) / 1_000 = 0
         assert_eq!(ctx.integer_value(29), 0);
     }
+
+    #[test]
+    fn result_render_context_result_gauge_type_returns_stored_gauge_type() {
+        let mut mr = make_result_for_mouse();
+        mr.data.gauge_type = 3;
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mut mr.main,
+            offsets: &mr.main_data.offsets,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(ctx.result_gauge_type(), 3);
+    }
+
+    #[test]
+    fn result_mouse_context_result_gauge_type_returns_stored_gauge_type() {
+        let mut mr = make_result_for_mouse();
+        mr.data.gauge_type = 5;
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(ctx.result_gauge_type(), 5);
+    }
+
+    #[test]
+    fn result_render_context_lane_shuffle_pattern_from_replay() {
+        let mut mr = make_result_for_mouse();
+        mr.resource
+            .replay_data_mut()
+            .expect("replay data should exist")
+            .lane_shuffle_pattern = Some(vec![vec![2, 0, 1, 3, 4, 5, 6, 7, 8, 9]]);
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mut mr.main,
+            offsets: &mr.main_data.offsets,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        // image_index 450 = lane_shuffle_pattern_value(0, 0) = 2
+        assert_eq!(ctx.image_index_value(450), 2);
+        // image_index 451 = lane_shuffle_pattern_value(0, 1) = 0
+        assert_eq!(ctx.image_index_value(451), 0);
+        // No 2P data -> -1
+        assert_eq!(ctx.image_index_value(460), -1);
+    }
+
+    #[test]
+    fn result_mouse_context_lane_shuffle_pattern_from_replay() {
+        let mut mr = make_result_for_mouse();
+        mr.resource
+            .replay_data_mut()
+            .expect("replay data should exist")
+            .lane_shuffle_pattern = Some(vec![vec![5, 3, 1, 0, 2, 4, 6, 7, 8, 9]]);
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultMouseContext {
+            timer: &mut timer,
+            result: &mut mr,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(ctx.image_index_value(450), 5);
+        assert_eq!(ctx.image_index_value(451), 3);
+    }
+
+    #[test]
+    fn result_render_context_lane_shuffle_pattern_none_returns_minus_one() {
+        let mut mr = make_result_for_mouse();
+        // replay_data exists but lane_shuffle_pattern is None (default)
+        let mut timer = TimerManager::new();
+        let ctx = render_context::ResultRenderContext {
+            timer: &mut timer,
+            data: &mr.data,
+            resource: &mr.resource,
+            main: &mut mr.main,
+            offsets: &mr.main_data.offsets,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert_eq!(ctx.image_index_value(450), -1);
+        assert_eq!(ctx.image_index_value(460), -1);
+    }
 }

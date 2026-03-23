@@ -135,6 +135,20 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
         shared_render_context::gauge_type(self.data)
     }
 
+    fn result_gauge_type(&self) -> i32 {
+        shared_render_context::gauge_type(self.data)
+    }
+
+    fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
+        self.resource
+            .replay_data()
+            .and_then(|rd| rd.lane_shuffle_pattern.as_ref())
+            .and_then(|patterns| patterns.get(player))
+            .and_then(|lanes| lanes.get(lane))
+            .copied()
+            .unwrap_or(-1)
+    }
+
     fn is_gauge_max(&self) -> bool {
         shared_render_context::is_gauge_max(self.resource)
     }
@@ -455,6 +469,21 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
 
     fn gauge_type(&self) -> i32 {
         shared_render_context::gauge_type(&self.result.data)
+    }
+
+    fn result_gauge_type(&self) -> i32 {
+        shared_render_context::gauge_type(&self.result.data)
+    }
+
+    fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
+        self.result
+            .resource
+            .replay_data()
+            .and_then(|rd| rd.lane_shuffle_pattern.as_ref())
+            .and_then(|patterns| patterns.get(player))
+            .and_then(|lanes| lanes.get(lane))
+            .copied()
+            .unwrap_or(-1)
     }
 
     fn is_gauge_max(&self) -> bool {
