@@ -584,12 +584,12 @@ impl SpriteBatch {
     /// Record a texture for the current draw call and manage batch boundaries.
     fn record_texture(&mut self, texture: &Texture) {
         // For pixmap-backed textures (no path), generate a synthetic key from the
-        // Arc pointer address so they get registered for GPU upload.
+        // stable pixmap_id so the GPU texture cache key remains constant even after
+        // Arc::make_mut reallocates rgba_data.
         let key = texture.path.clone().or_else(|| {
             texture
-                .rgba_data
-                .as_ref()
-                .map(|data| Arc::from(format!("__pixmap_{:x}", Arc::as_ptr(data) as usize)))
+                .pixmap_id
+                .map(|id| Arc::from(format!("__pixmap_{:x}", id)))
         });
 
         // Register pending texture for GPU upload if it has rgba data
@@ -1416,6 +1416,55 @@ mod tests {
         );
 
         batch.end();
+    }
+
+    /// Pixmap-backed textures must produce a stable GPU cache key even after
+    /// Arc::make_mut reallocates rgba_data (which changes the Arc pointer).
+    /// Regression test for GPU texture cache thrashing.
+    #[test]
+    fn test_pixmap_texture_key_stable_after_arc_make_mut() {
+        use crate::pixmap::{Pixmap, PixmapFormat};
+
+        let pixmap = Pixmap::new(4, 4, PixmapFormat::RGBA8888);
+        let mut tex = Texture::from_pixmap(&pixmap);
+
+        // Record the Arc pointer address before mutation.
+        let ptr_before = Arc::as_ptr(tex.rgba_data.as_ref().unwrap()) as usize;
+
+        // First draw: capture the batch key.
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+        batch.draw_texture(&tex, 0.0, 0.0, 4.0, 4.0);
+        let pending_before = batch.drain_pending_textures();
+        assert_eq!(pending_before.len(), 1);
+        let key_before: Arc<str> = pending_before.into_keys().next().unwrap();
+        batch.end();
+
+        // Simulate pixel mutation (same path as Texture::draw_pixmap).
+        // Arc::make_mut may reallocate, changing the pointer address.
+        {
+            let data = Arc::make_mut(tex.rgba_data.as_mut().unwrap());
+            data[0] = 255;
+        }
+        let ptr_after = Arc::as_ptr(tex.rgba_data.as_ref().unwrap()) as usize;
+
+        // Second draw: capture the batch key after mutation.
+        let mut batch2 = SpriteBatch::new();
+        batch2.begin();
+        batch2.draw_texture(&tex, 0.0, 0.0, 4.0, 4.0);
+        let pending_after = batch2.drain_pending_textures();
+        assert_eq!(pending_after.len(), 1);
+        let key_after: Arc<str> = pending_after.into_keys().next().unwrap();
+        batch2.end();
+
+        // The Arc pointer may have changed (depending on refcount), but the
+        // texture key must remain identical.
+        assert_eq!(
+            key_before, key_after,
+            "pixmap texture key must be stable across Arc::make_mut; \
+             ptr_before={:#x}, ptr_after={:#x}",
+            ptr_before, ptr_after
+        );
     }
 
     /// Verify that draw_region_rotated also triggers auto-flush.

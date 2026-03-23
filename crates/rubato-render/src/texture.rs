@@ -2,9 +2,14 @@
 // Drop-in replacements for the types in render_reexports.rs.
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::gpu_context::GpuContext;
 use crate::pixmap::{Pixmap, PixmapFormat};
+
+/// Monotonic counter for assigning stable IDs to pixmap-backed textures.
+/// Avoids relying on `Arc::as_ptr` addresses which change on `Arc::make_mut`.
+static NEXT_PIXMAP_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Texture filter modes matching LibGDX TextureFilter.
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +40,10 @@ pub struct Texture {
     pub gpu_view: Option<Arc<wgpu::TextureView>>,
     /// GPU sampler (created by set_filter)
     pub sampler: Option<Arc<wgpu::Sampler>>,
+    /// Stable identity for pixmap-backed textures (no file path).
+    /// Assigned once at creation from a monotonic counter so that the GPU
+    /// texture cache key remains constant even after `Arc::make_mut` on `rgba_data`.
+    pub pixmap_id: Option<u64>,
 }
 
 impl PartialEq for Texture {
@@ -72,6 +81,7 @@ impl Texture {
             disposed: false,
             path: None,
             rgba_data: Some(Arc::new(pixmap.data().to_vec())),
+            pixmap_id: Some(NEXT_PIXMAP_ID.fetch_add(1, Ordering::Relaxed)),
             ..Default::default()
         }
     }
@@ -83,6 +93,7 @@ impl Texture {
             disposed: false,
             path: None,
             rgba_data: Some(Arc::new(pixmap.data().to_vec())),
+            pixmap_id: Some(NEXT_PIXMAP_ID.fetch_add(1, Ordering::Relaxed)),
             ..Default::default()
         }
     }

@@ -125,6 +125,7 @@ fn transparent_processing(
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: tex.pixmap_id,
     })
 }
 

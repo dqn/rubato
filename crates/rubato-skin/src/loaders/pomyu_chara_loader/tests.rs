@@ -211,6 +211,7 @@ fn test_transparent_processing_already_flagged_returns_unchanged() {
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: None,
     };
     let mut flag = [false; 8];
     flag[0] = true; // already processed
@@ -229,6 +230,7 @@ fn test_transparent_processing_zero_size_sets_flag() {
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: None,
     };
     let mut flag = [false; 8];
     let result = transparent_processing(Some(tex), 3, &mut flag);
@@ -247,6 +249,7 @@ fn test_transparent_processing_no_rgba_data_sets_flag() {
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: None,
     };
     let mut flag = [false; 8];
     let result = transparent_processing(Some(tex), 2, &mut flag);
@@ -279,6 +282,7 @@ fn test_transparent_processing_removes_transparent_color() {
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: None,
     };
     let mut flag = [false; 8];
     let result = transparent_processing(Some(tex), 0, &mut flag);
@@ -532,6 +536,7 @@ fn test_char_bmp_take_via_get_mut() {
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: None,
     };
     let mut char_bmp: [Option<Texture>; 8] = [None, None, None, None, None, None, None, None];
     char_bmp[3] = Some(tex);
@@ -561,6 +566,7 @@ fn test_transparent_processing_with_bounds_checked_index() {
         gpu_texture: None,
         gpu_view: None,
         sampler: None,
+        pixmap_id: None,
     };
     let mut char_bmp: [Option<Texture>; 8] = [None, None, None, None, None, None, None, None];
     let mut transparent_flag = [false; 8];
