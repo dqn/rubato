@@ -91,6 +91,9 @@ fn lr2_judge_scaling(mut base: i64, judgerank: i32) -> i64 {
 
 #[allow(clippy::needless_range_loop)] // Index j used for [i64; 2] array with cross-index reads
 fn create_lr2(org: &[[i64; 2]], judgerank: i32, judge_window_rate: &[i32]) -> Vec<[i64; 2]> {
+    if org.len() < 4 {
+        return org.to_vec();
+    }
     let mut judge: Vec<[i64; 2]> = org.to_vec();
 
     // Only change pgreat, great, good
@@ -137,6 +140,15 @@ impl JudgeWindowRule {
         judgerank: i32,
         judge_window_rate: &[i32],
     ) -> Vec<[i64; 2]> {
+        if org.len() < 4 {
+            return org.to_vec();
+        }
+        debug_assert!(
+            org.len() <= self.fixjudge.len(),
+            "org has {} rows but fixjudge has only {} entries",
+            org.len(),
+            self.fixjudge.len()
+        );
         let mut judge: Vec<[i64; 2]> = vec![[0, 0]; org.len()];
         for i in 0..org.len() {
             for j in 0..2 {
@@ -835,6 +847,25 @@ mod tests {
         // BAD and POOR windows are never scaled
         assert_eq!(result[3], [-200000, 200000]);
         assert_eq!(result[4], [0, 1000000]);
+    }
+
+    #[test]
+    fn create_lr2_short_array_returns_unchanged() {
+        // org with fewer than 4 rows should be returned as-is without panicking
+        let short: &[[i64; 2]] = &[[-21000, 21000], [-60000, 60000]];
+        let rate = [100, 100, 100];
+        let result = create_lr2(short, 100, &rate);
+        assert_eq!(result, short.to_vec());
+    }
+
+    #[test]
+    fn create_normal_short_array_returns_unchanged() {
+        // org with fewer than 4 rows should be returned as-is without panicking
+        let rule = rule_normal();
+        let short: &[[i64; 2]] = &[[-20000, 20000], [-60000, 60000], [-150000, 150000]];
+        let rate = [100, 100, 100];
+        let result = rule.create_normal(short, 100, &rate);
+        assert_eq!(result, short.to_vec());
     }
 
     #[test]
