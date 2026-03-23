@@ -203,7 +203,9 @@ impl SkinTextFont {
             region_width: region.width,
         });
 
-        // Java: font.getData().setScale(1) — restore original scale
+        // Restore scale to pre-draw state. Unlike SkinTextBitmap (which resets to 1),
+        // Java SkinTextFont leaves scale at region.height/parameter.size after draw.
+        // Re-set at start of each draw call makes the between-call value irrelevant.
         if let Some(f) = self.font.as_mut() {
             f.scale = original_scale;
         }
