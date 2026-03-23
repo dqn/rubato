@@ -211,14 +211,15 @@ impl LR2SkinLoaderAccess for LR2PlaySkinLoaderState {
             if let Some(line_img) = line_opt
                 && let Some(region) = line_img.first_frame_region()
             {
-                let (dst_w, dst_h) = line_img
+                let (dst_x, dst_w, dst_h) = line_img
                     .data
                     .dst
                     .first()
-                    .map(|d| (d.region.width, d.region.height))
-                    .unwrap_or((0.0, 0.0));
+                    .map(|d| (d.region.x, d.region.width, d.region.height))
+                    .unwrap_or((0.0, 0.0, 0.0));
                 extracted_lines[i] = Some(crate::skin_note_object::LineImage {
                     region,
+                    dst_x,
                     dst_width: dst_w,
                     dst_height: dst_h,
                 });

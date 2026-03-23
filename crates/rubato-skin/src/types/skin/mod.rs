@@ -186,7 +186,7 @@ impl SkinObject {
             SkinObject::Note(o) => o.draw(sprite),
             SkinObject::Bar(o) => o.draw(sprite),
             SkinObject::Judge(o) => o.draw(sprite),
-            SkinObject::Bga(o) => o.draw(sprite),
+            SkinObject::Bga(o) => o.draw(sprite, state),
             SkinObject::Gauge(o) => o.draw(sprite),
             SkinObject::GaugeGraph(o) => o.draw(sprite),
             SkinObject::Hidden(o) => o.draw(sprite),
