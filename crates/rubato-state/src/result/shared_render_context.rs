@@ -669,6 +669,27 @@ pub fn gauge_history(resource: &PlayerResource) -> Option<&Vec<Vec<f32>>> {
     resource.gauge()
 }
 
+/// Returns the last value from the gauge transition history for the given gauge
+/// type on MusicResult screens. Java: `resource.getGauge()[type].last()`.
+pub fn gauge_transition_last_value(resource: &PlayerResource, gauge_type: i32) -> Option<f32> {
+    let gauge_history = resource.gauge()?;
+    let type_history = gauge_history.get(gauge_type as usize)?;
+    type_history.last().copied()
+}
+
+/// Returns the last value from the course gauge transition history for the given
+/// gauge type on CourseResult screens.
+/// Java: `resource.getCourseGauge().get(resource.getCourseGauge().size - 1)[type].last()`.
+pub fn course_gauge_transition_last_value(
+    resource: &PlayerResource,
+    gauge_type: i32,
+) -> Option<f32> {
+    let course_gauge = resource.course_gauge();
+    let last_stage = course_gauge.last()?;
+    let type_history = last_stage.get(gauge_type as usize)?;
+    type_history.last().copied()
+}
+
 /// Returns (border, max) for the current gauge type.
 /// Used by SkinGaugeGraphObject::prepare() on result screens.
 pub fn gauge_border_max(resource: &PlayerResource, gauge_type: i32) -> Option<(f32, f32)> {

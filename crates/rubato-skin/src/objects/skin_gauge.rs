@@ -116,9 +116,18 @@ impl SkinGauge {
             self.max = max;
         }
 
-        // Result screen: animate gauge fill from min to final value over
-        // starttime..endtime. Java: SkinGauge.prepare() lines 161-175.
+        // Result screen: use recorded gauge transition history's last value
+        // instead of the live GrooveGauge value, then animate gauge fill from
+        // min to final value over starttime..endtime.
+        // Java: SkinGauge.prepare() lines 161-175.
         if state.is_result_state() {
+            // Java reads gaugeTransition.get(gaugeTransition.size - 1) for the
+            // final recorded gauge value. This differs from the live gauge in
+            // course mode where constraints can modify the live value.
+            if let Some(transition_value) = state.gauge_transition_last_value(self.gauge_type) {
+                self.value = transition_value;
+            }
+
             let starttime = self.starttime as i64;
             let endtime = self.endtime as i64;
             let gauge_min = state.gauge_min();
@@ -128,7 +137,7 @@ impl SkinGauge {
                 let progress = self.max * (time - starttime) as f32 / (endtime - starttime) as f32;
                 self.value = self.value.min(progress.max(gauge_min));
             }
-            // else: time >= endtime, keep the synced value as-is
+            // else: time >= endtime, keep the transition/synced value as-is
         }
 
         // Update animation
@@ -1428,6 +1437,8 @@ mod tests {
         gauge_type: i32,
         border_max: Option<(f32, f32)>,
         gauge_min: f32,
+        /// If set, gauge_transition_last_value returns this for the matching gauge type.
+        gauge_transition_last: Option<f32>,
     }
 
     impl rubato_types::timer_access::TimerAccess for ResultMockState {
@@ -1467,6 +1478,9 @@ mod tests {
         fn current_state_type(&self) -> Option<rubato_types::main_state_type::MainStateType> {
             Some(rubato_types::main_state_type::MainStateType::Result)
         }
+        fn gauge_transition_last_value(&self, _gauge_type: i32) -> Option<f32> {
+            self.gauge_transition_last
+        }
     }
 
     impl crate::reexports::MainState for ResultMockState {}
@@ -1483,6 +1497,7 @@ mod tests {
             gauge_type: 0,
             border_max: Some((80.0, 100.0)),
             gauge_min: 2.0,
+            gauge_transition_last: None,
         };
         // time=50 < starttime=100: value should be gauge min (2.0)
         gauge.prepare(50, &state);
@@ -1505,6 +1520,7 @@ mod tests {
             gauge_type: 0,
             border_max: Some((80.0, 100.0)),
             gauge_min: 2.0,
+            gauge_transition_last: None,
         };
         // time=100, starttime=100, endtime=600: progress = max * 0 / 500 = 0
         // value = min(80, max(0, 2)) = min(80, 2) = 2.0
@@ -1528,6 +1544,7 @@ mod tests {
             gauge_type: 0,
             border_max: Some((80.0, 100.0)),
             gauge_min: 2.0,
+            gauge_transition_last: None,
         };
         // time=250, starttime=0, endtime=500: progress = 100 * 250/500 = 50
         // value = min(80, max(50, 2)) = min(80, 50) = 50.0
@@ -1551,6 +1568,7 @@ mod tests {
             gauge_type: 0,
             border_max: Some((80.0, 100.0)),
             gauge_min: 2.0,
+            gauge_transition_last: None,
         };
         // time=500 >= endtime=500: value should be the final gauge value (80.0)
         gauge.prepare(500, &state);
@@ -1575,6 +1593,7 @@ mod tests {
             gauge_type: 0,
             border_max: Some((80.0, 100.0)),
             gauge_min: 2.0,
+            gauge_transition_last: None,
         };
         // time=80, starttime=0, endtime=100: progress = 100 * 80/100 = 80.0
         // value = min(30, max(80, 2)) = min(30, 80) = 30.0 (clamped to final)
@@ -1634,5 +1653,88 @@ mod tests {
         gauge.data.region = crate::reexports::Rectangle::new(0.0, 0.0, 100.0, 20.0);
         let mut renderer = SkinObjectRenderer::new();
         gauge.draw(&mut renderer);
+    }
+
+    // --- Regression: Result screen should use gauge transition history, not live value ---
+    // Java SkinGauge.prepare() lines 164-169: on result screens, the gauge value is
+    // read from the gauge transition array's last element, not the live GrooveGauge.
+    // This matters in course mode where gauge constraints can modify the live value.
+
+    #[test]
+    fn result_screen_uses_gauge_transition_last_value() {
+        // Scenario: live gauge_value is 80.0 (modified by course constraints),
+        // but the recorded transition history's last value is 65.0.
+        // On the result screen, Java reads from gaugeTransition.last(), so we
+        // should see 65.0, not 80.0.
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 2, 100);
+        gauge.starttime = 0;
+        gauge.endtime = 100;
+
+        let state = ResultMockState {
+            gauge_value: 80.0,
+            gauge_type: 0,
+            border_max: Some((80.0, 100.0)),
+            gauge_min: 2.0,
+            gauge_transition_last: Some(65.0),
+        };
+        // time=200 >= endtime=100: animation complete, should show final value.
+        // Final value should be 65.0 (from transition history), not 80.0 (live).
+        gauge.prepare(200, &state);
+        assert!(
+            (gauge.value - 65.0).abs() < 1e-6,
+            "result screen should use gauge transition last value (65.0), got {}",
+            gauge.value
+        );
+    }
+
+    #[test]
+    fn result_screen_falls_back_to_live_value_when_no_transition() {
+        // When gauge_transition_last_value returns None, fall back to live gauge_value.
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 2, 100);
+        gauge.starttime = 0;
+        gauge.endtime = 100;
+
+        let state = ResultMockState {
+            gauge_value: 80.0,
+            gauge_type: 0,
+            border_max: Some((80.0, 100.0)),
+            gauge_min: 2.0,
+            gauge_transition_last: None,
+        };
+        gauge.prepare(200, &state);
+        assert!(
+            (gauge.value - 80.0).abs() < 1e-6,
+            "without transition data, should fall back to live gauge value (80.0), got {}",
+            gauge.value
+        );
+    }
+
+    #[test]
+    fn result_screen_transition_value_used_during_animation() {
+        // During the animation phase, the transition value should be the target,
+        // not the live gauge value.
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 50, ANIMATION_RANDOM, 2, 100);
+        gauge.starttime = 0;
+        gauge.endtime = 500;
+
+        let state = ResultMockState {
+            gauge_value: 80.0, // live value (should be ignored)
+            gauge_type: 0,
+            border_max: Some((80.0, 100.0)),
+            gauge_min: 2.0,
+            gauge_transition_last: Some(40.0), // recorded transition value
+        };
+        // time=250, progress = 100 * 250/500 = 50.0
+        // value = min(40.0, max(50.0, 2.0)) = min(40.0, 50.0) = 40.0
+        // (clamped to the transition value, not the live value)
+        gauge.prepare(250, &state);
+        assert!(
+            (gauge.value - 40.0).abs() < 1e-6,
+            "during animation, should clamp to transition value (40.0), got {}",
+            gauge.value
+        );
     }
 }

@@ -699,6 +699,16 @@ pub trait SkinRenderContext: TimerAccess {
         0.0
     }
 
+    /// Returns the last value from the gauge transition history for the given
+    /// gauge type. On the result screen, Java's SkinGauge reads the final
+    /// recorded gauge value from the transition array rather than the live
+    /// GrooveGauge value. For MusicResult this is `resource.getGauge()[type].last()`;
+    /// for CourseResult it is `resource.getCourseGauge().last()[type].last()`.
+    /// This matters in course mode where gauge constraints can modify the live value.
+    fn gauge_transition_last_value(&self, _gauge_type: i32) -> Option<f32> {
+        None
+    }
+
     /// Returns the gauge type for result screen rendering.
     fn result_gauge_type(&self) -> i32 {
         self.gauge_type()

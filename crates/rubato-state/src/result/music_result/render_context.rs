@@ -125,6 +125,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
         shared_render_context::gauge_type(self.data)
     }
 
+    fn gauge_transition_last_value(&self, gauge_type: i32) -> Option<f32> {
+        shared_render_context::gauge_transition_last_value(self.resource, gauge_type)
+    }
+
     fn result_gauge_type(&self) -> i32 {
         shared_render_context::gauge_type(self.data)
     }
@@ -450,6 +454,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
 
     fn gauge_type(&self) -> i32 {
         shared_render_context::gauge_type(&self.result.data)
+    }
+
+    fn gauge_transition_last_value(&self, gauge_type: i32) -> Option<f32> {
+        shared_render_context::gauge_transition_last_value(&self.result.resource, gauge_type)
     }
 
     fn result_gauge_type(&self) -> i32 {
