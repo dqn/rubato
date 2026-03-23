@@ -66,6 +66,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideRenderContex
         self.resource.score_data()
     }
 
+    fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        self.resource.target_score_data()
+    }
+
+    fn rival_score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        self.resource.rival_score_data()
+    }
+
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
         self.resource.replay_data()
     }
@@ -430,6 +438,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for DecideMouseContext
 
     fn score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
         self.resource.score_data()
+    }
+
+    fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        self.resource.target_score_data()
+    }
+
+    fn rival_score_data_ref(&self) -> Option<&rubato_core::score_data::ScoreData> {
+        self.resource.rival_score_data()
     }
 
     fn replay_option_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
@@ -1384,6 +1400,8 @@ mod tests {
         config: rubato_types::config::Config,
         player_config: rubato_types::player_config::PlayerConfig,
         score: Option<rubato_core::score_data::ScoreData>,
+        rival_score: Option<rubato_core::score_data::ScoreData>,
+        target_score: Option<rubato_core::score_data::ScoreData>,
         replay_data: Option<rubato_types::replay_data::ReplayData>,
         player_data: Option<rubato_types::player_data::PlayerData>,
     }
@@ -1397,6 +1415,8 @@ mod tests {
                 config: rubato_types::config::Config::default(),
                 player_config: rubato_types::player_config::PlayerConfig::default(),
                 score: None,
+                rival_score: None,
+                target_score: None,
                 replay_data: None,
                 player_data: None,
             }
@@ -1417,10 +1437,10 @@ mod tests {
             self.score.as_ref()
         }
         fn rival_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
-            None
+            self.rival_score.as_ref()
         }
         fn target_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
-            None
+            self.target_score.as_ref()
         }
         fn course_score_data(&self) -> Option<&rubato_core::score_data::ScoreData> {
             None
@@ -2767,5 +2787,135 @@ mod tests {
         assert_eq!(ctx.integer_value(36), 3); // BD
         assert_eq!(ctx.integer_value(37), 10); // PR
         assert_eq!(ctx.integer_value(333), 63); // total judges 0-3
+    }
+
+    // ============================================================
+    // DecideRenderContext target_score_data / rival_score_data_ref
+    // ============================================================
+
+    #[test]
+    fn decide_render_context_target_score_data_delegates_to_resource() {
+        let mut resource = SongLengthResource::with_length_ms(100_000);
+        let mut target = rubato_core::score_data::ScoreData::default();
+        target.notes = 999;
+        target.judge_counts.epg = 500;
+        resource.target_score = Some(target);
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let target_data = ctx.target_score_data();
+        assert!(
+            target_data.is_some(),
+            "target_score_data must delegate to resource"
+        );
+        assert_eq!(target_data.unwrap().notes, 999);
+    }
+
+    #[test]
+    fn decide_render_context_rival_score_data_ref_delegates_to_resource() {
+        let mut resource = SongLengthResource::with_length_ms(100_000);
+        let mut rival = rubato_core::score_data::ScoreData::default();
+        rival.notes = 777;
+        rival.judge_counts.egr = 200;
+        resource.rival_score = Some(rival);
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let rival_data = ctx.rival_score_data_ref();
+        assert!(
+            rival_data.is_some(),
+            "rival_score_data_ref must delegate to resource"
+        );
+        assert_eq!(rival_data.unwrap().notes, 777);
+    }
+
+    #[test]
+    fn decide_render_context_target_and_rival_none_when_absent() {
+        let resource = SongLengthResource::with_length_ms(100_000);
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideRenderContext {
+            timer: &mut timer,
+            resource: &resource,
+            main: &mut main,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        assert!(ctx.target_score_data().is_none());
+        assert!(ctx.rival_score_data_ref().is_none());
+    }
+
+    #[test]
+    fn decide_mouse_context_target_score_data_delegates_to_resource() {
+        let mut resource = SongLengthResource::with_length_ms(100_000);
+        let mut target = rubato_core::score_data::ScoreData::default();
+        target.notes = 888;
+        resource.target_score = Some(target);
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+            pending_events: Vec::new(),
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let target_data = ctx.target_score_data();
+        assert!(
+            target_data.is_some(),
+            "DecideMouseContext::target_score_data must delegate"
+        );
+        assert_eq!(target_data.unwrap().notes, 888);
+    }
+
+    #[test]
+    fn decide_mouse_context_rival_score_data_ref_delegates_to_resource() {
+        let mut resource = SongLengthResource::with_length_ms(100_000);
+        let mut rival = rubato_core::score_data::ScoreData::default();
+        rival.notes = 666;
+        resource.rival_score = Some(rival);
+
+        let mut timer = TimerManager::new();
+        let mut main = MainControllerRef::new(Box::new(NullMainController));
+        let sdp = rubato_types::score_data_property::ScoreDataProperty::new();
+        let ctx = DecideMouseContext {
+            timer: &mut timer,
+            main: &mut main,
+            resource: &mut resource,
+            score_data_property: &sdp,
+            offsets: &EMPTY_OFFSETS,
+            pending_events: Vec::new(),
+        };
+        use rubato_types::skin_render_context::SkinRenderContext;
+        let rival_data = ctx.rival_score_data_ref();
+        assert!(
+            rival_data.is_some(),
+            "DecideMouseContext::rival_score_data_ref must delegate"
+        );
+        assert_eq!(rival_data.unwrap().notes, 666);
     }
 }

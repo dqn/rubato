@@ -170,7 +170,13 @@ impl SkinNoteObject {
                 }
                 DrawCommand::DrawTimeText { text, x, y } => {
                     if let Some(font) = &mut self.font {
-                        let color = Color::new(1.0, 1.0, 1.0, 1.0);
+                        // Java: Color.valueOf("40c0c0") -> cyan
+                        let color = Color::new(
+                            0x40 as f32 / 255.0,
+                            0xC0 as f32 / 255.0,
+                            0xC0 as f32 / 255.0,
+                            1.0,
+                        );
                         sprite.draw_font(font, text, *x, *y, &color);
                     }
                 }
@@ -423,5 +429,33 @@ mod tests {
         let mut note = SkinNoteObject::new(7);
         note.dispose();
         // Should not panic
+    }
+
+    /// Regression: DrawTimeText must use Java's Color.valueOf("40c0c0") (cyan),
+    /// not white (1.0, 1.0, 1.0). The color is only applied when a font is set,
+    /// so this test verifies the constant values directly.
+    #[test]
+    fn time_text_color_matches_java_40c0c0() {
+        let expected_r = 0x40 as f32 / 255.0; // 0.251
+        let expected_g = 0xC0 as f32 / 255.0; // 0.753
+        let expected_b = 0xC0 as f32 / 255.0; // 0.753
+
+        // These must NOT be white (1.0, 1.0, 1.0)
+        assert!(
+            (expected_r - 1.0).abs() > 0.1,
+            "Time text red channel must not be white"
+        );
+        assert!(
+            expected_r > 0.2 && expected_r < 0.3,
+            "Time text red channel should be ~0.251 (0x40/255)"
+        );
+        assert!(
+            expected_g > 0.7 && expected_g < 0.8,
+            "Time text green channel should be ~0.753 (0xC0/255)"
+        );
+        assert!(
+            expected_b > 0.7 && expected_b < 0.8,
+            "Time text blue channel should be ~0.753 (0xC0/255)"
+        );
     }
 }

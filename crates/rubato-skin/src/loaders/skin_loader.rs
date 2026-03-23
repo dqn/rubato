@@ -202,10 +202,11 @@ pub fn load_skin_from_config(
             &loader.filemap,
         );
 
-        if let Ok(guard) = RESOURCE.lock()
-            && let Some(ref r) = *guard
         {
-            r.dispose_old();
+            let guard = lock_or_recover(&RESOURCE);
+            if let Some(ref r) = *guard {
+                r.dispose_old();
+            }
         }
 
         skin
@@ -223,10 +224,11 @@ pub fn load_skin_from_config(
             &loader.json_loader.filemap,
         );
 
-        if let Ok(guard) = RESOURCE.lock()
-            && let Some(ref r) = *guard
         {
-            r.dispose_old();
+            let guard = lock_or_recover(&RESOURCE);
+            if let Some(ref r) = *guard {
+                r.dispose_old();
+            }
         }
 
         skin
@@ -238,10 +240,11 @@ pub fn load_skin_from_config(
         };
         let skin = crate::lr2::lr2_skin_csv_loader::load_lr2_skin(&path, &skin_type, dst);
 
-        if let Ok(guard) = RESOURCE.lock()
-            && let Some(ref r) = *guard
         {
-            r.dispose_old();
+            let guard = lock_or_recover(&RESOURCE);
+            if let Some(ref r) = *guard {
+                r.dispose_old();
+            }
         }
 
         skin
@@ -304,10 +307,11 @@ pub fn load_skin_from_path_with_state(
         crate::lr2::lr2_skin_csv_loader::load_lr2_skin(&path, &skin_type, dst)
     };
 
-    if let Ok(guard) = RESOURCE.lock()
-        && let Some(ref r) = *guard
     {
-        r.dispose_old();
+        let guard = lock_or_recover(&RESOURCE);
+        if let Some(ref r) = *guard {
+            r.dispose_old();
+        }
     }
 
     // Apply player-configured skin offsets (parity with load_skin_from_config).
@@ -359,10 +363,11 @@ pub fn load_with_config(
         let mut loader = crate::json::json_skin_loader::JSONSkinLoader::with_config(&config);
         let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
         // Dispose old resources after loading
-        if let Ok(guard) = RESOURCE.lock()
-            && let Some(ref r) = *guard
         {
-            r.dispose_old();
+            let guard = lock_or_recover(&RESOURCE);
+            if let Some(ref r) = *guard {
+                r.dispose_old();
+            }
         }
         result
     } else if skin_config_path.ends_with(".luaskin") {
@@ -374,10 +379,11 @@ pub fn load_with_config(
         let mut loader =
             crate::lua::lua_skin_loader::LuaSkinLoader::new_with_state(_state, &config);
         let result = loader.load_skin(Path::new(skin_config_path), skin_type, &property);
-        if let Ok(guard) = RESOURCE.lock()
-            && let Some(ref r) = *guard
         {
-            r.dispose_old();
+            let guard = lock_or_recover(&RESOURCE);
+            if let Some(ref r) = *guard {
+                r.dispose_old();
+            }
         }
         result
     } else {

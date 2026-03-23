@@ -215,6 +215,10 @@ impl SkinSlider {
         if !self.data.draw {
             return;
         }
+        if self.range <= 0 {
+            self.data.draw = false;
+            return;
+        }
         self.current_image = self.source.get_image(time, state);
         if self.current_image.is_none() {
             self.data.draw = false;
@@ -360,5 +364,120 @@ impl SkinSlider {
 
     pub fn direction(&self) -> i32 {
         self.direction
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::reexports::TextureRegion;
+    use crate::test_helpers::MockMainState;
+    use crate::types::skin_object::{DestinationParams, SkinObjectRenderer};
+
+    fn make_region() -> TextureRegion {
+        TextureRegion {
+            region_width: 24,
+            region_height: 24,
+            u: 0.0,
+            v: 0.0,
+            u2: 1.0,
+            v2: 1.0,
+            ..TextureRegion::default()
+        }
+    }
+
+    fn setup_slider_data(data: &mut crate::types::skin_object::SkinObjectData) {
+        data.set_destination_with_int_timer_ops(
+            &DestinationParams {
+                time: 0,
+                x: 0.0,
+                y: 0.0,
+                w: 24.0,
+                h: 200.0,
+                acc: 0,
+                a: 255,
+                r: 255,
+                g: 255,
+                b: 255,
+                blend: 0,
+                filter: 0,
+                angle: 0,
+                center: 0,
+                loop_val: 0,
+            },
+            0,
+            &[0],
+        );
+    }
+
+    #[test]
+    fn test_slider_zero_range_not_drawn() {
+        // Regression: prepare() lacked the range <= 0 guard that mouse_pressed()
+        // had, allowing zero-range sliders to render.
+        let mut slider = SkinSlider::new_with_int_timer(
+            vec![make_region()],
+            0,
+            0,
+            0, // direction
+            0, // range = 0
+            0, // type_id
+            false,
+        );
+        setup_slider_data(&mut slider.data);
+
+        let state = MockMainState::default();
+        slider.prepare(0, &state);
+        assert!(
+            !slider.data.draw,
+            "slider with zero range must not be drawn"
+        );
+    }
+
+    #[test]
+    fn test_slider_negative_range_not_drawn() {
+        // Regression: negative range rendered inverted but was non-interactive.
+        let mut slider = SkinSlider::new_with_int_timer(
+            vec![make_region()],
+            0,
+            0,
+            0,    // direction
+            -100, // negative range
+            0,    // type_id
+            false,
+        );
+        setup_slider_data(&mut slider.data);
+
+        let state = MockMainState::default();
+        slider.prepare(0, &state);
+        assert!(
+            !slider.data.draw,
+            "slider with negative range must not be drawn"
+        );
+    }
+
+    #[test]
+    fn test_slider_positive_range_draws() {
+        // Positive range should still be drawn normally.
+        let mut slider = SkinSlider::new_with_int_timer(
+            vec![make_region()],
+            0,
+            0,
+            0,   // direction
+            100, // positive range
+            0,   // type_id
+            false,
+        );
+        setup_slider_data(&mut slider.data);
+
+        let state = MockMainState::default();
+        slider.prepare(0, &state);
+        assert!(
+            slider.data.draw,
+            "slider with positive range should be drawn"
+        );
+
+        let mut renderer = SkinObjectRenderer::new();
+        slider.draw(&mut renderer);
+        assert_eq!(renderer.sprite.vertices().len(), 6); // 1 quad
     }
 }

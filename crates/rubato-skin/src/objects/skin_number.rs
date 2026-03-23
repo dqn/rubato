@@ -288,7 +288,7 @@ impl SkinNumber {
             );
             let mut abs_value = value.unsigned_abs();
             for j in (0..self.current_images.len()).rev() {
-                if self.mimage.is_some() && self.zeropadding > 0 {
+                if uses_signed_sheet && self.zeropadding > 0 {
                     if j == 0 {
                         self.current_images[j] = Some(image[11].clone());
                     } else if abs_value > 0 || j == self.current_images.len() - 1 {
@@ -310,7 +310,7 @@ impl SkinNumber {
                         Some(image[blank_index].clone())
                     } else if self.zeropadding == 1 {
                         Some(image[0].clone())
-                    } else if self.mimage.is_some() {
+                    } else if self.mimage.is_some() && image.len() > 11 {
                         let next = &self.current_images[j + 1];
                         if next.is_some() && *next != Some(image[11].clone()) {
                             Some(image[11].clone())
@@ -944,5 +944,84 @@ mod tests {
         let mut renderer = SkinObjectRenderer::new();
         num.draw(&mut renderer);
         assert_eq!(renderer.sprite.vertices().len(), 18);
+    }
+
+    #[test]
+    fn test_skin_number_mimage_positive_value_uses_normal_path() {
+        // Regression: with the old condition `mimage.is_some() && zeropadding > 0`,
+        // positive values with an mimage sheet and zeropadding=2 would enter the
+        // signed-sheet branch, using blank_index=0 (digit "0") instead of
+        // blank_index=10 (actual blank). The fix gates on `uses_signed_sheet`
+        // which is only true when value < 0.
+        let mut num = SkinNumber::new_with_int_timer(
+            make_digit_images(),       // 12-element sheet (0-9, blank=10, minus=11)
+            Some(make_digit_images()), // mimage present
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 2, // blank-fill mode
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
+        setup_data(&mut num.data, 0.0, 0.0, 24.0, 32.0);
+
+        let state = MockMainState::default();
+        // Positive value: should NOT enter signed-sheet path.
+        num.prepare_with_value(0, &state, 5, 0.0, 0.0);
+        assert!(num.data.draw);
+
+        // With the fix, leading digits use the normal else branch (zeropadding==2
+        // -> blank_index). For a 12-element image set, blank_index=10.
+        // The signed-sheet branch would have set j==0 to image[11] (minus sign)
+        // which is wrong for positive values.
+        // Verify: 3 digits rendered (all slots filled with either digit or blank).
+        let mut renderer = SkinObjectRenderer::new();
+        num.draw(&mut renderer);
+        assert_eq!(
+            renderer.sprite.vertices().len(),
+            18, // 3 quads (blank, blank, digit-5)
+            "all keta slots should render when zeropadding=2 with positive value"
+        );
+    }
+
+    #[test]
+    fn test_skin_number_mimage_present_normal_sheet_10_elements_no_panic() {
+        // Regression: when mimage is present but value >= 0, the normal sheet is
+        // used. If the normal sheet has only 10 elements and zeropadding == 0,
+        // the code path at the `mimage.is_some()` branch previously accessed
+        // image[11] without bounds check, causing a panic.
+        let mut num = SkinNumber::new_with_int_timer(
+            make_plain_digit_images(), // 10-element normal sheet (no minus/blank slots)
+            Some(make_digit_images()), // 12-element mimage sheet
+            0,
+            0,
+            NumberDisplayConfig {
+                keta: 3,
+                zeropadding: 0, // triggers the else branch that checks mimage.is_some()
+                space: 0,
+                align: 0,
+            },
+            0,
+        );
+        setup_data(&mut num.data, 0.0, 0.0, 24.0, 32.0);
+
+        let state = MockMainState::default();
+        // Positive value with keta > digits: leading slots enter the mimage.is_some() branch
+        // with image from the 10-element normal sheet.
+        num.prepare_with_value(0, &state, 5, 0.0, 0.0);
+        assert!(num.data.draw);
+
+        // Should not panic; leading digits become None (shifted out).
+        let mut renderer = SkinObjectRenderer::new();
+        num.draw(&mut renderer);
+        // Only 1 digit rendered (value=5, keta=3, zeropadding=0 -> 2 leading nulls)
+        assert_eq!(
+            renderer.sprite.vertices().len(),
+            6,
+            "only the ones digit should render when zeropadding=0 with 10-element sheet"
+        );
     }
 }

@@ -320,7 +320,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
                     3 => self.max_bpm,
                     _ => 0.0,
                 };
-                if bpm == 0.0 {
+                if bpm == 0.0 || self.live_hispeed == 0.0 {
                     return 0;
                 }
                 (240000.0 / bpm / self.live_hispeed as f64
@@ -884,6 +884,9 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                     return 0;
                 }
                 let hispeed = lr.map_or(1.0, |lr| lr.hispeed()) as f64;
+                if hispeed == 0.0 {
+                    return 0;
+                }
                 let lanecover = lr.map_or(0.0, |lr| lr.lanecover()) as f64;
                 (240000.0 / bpm / hispeed
                     * if cover { 1.0 - lanecover } else { 1.0 }
@@ -2897,6 +2900,16 @@ mod tests {
         ctx.now_bpm = 0.0;
         ctx.live_hispeed = 1.0;
         ctx.live_lanecover = 0.5;
+        assert_eq!(ctx.integer_value(1312), 0);
+    }
+
+    #[test]
+    fn duration_lanecover_zero_hispeed_returns_zero() {
+        let mut ctx = make_render_ctx(0);
+        ctx.now_bpm = 120.0;
+        ctx.live_hispeed = 0.0;
+        ctx.live_lanecover = 0.5;
+        // Without the guard, 240000/120/0 would produce infinity -> garbage i32
         assert_eq!(ctx.integer_value(1312), 0);
     }
 

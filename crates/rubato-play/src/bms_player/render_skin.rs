@@ -158,7 +158,19 @@ impl BMSPlayer {
                     .as_ref()
                     .map_or(0, |r| r.now_quarter_note_time()),
                 note_expansion_rate: self.play_skin.note_expansion_rate,
-                lane_group_regions: Vec::new(),
+                lane_group_regions: self
+                    .play_skin
+                    .lane_group_region()
+                    .map(|regions| {
+                        regions
+                            .iter()
+                            .map(|r| LaneGroupRegion {
+                                x: r.x,
+                                width: r.width,
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
                 show_bpmguide: self.player_config.display_settings.bpmguide,
                 show_pastnote: self.player_config.display_settings.showpastnote,
                 mark_processednote: self.player_config.display_settings.markprocessednote,
@@ -412,5 +424,65 @@ mod tests {
 
         // .get(2) returns None -> map_or(0, ...) -> 0
         assert_eq!(bad_judge_time, 0);
+    }
+
+    // =========================================================================
+    // Regression: lane_group_regions must be populated from PlaySkin's
+    // lane_group_region(), not hardcoded to Vec::new(). Empty regions suppress
+    // all practice mode text overlays (time, BPM, stop indicators).
+    // =========================================================================
+
+    #[test]
+    fn lane_group_regions_mapping_from_rectangles() {
+        use crate::play_skin::PlaySkin;
+        use rubato_render::color::Rectangle;
+
+        let mut skin = PlaySkin::new();
+        skin.lanegroupregion = Some(vec![
+            Rectangle::new(10.0, 20.0, 300.0, 400.0),
+            Rectangle::new(500.0, 20.0, 300.0, 400.0),
+        ]);
+
+        let regions: Vec<LaneGroupRegion> = skin
+            .lane_group_region()
+            .map(|regions| {
+                regions
+                    .iter()
+                    .map(|r| LaneGroupRegion {
+                        x: r.x,
+                        width: r.width,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        assert_eq!(regions.len(), 2);
+        assert!((regions[0].x - 10.0).abs() < f32::EPSILON);
+        assert!((regions[0].width - 300.0).abs() < f32::EPSILON);
+        assert!((regions[1].x - 500.0).abs() < f32::EPSILON);
+        assert!((regions[1].width - 300.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn lane_group_regions_empty_when_skin_has_none() {
+        use crate::play_skin::PlaySkin;
+
+        let skin = PlaySkin::new();
+        assert!(skin.lanegroupregion.is_none());
+
+        let regions: Vec<LaneGroupRegion> = skin
+            .lane_group_region()
+            .map(|regions| {
+                regions
+                    .iter()
+                    .map(|r| LaneGroupRegion {
+                        x: r.x,
+                        width: r.width,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        assert!(regions.is_empty());
     }
 }

@@ -243,99 +243,113 @@ impl SkinBPMGraph {
         } else {
             let width = self.data.region.width.abs() as i32;
             let height = self.data.region.height.abs() as i32;
-            let mut shape_pixmap = Pixmap::new(width, height, PixmapFormat::RGBA8888);
-
-            let last_time = self.bpm_data[self.bpm_data.len() - 1][1] + 1000.0;
-            // In Java: last_time = max(last_time, song.getInformation().getLastNoteTime() + 1000).
-            // SkinBpmGraph does not have access to SongData here (it only receives bpm_data
-            // via set_bpm_data). The +1000 padding provides a reasonable default end margin.
-
-            let safe_mainbpm = if self.mainbpm == 0.0 {
-                1.0
+            if width <= 0 || height <= 0 {
+                Pixmap::new(1, 1, PixmapFormat::RGBA8888)
             } else {
-                self.mainbpm
-            };
+                let mut shape_pixmap = Pixmap::new(width, height, PixmapFormat::RGBA8888);
 
-            // Graph drawing
-            for i in 1..self.bpm_data.len() {
-                // Vertical line
-                let x1 = (width as f64 * self.bpm_data[i][1] / last_time) as i32;
-                let y1 = ((((self.bpm_data[i - 1][0] / safe_mainbpm)
-                    .max(self.min_value)
-                    .min(self.max_value))
-                .log10()
-                    - self.min_value_log)
-                    / (self.max_value_log - self.min_value_log)
-                    * (height - self.line_width) as f64) as i32;
-                let _x2 = x1;
-                let y2 = ((((self.bpm_data[i][0] / safe_mainbpm)
-                    .max(self.min_value)
-                    .min(self.max_value))
-                .log10()
-                    - self.min_value_log)
-                    / (self.max_value_log - self.min_value_log)
-                    * (height - self.line_width) as f64) as i32;
-                if (y2 - y1).abs() - self.line_width > 0 {
-                    shape_pixmap.set_color(&self.transition_line_color);
-                    shape_pixmap.fill_rectangle(
-                        x1,
-                        y1.min(y2) + self.line_width,
-                        self.line_width,
-                        (y2 - y1).abs() - self.line_width,
-                    );
+                let last_time = self.bpm_data[self.bpm_data.len() - 1][1] + 1000.0;
+                // In Java: last_time = max(last_time, song.getInformation().getLastNoteTime() + 1000).
+                // SkinBpmGraph does not have access to SongData here (it only receives bpm_data
+                // via set_bpm_data). The +1000 padding provides a reasonable default end margin.
+
+                if last_time > 0.0 {
+                    let safe_mainbpm = if self.mainbpm == 0.0 {
+                        1.0
+                    } else {
+                        self.mainbpm
+                    };
+
+                    // Graph drawing
+                    for i in 1..self.bpm_data.len() {
+                        // Vertical line
+                        let x1 = (width as f64 * self.bpm_data[i][1] / last_time) as i32;
+                        let y1 = ((((self.bpm_data[i - 1][0] / safe_mainbpm)
+                            .max(self.min_value)
+                            .min(self.max_value))
+                        .log10()
+                            - self.min_value_log)
+                            / (self.max_value_log - self.min_value_log)
+                            * (height - self.line_width) as f64)
+                            as i32;
+                        let _x2 = x1;
+                        let y2 = ((((self.bpm_data[i][0] / safe_mainbpm)
+                            .max(self.min_value)
+                            .min(self.max_value))
+                        .log10()
+                            - self.min_value_log)
+                            / (self.max_value_log - self.min_value_log)
+                            * (height - self.line_width) as f64)
+                            as i32;
+                        if (y2 - y1).abs() - self.line_width > 0 {
+                            shape_pixmap.set_color(&self.transition_line_color);
+                            shape_pixmap.fill_rectangle(
+                                x1,
+                                y1.min(y2) + self.line_width,
+                                self.line_width,
+                                (y2 - y1).abs() - self.line_width,
+                            );
+                        }
+                        // Horizontal line
+                        let x1 = (width as f64 * self.bpm_data[i - 1][1] / last_time) as i32;
+                        let y1 = ((((self.bpm_data[i - 1][0] / safe_mainbpm)
+                            .max(self.min_value)
+                            .min(self.max_value))
+                        .log10()
+                            - self.min_value_log)
+                            / (self.max_value_log - self.min_value_log)
+                            * (height - self.line_width) as f64)
+                            as i32;
+                        let x2 = (width as f64 * self.bpm_data[i][1] / last_time) as i32;
+                        let y2 = y1;
+                        let line_color = if self.bpm_data[i - 1][0] == self.mainbpm {
+                            &self.main_line_color
+                        } else if self.bpm_data[i - 1][0] == self.minbpm {
+                            &self.min_line_color
+                        } else if self.bpm_data[i - 1][0] == self.maxbpm {
+                            &self.max_line_color
+                        } else if self.bpm_data[i - 1][0] <= 0.0 {
+                            &self.stop_line_color
+                        } else {
+                            &self.other_line_color
+                        };
+                        shape_pixmap.set_color(line_color);
+                        shape_pixmap.fill_rectangle(
+                            x1,
+                            y2,
+                            x2 - x1 + self.line_width,
+                            self.line_width,
+                        );
+                    }
+                    // Last horizontal line
+                    let last_idx = self.bpm_data.len() - 1;
+                    let x1 = (width as f64 * self.bpm_data[last_idx][1] / last_time) as i32;
+                    let y1 = ((((self.bpm_data[last_idx][0] / safe_mainbpm)
+                        .max(self.min_value)
+                        .min(self.max_value))
+                    .log10()
+                        - self.min_value_log)
+                        / (self.max_value_log - self.min_value_log)
+                        * (height - self.line_width) as f64) as i32;
+                    let x2 = width;
+                    let y2 = y1;
+                    let line_color = if self.bpm_data[last_idx][0] == self.mainbpm {
+                        &self.main_line_color
+                    } else if self.bpm_data[last_idx][0] == self.minbpm {
+                        &self.min_line_color
+                    } else if self.bpm_data[last_idx][0] == self.maxbpm {
+                        &self.max_line_color
+                    } else if self.bpm_data[last_idx][0] <= 0.0 {
+                        &self.stop_line_color
+                    } else {
+                        &self.other_line_color
+                    };
+                    shape_pixmap.set_color(line_color);
+                    shape_pixmap.fill_rectangle(x1, y2, x2 - x1 + self.line_width, self.line_width);
                 }
-                // Horizontal line
-                let x1 = (width as f64 * self.bpm_data[i - 1][1] / last_time) as i32;
-                let y1 = ((((self.bpm_data[i - 1][0] / safe_mainbpm)
-                    .max(self.min_value)
-                    .min(self.max_value))
-                .log10()
-                    - self.min_value_log)
-                    / (self.max_value_log - self.min_value_log)
-                    * (height - self.line_width) as f64) as i32;
-                let x2 = (width as f64 * self.bpm_data[i][1] / last_time) as i32;
-                let y2 = y1;
-                let line_color = if self.bpm_data[i - 1][0] == self.mainbpm {
-                    &self.main_line_color
-                } else if self.bpm_data[i - 1][0] == self.minbpm {
-                    &self.min_line_color
-                } else if self.bpm_data[i - 1][0] == self.maxbpm {
-                    &self.max_line_color
-                } else if self.bpm_data[i - 1][0] <= 0.0 {
-                    &self.stop_line_color
-                } else {
-                    &self.other_line_color
-                };
-                shape_pixmap.set_color(line_color);
-                shape_pixmap.fill_rectangle(x1, y2, x2 - x1 + self.line_width, self.line_width);
-            }
-            // Last horizontal line
-            let last_idx = self.bpm_data.len() - 1;
-            let x1 = (width as f64 * self.bpm_data[last_idx][1] / last_time) as i32;
-            let y1 = ((((self.bpm_data[last_idx][0] / safe_mainbpm)
-                .max(self.min_value)
-                .min(self.max_value))
-            .log10()
-                - self.min_value_log)
-                / (self.max_value_log - self.min_value_log)
-                * (height - self.line_width) as f64) as i32;
-            let x2 = width;
-            let y2 = y1;
-            let line_color = if self.bpm_data[last_idx][0] == self.mainbpm {
-                &self.main_line_color
-            } else if self.bpm_data[last_idx][0] == self.minbpm {
-                &self.min_line_color
-            } else if self.bpm_data[last_idx][0] == self.maxbpm {
-                &self.max_line_color
-            } else if self.bpm_data[last_idx][0] <= 0.0 {
-                &self.stop_line_color
-            } else {
-                &self.other_line_color
-            };
-            shape_pixmap.set_color(line_color);
-            shape_pixmap.fill_rectangle(x1, y2, x2 - x1 + self.line_width, self.line_width);
 
-            shape_pixmap
+                shape_pixmap
+            }
         };
 
         if let Some(ref mut shapetex) = self.shapetex
@@ -489,5 +503,90 @@ mod tests {
             "u2 should be 1.0 at full render, got {}",
             shapetex.u2
         );
+    }
+
+    /// Regression: when the last bpm_data timestamp is exactly -1000.0,
+    /// last_time becomes 0.0 and all x-coordinate divisions would produce
+    /// infinity/NaN. update_texture must skip graph drawing for degenerate data.
+    #[test]
+    fn update_texture_skips_drawing_when_last_time_is_zero() {
+        let config = BpmGraphConfig {
+            delay: 0,
+            line_width: 2,
+            main_bpm_color: "",
+            min_bpm_color: "",
+            max_bpm_color: "",
+            other_bpm_color: "",
+            stop_line_color: "",
+            transition_line_color: "",
+        };
+        let mut graph = SkinBPMGraph::new(config);
+        graph.data.region = Rectangle::new(0.0, 0.0, 100.0, 50.0);
+        // Two entries so bpm_data.len() >= 2 triggers the drawing path.
+        // Second entry's timestamp is -1000.0, so last_time = -1000.0 + 1000.0 = 0.0.
+        graph.bpm_data = vec![[120.0, 0.0], [120.0, -1000.0]];
+        graph.mainbpm = 120.0;
+
+        // Before the fix, this would divide by zero and produce NaN/infinity
+        // in the pixel coordinate calculations.
+        graph.update_texture();
+
+        // The texture should still be created (just with no graph lines drawn).
+        assert!(graph.shapetex.is_some());
+    }
+
+    /// Verify that negative last_time (timestamp < -1000) is also guarded.
+    #[test]
+    fn update_texture_skips_drawing_when_last_time_is_negative() {
+        let config = BpmGraphConfig {
+            delay: 0,
+            line_width: 2,
+            main_bpm_color: "",
+            min_bpm_color: "",
+            max_bpm_color: "",
+            other_bpm_color: "",
+            stop_line_color: "",
+            transition_line_color: "",
+        };
+        let mut graph = SkinBPMGraph::new(config);
+        graph.data.region = Rectangle::new(0.0, 0.0, 100.0, 50.0);
+        // last_time = -2000.0 + 1000.0 = -1000.0 (negative)
+        graph.bpm_data = vec![[120.0, 0.0], [120.0, -2000.0]];
+        graph.mainbpm = 120.0;
+
+        graph.update_texture();
+
+        assert!(graph.shapetex.is_some());
+    }
+
+    /// Regression: when the region has zero width or height, update_texture
+    /// should return a 1x1 placeholder pixmap instead of creating a 0x0 pixmap
+    /// and running the graph drawing loop with degenerate coordinates.
+    #[test]
+    fn update_texture_returns_placeholder_for_zero_dimension_region() {
+        let config = BpmGraphConfig {
+            delay: 0,
+            line_width: 2,
+            main_bpm_color: "",
+            min_bpm_color: "",
+            max_bpm_color: "",
+            other_bpm_color: "",
+            stop_line_color: "",
+            transition_line_color: "",
+        };
+        let mut graph = SkinBPMGraph::new(config);
+        // Set region to zero width
+        graph.data.region = Rectangle::new(0.0, 0.0, 0.0, 50.0);
+        graph.bpm_data = vec![[120.0, 0.0], [180.0, 5000.0]];
+        graph.mainbpm = 120.0;
+
+        graph.update_texture();
+        assert!(graph.shapetex.is_some());
+
+        // Also test zero height
+        graph.shapetex = None;
+        graph.data.region = Rectangle::new(0.0, 0.0, 100.0, 0.0);
+        graph.update_texture();
+        assert!(graph.shapetex.is_some());
     }
 }

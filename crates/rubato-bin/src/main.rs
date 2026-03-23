@@ -239,6 +239,8 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
         gpu: None,
         sprite_pipeline: None,
         texture_manager: None,
+        sprite_uniform_buffer: None,
+        sprite_uniform_bind_group: None,
         egui_integration: None,
         egui_state: None,
         title,
@@ -270,6 +272,10 @@ struct RubatoApp {
     sprite_pipeline: Option<SpriteRenderPipeline>,
     /// GPU texture cache for skin image rendering
     texture_manager: Option<GpuTextureManager>,
+    /// Persistent uniform buffer for sprite projection matrix (64 bytes, reused each frame).
+    sprite_uniform_buffer: Option<wgpu::Buffer>,
+    /// Bind group for the persistent uniform buffer. Only recreated if the buffer is recreated.
+    sprite_uniform_bind_group: Option<wgpu::BindGroup>,
     egui_integration: Option<EguiIntegration>,
     egui_state: Option<egui_winit::State>,
     title: String,
@@ -755,10 +761,11 @@ impl RubatoApp {
 
                 // Upload pending textures and prepare sprite batch resources
                 // before the render pass (bind groups must outlive the render pass)
-                let sprite_resources = self.prepare_sprite_resources(gpu, &mut encoder);
+                let sprite_ready = self.prepare_sprite_resources(gpu, &mut encoder);
 
                 // Build GpuRenderContext before render_pass so it outlives the pass
-                let gpu_ctx = if let Some(ref uniform_bind_group) = sprite_resources
+                let gpu_ctx = if sprite_ready
+                    && let Some(ref uniform_bind_group) = self.sprite_uniform_bind_group
                     && let Some(sprite_pipeline) = &self.sprite_pipeline
                     && let Some(texture_manager) = &self.texture_manager
                 {
@@ -842,17 +849,29 @@ impl RubatoApp {
         }
     }
 
-    /// Upload pending textures and create sprite batch uniform resources.
+    /// Upload pending textures and update sprite batch uniform resources.
+    /// Returns `true` if sprite resources are ready for rendering.
+    /// The uniform buffer and bind group are stored persistently on `self`
+    /// and reused across frames; only the projection data is re-uploaded.
     fn prepare_sprite_resources(
         &mut self,
         gpu: &GpuContext,
         _encoder: &mut wgpu::CommandEncoder,
-    ) -> Option<wgpu::BindGroup> {
-        let sprite_pipeline = self.sprite_pipeline.as_ref()?;
-        let texture_manager = self.texture_manager.as_mut()?;
-        let sprite_batch = self.controller.sprite_batch_mut()?;
-        if sprite_batch.vertices().is_empty() {
-            return None;
+    ) -> bool {
+        let sprite_pipeline = match self.sprite_pipeline.as_ref() {
+            Some(p) => p,
+            None => return false,
+        };
+        let texture_manager = match self.texture_manager.as_mut() {
+            Some(t) => t,
+            None => return false,
+        };
+        let sprite_batch = match self.controller.sprite_batch_mut() {
+            Some(b) => b,
+            None => return false,
+        };
+        if !sprite_batch.has_pending_draw_data() {
+            return false;
         }
 
         // Upload any new textures encountered this frame
@@ -873,26 +892,31 @@ impl RubatoApp {
             );
         }
 
-        // Create uniform bind group with projection matrix
+        // Reuse persistent uniform buffer; create once on first use
         let projection_data = sprite_batch.projection();
-        let uniform_buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("sprite uniform buffer"),
-            size: 64, // 4x4 f32 matrix
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        if self.sprite_uniform_buffer.is_none() {
+            let buffer = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("sprite uniform buffer"),
+                size: 64, // 4x4 f32 matrix
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            let bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("sprite uniform bind group"),
+                layout: &sprite_pipeline.uniform_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+            });
+            self.sprite_uniform_buffer = Some(buffer);
+            self.sprite_uniform_bind_group = Some(bind_group);
+        }
+        let uniform_buffer = self.sprite_uniform_buffer.as_ref().unwrap();
         gpu.queue
-            .write_buffer(&uniform_buffer, 0, bytemuck::cast_slice(projection_data));
-        let uniform_bind_group = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("sprite uniform bind group"),
-            layout: &sprite_pipeline.uniform_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
-        });
+            .write_buffer(uniform_buffer, 0, bytemuck::cast_slice(projection_data));
 
-        Some(uniform_bind_group)
+        true
     }
 
     /// Capture the rendered frame and save as a PNG screenshot.

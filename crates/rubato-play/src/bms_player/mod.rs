@@ -9,7 +9,7 @@ pub(crate) use crate::input::key_sound::KeySoundProcessor;
 pub(crate) use crate::judge::algorithm::JudgeAlgorithm;
 pub(crate) use crate::judge::manager::{JudgeConfig, JudgeManager};
 pub(crate) use crate::lane_property::LaneProperty;
-pub(crate) use crate::lane_renderer::LaneRenderer;
+pub(crate) use crate::lane_renderer::{LaneGroupRegion, LaneRenderer};
 pub(crate) use crate::play_skin::PlaySkin;
 pub(crate) use crate::practice_configuration::PracticeConfiguration;
 pub(crate) use crate::rhythm_timer_processor::RhythmTimerProcessor;

@@ -106,17 +106,32 @@ struct DrawBatch {
     vertex_count: u32,
 }
 
+/// A completed vertex segment ready for GPU submission.
+/// Created when the active vertex buffer reaches MAX_VERTICES capacity.
+#[derive(Debug)]
+struct FlushedSegment {
+    vertices: Vec<SpriteVertex>,
+    draw_batches: Vec<DrawBatch>,
+    pending_textures: HashMap<Arc<str>, PendingTexture>,
+}
+
 /// Batched 2D sprite renderer.
 /// Corresponds to com.badlogic.gdx.graphics.g2d.SpriteBatch.
 ///
 /// Collects sprite draw calls into a vertex buffer. Actual GPU submission
 /// happens when `flush()` is called or when the batch reaches capacity.
+/// When the active vertex buffer reaches MAX_VERTICES, it is moved into
+/// `flushed_segments` and a fresh buffer is started, matching Java LibGDX's
+/// auto-flush behavior (`if (idx >= vertices.length) flush()`).
 #[derive(Debug, Default)]
 pub struct SpriteBatch {
     vertices: Vec<SpriteVertex>,
     draw_batches: Vec<DrawBatch>,
     /// Textures encountered during draw calls, waiting for GPU upload
     pending_textures: HashMap<Arc<str>, PendingTexture>,
+    /// Completed vertex segments waiting for GPU submission.
+    /// Created by auto-flush when the active buffer reaches MAX_VERTICES.
+    flushed_segments: Vec<FlushedSegment>,
     current_color: [f32; 4],
     blend_src: i32,
     blend_dst: i32,
@@ -144,6 +159,7 @@ impl SpriteBatch {
             vertices: Vec::with_capacity(MAX_VERTICES),
             draw_batches: Vec::new(),
             pending_textures: HashMap::new(),
+            flushed_segments: Vec::new(),
             current_color: [1.0, 1.0, 1.0, 1.0],
             blend_src: 0x0302, // GL_SRC_ALPHA
             blend_dst: 0x0303, // GL_ONE_MINUS_SRC_ALPHA
@@ -157,9 +173,17 @@ impl SpriteBatch {
         }
     }
 
-    /// Returns the number of vertices currently in the CPU-side buffer.
+    /// Returns the total number of vertices pending GPU submission,
+    /// including both auto-flushed segments and the active buffer.
     pub fn vertex_count(&self) -> usize {
-        self.vertices.len()
+        let flushed: usize = self.flushed_segments.iter().map(|s| s.vertices.len()).sum();
+        flushed + self.vertices.len()
+    }
+
+    /// Returns true if there are vertices pending GPU submission,
+    /// either in auto-flushed segments or the active buffer.
+    pub fn has_pending_draw_data(&self) -> bool {
+        !self.vertices.is_empty() || !self.flushed_segments.is_empty()
     }
 
     /// Set the projection/transform matrix for the batch.
@@ -263,25 +287,99 @@ impl SpriteBatch {
         self.vertices.clear();
         self.draw_batches.clear();
         self.pending_textures.clear();
+        self.flushed_segments.clear();
+    }
+
+    /// Auto-flush: move the current active buffer into a completed segment
+    /// and start fresh. Called when the vertex buffer reaches MAX_VERTICES.
+    /// Matches Java LibGDX's `if (idx >= vertices.length) flush()`.
+    fn auto_flush(&mut self) {
+        if self.vertices.is_empty() {
+            return;
+        }
+        let vertices = std::mem::replace(&mut self.vertices, Vec::with_capacity(MAX_VERTICES));
+        let draw_batches = std::mem::take(&mut self.draw_batches);
+        let pending_textures = std::mem::take(&mut self.pending_textures);
+        self.flushed_segments.push(FlushedSegment {
+            vertices,
+            draw_batches,
+            pending_textures,
+        });
     }
 
     /// Flush batched vertices to GPU via a render pass.
     ///
-    /// This is the actual GPU submission path. Reuses a persistent vertex
-    /// buffer (growing geometrically when needed), binds the appropriate
-    /// pipeline, and issues per-batch draw calls with the correct texture
-    /// bind group for each batch.
+    /// This is the actual GPU submission path. Processes any auto-flushed
+    /// segments first, then the active buffer. Each segment is uploaded and
+    /// drawn separately, keeping individual GPU uploads bounded to
+    /// MAX_VERTICES. Reuses a persistent vertex buffer (growing
+    /// geometrically when needed).
+    ///
+    /// # Required call sequence
+    ///
+    /// Before calling this method, callers **must**:
+    /// 1. Call [`drain_pending_textures()`](Self::drain_pending_textures) to
+    ///    collect textures that need GPU upload.
+    /// 2. Upload them via `GpuTextureManager::ensure_uploaded()`.
+    ///
+    /// If pending textures have not been drained and uploaded, segments will
+    /// render with missing bind groups, falling back to the white texture.
     pub fn flush_to_gpu<'a>(
         &mut self,
         render_pass: &mut wgpu::RenderPass<'a>,
         ctx: &'a GpuRenderContext<'a>,
     ) {
-        if self.vertices.is_empty() {
+        debug_assert!(
+            self.pending_textures.is_empty(),
+            "flush_to_gpu called with undrained pending_textures in active buffer; \
+             call drain_pending_textures() + ensure_uploaded() first"
+        );
+        debug_assert!(
+            self.flushed_segments
+                .iter()
+                .all(|s| s.pending_textures.is_empty()),
+            "flush_to_gpu called with undrained pending_textures in flushed segments; \
+             call drain_pending_textures() + ensure_uploaded() first"
+        );
+        // Move the active buffer into a final segment so we can process
+        // everything uniformly. This avoids borrow conflicts between
+        // the vertex data and the GPU buffer fields on `self`.
+        if !self.vertices.is_empty() {
+            let vertices = std::mem::replace(&mut self.vertices, Vec::with_capacity(MAX_VERTICES));
+            let draw_batches = std::mem::take(&mut self.draw_batches);
+            let pending_textures = std::mem::take(&mut self.pending_textures);
+            self.flushed_segments.push(FlushedSegment {
+                vertices,
+                draw_batches,
+                pending_textures,
+            });
+        }
+
+        // Process all segments in submission order
+        let segments = std::mem::take(&mut self.flushed_segments);
+        for segment in &segments {
+            self.flush_segment_to_gpu(&segment.vertices, &segment.draw_batches, render_pass, ctx);
+        }
+
+        self.vertices.clear();
+        self.draw_batches.clear();
+        self.pending_textures.clear();
+    }
+
+    /// Upload and draw a single vertex segment.
+    fn flush_segment_to_gpu<'a>(
+        &mut self,
+        vertices: &[SpriteVertex],
+        draw_batches: &[DrawBatch],
+        render_pass: &mut wgpu::RenderPass<'a>,
+        ctx: &'a GpuRenderContext<'a>,
+    ) {
+        if vertices.is_empty() {
             return;
         }
 
         // Reuse persistent vertex buffer; grow geometrically when needed
-        let vertex_data: &[u8] = bytemuck::cast_slice(&self.vertices);
+        let vertex_data: &[u8] = bytemuck::cast_slice(vertices);
         let required_size = vertex_data.len() as u64;
 
         if self.gpu_vertex_buffer_capacity < required_size {
@@ -306,17 +404,17 @@ impl SpriteBatch {
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..required_size));
 
         // If no draw batches recorded, fall back to single-batch rendering
-        if self.draw_batches.is_empty() {
+        if draw_batches.is_empty() {
             let bind_group = ctx.texture_manager.bind_group(None, self.shader_type);
             if let Some(render_pipeline) = ctx.pipeline.pipeline(self.shader_type, self.blend_mode)
             {
                 render_pass.set_pipeline(render_pipeline);
                 render_pass.set_bind_group(1, bind_group, &[]);
-                render_pass.draw(0..self.vertices.len() as u32, 0..1);
+                render_pass.draw(0..vertices.len() as u32, 0..1);
             }
         } else {
             // Issue one draw call per batch with the correct texture/pipeline
-            for batch in &self.draw_batches {
+            for batch in draw_batches {
                 if batch.vertex_count == 0 {
                     continue;
                 }
@@ -334,10 +432,6 @@ impl SpriteBatch {
                 }
             }
         }
-
-        self.vertices.clear();
-        self.draw_batches.clear();
-        self.pending_textures.clear();
     }
 
     /// Get the projection matrix values.
@@ -347,6 +441,11 @@ impl SpriteBatch {
 
     /// Draw a full texture at (x, y) with size (w, h).
     pub fn draw_texture(&mut self, texture: &Texture, x: f32, y: f32, w: f32, h: f32) {
+        // Auto-flush when approaching capacity, matching Java LibGDX's
+        // `if (idx >= vertices.length) flush()` before adding new vertices.
+        if self.vertices.len() + 6 > MAX_VERTICES {
+            self.auto_flush();
+        }
         self.record_texture(texture);
         self.push_quad(
             x,
@@ -364,6 +463,11 @@ impl SpriteBatch {
 
     /// Draw a texture region at (x, y) with size (w, h).
     pub fn draw_region(&mut self, region: &TextureRegion, x: f32, y: f32, w: f32, h: f32) {
+        // Auto-flush when approaching capacity, matching Java LibGDX's
+        // `if (idx >= vertices.length) flush()` before adding new vertices.
+        if self.vertices.len() + 6 > MAX_VERTICES {
+            self.auto_flush();
+        }
         if let Some(tex) = &region.texture {
             self.record_texture(tex);
         } else {
@@ -385,6 +489,11 @@ impl SpriteBatch {
 
     /// Draw a texture region with rotation and scale.
     pub fn draw_region_rotated(&mut self, region: &TextureRegion, transform: &SpriteTransform) {
+        // Auto-flush when approaching capacity, matching Java LibGDX's
+        // `if (idx >= vertices.length) flush()` before adding new vertices.
+        if self.vertices.len() + 6 > MAX_VERTICES {
+            self.auto_flush();
+        }
         if let Some(tex) = &region.texture {
             self.record_texture(tex);
         } else {
@@ -462,8 +571,14 @@ impl SpriteBatch {
     }
 
     /// Drain pending textures that need GPU upload.
+    /// Includes textures from both auto-flushed segments and the active buffer.
     pub fn drain_pending_textures(&mut self) -> HashMap<Arc<str>, PendingTexture> {
-        std::mem::take(&mut self.pending_textures)
+        let mut all_pending = HashMap::new();
+        for segment in &mut self.flushed_segments {
+            all_pending.extend(std::mem::take(&mut segment.pending_textures));
+        }
+        all_pending.extend(std::mem::take(&mut self.pending_textures));
+        all_pending
     }
 
     /// Record a texture for the current draw call and manage batch boundaries.
@@ -1153,5 +1268,191 @@ mod tests {
         assert_eq!(quads[1].texture_key.as_deref(), Some("tex_b"));
         assert_eq!(quads[0].x, 0.0);
         assert_eq!(quads[1].x, 20.0);
+    }
+
+    /// Verify that the active vertex buffer never exceeds MAX_VERTICES.
+    /// Before this fix, the Vec would grow unboundedly past MAX_VERTICES.
+    #[test]
+    fn test_auto_flush_caps_active_vertex_buffer() {
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+
+        let tex = Texture::default();
+        // Draw more quads than MAX_SPRITES (1000) to trigger auto-flush
+        let total_quads = MAX_SPRITES + 100;
+        for i in 0..total_quads {
+            batch.draw_texture(&tex, i as f32, 0.0, 10.0, 10.0);
+            // The active buffer must never exceed MAX_VERTICES
+            assert!(
+                batch.vertices.len() <= MAX_VERTICES,
+                "active vertex buffer grew to {} (MAX_VERTICES={}), quad #{}",
+                batch.vertices.len(),
+                MAX_VERTICES,
+                i + 1,
+            );
+        }
+
+        // Total vertex count across all segments should equal total_quads * 6
+        assert_eq!(
+            batch.vertex_count(),
+            total_quads * 6,
+            "total vertex count must include all auto-flushed segments"
+        );
+
+        // At least one auto-flush should have occurred
+        assert!(
+            !batch.flushed_segments.is_empty(),
+            "auto-flush should have created at least one completed segment"
+        );
+
+        batch.end();
+    }
+
+    /// Verify that auto-flush preserves all draw data: the total vertex
+    /// count must match what would have accumulated without the cap.
+    #[test]
+    fn test_auto_flush_preserves_all_vertices() {
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+
+        let tex = Texture::default();
+        let total_quads = MAX_SPRITES * 3 + 50; // triggers multiple auto-flushes
+        for i in 0..total_quads {
+            batch.draw_texture(&tex, i as f32, 0.0, 1.0, 1.0);
+        }
+
+        assert_eq!(
+            batch.vertex_count(),
+            total_quads * 6,
+            "no vertices should be lost during auto-flush"
+        );
+
+        batch.end();
+    }
+
+    /// Verify that has_pending_draw_data() returns true when data exists
+    /// only in flushed segments (active buffer empty after exact-capacity flush).
+    #[test]
+    fn test_has_pending_draw_data_after_auto_flush() {
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+
+        let tex = Texture::default();
+        // Fill exactly to capacity, then one more to trigger auto-flush
+        for _ in 0..MAX_SPRITES {
+            batch.draw_texture(&tex, 0.0, 0.0, 1.0, 1.0);
+        }
+        // At this point vertices.len() == MAX_VERTICES, next draw triggers auto-flush
+        batch.draw_texture(&tex, 0.0, 0.0, 1.0, 1.0);
+
+        // The active buffer has just the last quad (6 vertices)
+        assert_eq!(batch.vertices.len(), 6);
+        // But has_pending_draw_data should be true (data in segments + active)
+        assert!(batch.has_pending_draw_data());
+
+        batch.end();
+    }
+
+    /// Verify that flush() clears both flushed segments and active buffer.
+    #[test]
+    fn test_flush_clears_flushed_segments() {
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+
+        let tex = Texture::default();
+        for _ in 0..(MAX_SPRITES + 10) {
+            batch.draw_texture(&tex, 0.0, 0.0, 1.0, 1.0);
+        }
+        assert!(!batch.flushed_segments.is_empty());
+
+        batch.flush();
+        assert!(batch.vertices.is_empty());
+        assert!(batch.flushed_segments.is_empty());
+        assert_eq!(batch.vertex_count(), 0);
+        assert!(!batch.has_pending_draw_data());
+
+        batch.end();
+    }
+
+    /// Verify that drain_pending_textures collects textures from all segments.
+    #[test]
+    fn test_drain_pending_textures_includes_flushed_segments() {
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+
+        // Create texture that will be in the first segment
+        let tex_a = Texture {
+            width: 4,
+            height: 4,
+            disposed: false,
+            path: Some(Arc::from("seg_tex_a")),
+            rgba_data: Some(Arc::new(vec![0u8; 64])),
+            ..Default::default()
+        };
+        // Fill first segment to capacity with tex_a
+        for _ in 0..MAX_SPRITES {
+            batch.draw_texture(&tex_a, 0.0, 0.0, 1.0, 1.0);
+        }
+
+        // Trigger auto-flush and add a different texture in the new segment
+        let tex_b = Texture {
+            width: 4,
+            height: 4,
+            disposed: false,
+            path: Some(Arc::from("seg_tex_b")),
+            rgba_data: Some(Arc::new(vec![0u8; 64])),
+            ..Default::default()
+        };
+        batch.draw_texture(&tex_b, 0.0, 0.0, 1.0, 1.0);
+
+        let pending = batch.drain_pending_textures();
+        assert!(
+            pending.contains_key(&Arc::from("seg_tex_a") as &Arc<str>),
+            "texture from flushed segment must be included"
+        );
+        assert!(
+            pending.contains_key(&Arc::from("seg_tex_b") as &Arc<str>),
+            "texture from active buffer must be included"
+        );
+
+        batch.end();
+    }
+
+    /// Verify that draw_region_rotated also triggers auto-flush.
+    #[test]
+    fn test_auto_flush_draw_region_rotated() {
+        let mut batch = SpriteBatch::new();
+        batch.begin();
+
+        let region = TextureRegion {
+            u: 0.0,
+            v: 0.0,
+            u2: 1.0,
+            v2: 1.0,
+            ..Default::default()
+        };
+        let transform = SpriteTransform {
+            x: 0.0,
+            y: 0.0,
+            center_x: 5.0,
+            center_y: 5.0,
+            width: 10.0,
+            height: 10.0,
+            scale_x: 1.0,
+            scale_y: 1.0,
+            angle: 45.0,
+        };
+
+        for _ in 0..(MAX_SPRITES + 10) {
+            batch.draw_region_rotated(&region, &transform);
+            assert!(
+                batch.vertices.len() <= MAX_VERTICES,
+                "active buffer exceeded MAX_VERTICES during draw_region_rotated"
+            );
+        }
+
+        assert_eq!(batch.vertex_count(), (MAX_SPRITES + 10) * 6);
+
+        batch.end();
     }
 }

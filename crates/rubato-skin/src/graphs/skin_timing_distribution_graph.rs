@@ -48,7 +48,7 @@ impl SkinTimingDistributionGraph {
     pub fn new(config: TimingDistributionGraphConfig<'_>) -> Self {
         let w = config.width.max(1);
         let lw = config.line_width.clamp(1, w);
-        let gx = w / lw;
+        let gx = (w / lw).max(1);
         let c = gx / 2;
         let graph_color_val = Color::value_of(&color_string_validation(config.graph_color));
         let average_color_val = Color::value_of(&color_string_validation(config.average_color));
@@ -191,5 +191,50 @@ impl SkinTimingDistributionGraph {
         {
             t.dispose();
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_config() -> TimingDistributionGraphConfig<'static> {
+        TimingDistributionGraphConfig {
+            width: 200,
+            line_width: 2,
+            graph_color: "FFFFFFFF",
+            average_color: "FF0000FF",
+            dev_color: "00FF00FF",
+            pg_color: "00FF00FF",
+            gr_color: "0000FFFF",
+            gd_color: "FFFF00FF",
+            bd_color: "FF00FFFF",
+            pr_color: "888888FF",
+            draw_average: 1,
+            draw_dev: 1,
+        }
+    }
+
+    #[test]
+    fn gx_is_at_least_one_when_line_width_exceeds_width() {
+        // Regression: when line_width > width, gx = width / line_width = 0,
+        // causing a 0-width Pixmap and invisible graph.
+        let mut config = default_config();
+        config.width = 1;
+        config.line_width = 100;
+        let graph = SkinTimingDistributionGraph::new(config);
+        assert!(
+            graph.gx >= 1,
+            "gx must be at least 1 to avoid 0-width Pixmap"
+        );
+    }
+
+    #[test]
+    fn gx_normal_case() {
+        let mut config = default_config();
+        config.width = 200;
+        config.line_width = 2;
+        let graph = SkinTimingDistributionGraph::new(config);
+        assert_eq!(graph.gx, 100);
     }
 }

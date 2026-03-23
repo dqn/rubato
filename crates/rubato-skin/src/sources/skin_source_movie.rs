@@ -236,9 +236,8 @@ impl SkinSource for SkinSourceMovie {
             #[cfg(feature = "ffmpeg")]
             {
                 // Drop the decoder to release ffmpeg resources
-                if let Ok(mut guard) = self.decoder.lock() {
-                    *guard = None;
-                }
+                let mut guard = rubato_types::sync_utils::lock_or_recover(&self.decoder);
+                *guard = None;
             }
             self.disposed = true;
             log::debug!("Disposed movie source: {}", self.path);

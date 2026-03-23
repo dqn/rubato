@@ -95,6 +95,10 @@ impl BitmapFontData {
             }
         }
 
+        if data.glyphs.is_empty() || data.image_paths.is_empty() {
+            return None;
+        }
+
         Some(data)
     }
 }
@@ -478,22 +482,26 @@ mod tests {
     #[test]
     fn parse_fnt_empty_string() {
         let data = BitmapFontData::parse_fnt("", None);
-        assert!(data.is_some());
-        let data = data.unwrap();
-        assert!(data.glyphs.is_empty());
-        assert!(data.image_paths.is_empty());
+        assert!(
+            data.is_none(),
+            "empty .fnt content must return None (no glyphs, no pages)"
+        );
     }
 
     #[test]
     fn parse_fnt_info_line() {
-        let content = "info face=\"TestFont\" size=24 bold=0\n";
+        let content = "info face=\"TestFont\" size=24 bold=0\n\
+page id=0 file=\"t.png\"\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
         let data = BitmapFontData::parse_fnt(content, None).unwrap();
         assert_eq!(data.font_size, 24.0);
     }
 
     #[test]
     fn parse_fnt_common_line() {
-        let content = "common lineHeight=32 base=25 scaleW=512 scaleH=256\n";
+        let content = "common lineHeight=32 base=25 scaleW=512 scaleH=256\n\
+page id=0 file=\"t.png\"\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
         let data = BitmapFontData::parse_fnt(content, None).unwrap();
         assert_eq!(data.line_height, 32.0);
         assert_eq!(data.base, 25.0);
@@ -503,7 +511,8 @@ mod tests {
 
     #[test]
     fn parse_fnt_page_line_with_quotes() {
-        let content = "page id=0 file=\"font_page0.png\"\n";
+        let content = "page id=0 file=\"font_page0.png\"\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
         let data = BitmapFontData::parse_fnt(content, None).unwrap();
         assert_eq!(data.image_paths.len(), 1);
         assert_eq!(data.image_paths[0], "font_page0.png");
@@ -511,7 +520,8 @@ mod tests {
 
     #[test]
     fn parse_fnt_page_line_without_quotes() {
-        let content = "page id=0 file=font_page0.png\n";
+        let content = "page id=0 file=font_page0.png\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
         let data = BitmapFontData::parse_fnt(content, None).unwrap();
         assert_eq!(data.image_paths.len(), 1);
         assert_eq!(data.image_paths[0], "font_page0.png");
@@ -519,8 +529,8 @@ mod tests {
 
     #[test]
     fn parse_fnt_char_line() {
-        let content =
-            "char id=65 x=10 y=20 width=30 height=40 xoffset=2 yoffset=3 xadvance=35 page=0\n";
+        let content = "page id=0 file=\"t.png\"\n\
+char id=65 x=10 y=20 width=30 height=40 xoffset=2 yoffset=3 xadvance=35 page=0\n";
         let data = BitmapFontData::parse_fnt(content, None).unwrap();
         assert_eq!(data.glyphs.len(), 1);
         let glyph = data.glyphs.get(&65).unwrap();
@@ -538,6 +548,7 @@ mod tests {
     #[test]
     fn parse_fnt_multiple_chars() {
         let content = "\
+page id=0 file=\"t.png\"\n\
 char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n\
 char id=66 x=10 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n\
 char id=67 x=20 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
@@ -551,6 +562,7 @@ char id=67 x=20 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n"
     #[test]
     fn parse_fnt_ignores_unknown_lines() {
         let content = "\
+page id=0 file=\"t.png\"\n\
 kerning first=65 second=66 amount=-1\n\
 chars count=1\n\
 char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
@@ -560,8 +572,8 @@ char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
 
     #[test]
     fn parse_fnt_negative_offsets() {
-        let content =
-            "char id=65 x=0 y=0 width=10 height=10 xoffset=-2 yoffset=-3 xadvance=8 page=0\n";
+        let content = "page id=0 file=\"t.png\"\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=-2 yoffset=-3 xadvance=8 page=0\n";
         let data = BitmapFontData::parse_fnt(content, None).unwrap();
         let glyph = data.glyphs.get(&65).unwrap();
         assert_eq!(glyph.xoffset, -2);
@@ -571,7 +583,8 @@ char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
     #[test]
     fn parse_fnt_page_with_base_dir() {
         let base_dir = std::path::Path::new("/fonts");
-        let content = "page id=0 file=\"atlas.png\"\n";
+        let content = "page id=0 file=\"atlas.png\"\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
         let data = BitmapFontData::parse_fnt(content, Some(base_dir)).unwrap();
         assert_eq!(data.image_paths.len(), 1);
         assert!(data.image_paths[0].contains("atlas.png"));
@@ -584,8 +597,8 @@ char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
     fn parse_fnt_field_x_not_confused_with_xoffset() {
         // When xoffset= appears before x= in the line, substring matching would
         // incorrectly match "x=" inside "xoffset=" and return the xoffset value.
-        let line =
-            "char id=65 xoffset=99 x=10 y=20 width=30 height=40 yoffset=3 xadvance=35 page=0";
+        let line = "page id=0 file=\"t.png\"\n\
+char id=65 xoffset=99 x=10 y=20 width=30 height=40 yoffset=3 xadvance=35 page=0";
         let data = BitmapFontData::parse_fnt(line, None).unwrap();
         let glyph = data.glyphs.get(&65).unwrap();
         assert_eq!(glyph.x, 10, "x= must not match inside xoffset=");
@@ -595,8 +608,8 @@ char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
     #[test]
     fn parse_fnt_field_y_not_confused_with_yoffset() {
         // Same issue: "y=" is a substring of "yoffset=".
-        let line =
-            "char id=65 x=10 yoffset=88 y=20 width=30 height=40 xoffset=3 xadvance=35 page=0";
+        let line = "page id=0 file=\"t.png\"\n\
+char id=65 x=10 yoffset=88 y=20 width=30 height=40 xoffset=3 xadvance=35 page=0";
         let data = BitmapFontData::parse_fnt(line, None).unwrap();
         let glyph = data.glyphs.get(&65).unwrap();
         assert_eq!(glyph.y, 20, "y= must not match inside yoffset=");
@@ -711,5 +724,48 @@ char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
     fn freetype_generator_dispose_no_panic() {
         let mut generator = FreeTypeFontGenerator::new("test.ttf");
         generator.dispose(); // Should not panic
+    }
+
+    #[test]
+    fn parse_fnt_no_glyphs_returns_none() {
+        // Has a page but no char entries -- should be rejected.
+        let content = "\
+info face=\"Test\" size=16 bold=0\n\
+common lineHeight=20 base=16 scaleW=256 scaleH=256\n\
+page id=0 file=\"test.png\"\n";
+        let data = BitmapFontData::parse_fnt(content, None);
+        assert!(
+            data.is_none(),
+            "parse_fnt must return None when no glyphs are parsed"
+        );
+    }
+
+    #[test]
+    fn parse_fnt_no_pages_returns_none() {
+        // Has glyphs but no page entries -- should be rejected.
+        let content = "\
+info face=\"Test\" size=16 bold=0\n\
+common lineHeight=20 base=16 scaleW=256 scaleH=256\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
+        let data = BitmapFontData::parse_fnt(content, None);
+        assert!(
+            data.is_none(),
+            "parse_fnt must return None when no pages are parsed"
+        );
+    }
+
+    #[test]
+    fn parse_fnt_valid_returns_some() {
+        // Both pages and glyphs present -- should succeed.
+        let content = "\
+info face=\"Test\" size=16 bold=0\n\
+common lineHeight=20 base=16 scaleW=256 scaleH=256\n\
+page id=0 file=\"test.png\"\n\
+char id=65 x=0 y=0 width=10 height=10 xoffset=0 yoffset=0 xadvance=12 page=0\n";
+        let data = BitmapFontData::parse_fnt(content, None);
+        assert!(
+            data.is_some(),
+            "parse_fnt must return Some when both glyphs and pages are present"
+        );
     }
 }

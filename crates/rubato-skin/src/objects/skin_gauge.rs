@@ -171,7 +171,7 @@ impl SkinGauge {
                 if self.duration <= 0 {
                     self.animation = 0;
                 } else {
-                    self.animation = (time % self.duration) as i32;
+                    self.animation = (time.rem_euclid(self.duration)) as i32;
                 }
             }
             _ => {}
@@ -927,6 +927,52 @@ mod tests {
                 v >= 0 && v <= 9,
                 "animation value {} out of range [0, 9]",
                 v
+            );
+        }
+    }
+
+    /// Regression: ANIMATION_FLICKERING with negative time (practice mode time
+    /// rewinding) must produce a non-negative animation value. Rust's `%`
+    /// follows the dividend sign, so `(-7) % 100 == -7`. Using `rem_euclid`
+    /// ensures the result is always in [0, duration).
+    #[test]
+    fn flickering_animation_negative_time_produces_non_negative() {
+        let images: Vec<Vec<Option<TextureRegion>>> = vec![vec![Some(TextureRegion::new()); 6]];
+        let mut gauge = SkinGauge::new(images, 0, 0, 10, ANIMATION_FLICKERING, 0, 100);
+
+        let state = GaugeMockState {
+            gauge_value: 50.0,
+            gauge_type: 0,
+            border_max: None,
+        };
+
+        // Negative times that would produce negative results with truncating `%`.
+        for &t in &[-1i64, -7, -99, -100, -101, -500, -999] {
+            gauge.prepare(t, &state);
+            assert!(
+                gauge.animation >= 0,
+                "animation must be non-negative for time={t}, got {}",
+                gauge.animation
+            );
+            assert!(
+                (gauge.animation as i64) < gauge.duration,
+                "animation must be < duration for time={t}, got {}",
+                gauge.animation
+            );
+        }
+
+        // Positive times should still work as before.
+        for &t in &[0i64, 1, 50, 99, 100, 150, 999] {
+            gauge.prepare(t, &state);
+            assert!(
+                gauge.animation >= 0,
+                "animation must be non-negative for time={t}, got {}",
+                gauge.animation
+            );
+            assert!(
+                (gauge.animation as i64) < gauge.duration,
+                "animation must be < duration for time={t}, got {}",
+                gauge.animation
             );
         }
     }

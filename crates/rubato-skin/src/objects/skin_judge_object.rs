@@ -108,6 +108,10 @@ impl SkinJudgeObject {
         self.data.prepare(time, state);
 
         let judgenow = judgenow as usize;
+        if judgenow >= self.judge_images.len() {
+            self.data.draw = false;
+            return;
+        }
         let gauge_is_max = state.is_gauge_max();
 
         // Select judge image: if PG and gauge is max, use MAX PG (index 6) if available
@@ -412,5 +416,21 @@ mod tests {
         judge.set_judge_image(0, make_test_image());
         judge.set_judge_count(0, make_test_number());
         judge.dispose();
+    }
+
+    #[test]
+    fn test_prepare_out_of_bounds_judge_sets_draw_false() {
+        // Regression: if now_judge() returns a value > 7, the judgenow index
+        // exceeds judge_images.len() (7) and would panic on array access.
+        // The fix adds a bounds check that sets draw=false instead.
+        let mut judge = SkinJudgeObject::new(0, false);
+        judge.set_judge_image(0, make_test_image());
+        // now_judge=9 -> judgenow=8, which is out of bounds for [Option<SkinImage>; 7]
+        let state = JudgeMockState::new(9, 0, false);
+        judge.prepare(1000, &state);
+        assert!(
+            !judge.data.draw,
+            "out-of-bounds judgenow must set draw=false, not panic"
+        );
     }
 }

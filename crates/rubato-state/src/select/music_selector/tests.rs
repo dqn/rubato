@@ -3020,3 +3020,66 @@ fn set_float_value_volume_propagates_to_main_controller() {
     assert_eq!(updates[2].keyvolume, 0.5);
     assert_eq!(updates[2].bgvolume, 0.25);
 }
+
+// ============================================================
+// refresh_cached_score_data_property rival score population
+// ============================================================
+
+#[test]
+fn refresh_cached_score_data_property_populates_rival_fields() {
+    let mut selector = MusicSelector::new();
+    let mut bar = make_song_bar("rival-test", Some("/test/rival.bms"));
+
+    // Set player score and rival score on the bar
+    let mut score = ScoreData::default();
+    score.notes = 500;
+    score.judge_counts.epg = 400;
+    score.judge_counts.egr = 50;
+    bar.set_score(Some(score));
+
+    let mut rival = ScoreData::default();
+    rival.notes = 500;
+    rival.judge_counts.epg = 300;
+    rival.judge_counts.egr = 100;
+    bar.set_rival_score(Some(rival));
+
+    set_selected_bar(&mut selector, bar);
+
+    selector.refresh_cached_score_data_property();
+
+    // rival score fields should be populated
+    assert_eq!(
+        selector.cached_score_data_property.rivalscore,
+        300 * 2 + 100, // exscore = epg*2 + egr
+        "rivalscore must be populated from rival bar score"
+    );
+    assert!(
+        selector.cached_score_data_property.rival.is_some(),
+        "rival ScoreData must be stored in score_data_property"
+    );
+}
+
+#[test]
+fn refresh_cached_score_data_property_no_rival_zeroes_rival_fields() {
+    let mut selector = MusicSelector::new();
+    let mut bar = make_song_bar("no-rival", Some("/test/norival.bms"));
+
+    let mut score = ScoreData::default();
+    score.notes = 100;
+    score.judge_counts.epg = 80;
+    bar.set_score(Some(score));
+    // No rival score set
+
+    set_selected_bar(&mut selector, bar);
+
+    selector.refresh_cached_score_data_property();
+
+    assert_eq!(
+        selector.cached_score_data_property.rivalscore, 0,
+        "rivalscore must be 0 when no rival"
+    );
+    assert!(
+        selector.cached_score_data_property.rival.is_none(),
+        "rival must be None when no rival score exists"
+    );
+}

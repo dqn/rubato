@@ -373,9 +373,11 @@ impl MusicSelector {
     /// up-to-date values for Lua skins that read `main_state.rate()` / `main_state.exscore()`.
     pub(super) fn refresh_cached_score_data_property(&mut self) {
         let score = self.manager.selected().and_then(|b| b.score());
+        let rival = self.manager.selected().and_then(|b| b.rival_score());
         self.cached_score_data_property =
             rubato_types::score_data_property::ScoreDataProperty::new();
-        self.cached_score_data_property.update_score(score);
+        self.cached_score_data_property
+            .update_score_and_rival(score, rival);
     }
 
     /// Resolve an IR-based target score from the current ranking data.

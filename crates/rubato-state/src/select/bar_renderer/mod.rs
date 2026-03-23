@@ -83,9 +83,11 @@ impl BarRenderer {
                 None => continue,
             };
 
-            let index = (ctx.selectedindex + ctx.currentsongs.len() * 100 + i
-                - ctx.center_bar as usize)
-                % ctx.currentsongs.len();
+            // Use i64 arithmetic to avoid usize wrapping when center_bar is negative.
+            let index =
+                ((ctx.selectedindex as i64 + ctx.currentsongs.len() as i64 * 100 + i as i64
+                    - ctx.center_bar as i64)
+                    .rem_euclid(ctx.currentsongs.len() as i64)) as usize;
 
             // After prepare(), data.region contains the interpolated destination rectangle
             if si.data.draw {
@@ -171,9 +173,11 @@ impl BarRenderer {
                     }) as i32 as f32;
 
                 // set song bar type
-                let index = (ctx.selectedindex + ctx.currentsongs.len() * 100 + i
-                    - ctx.center_bar as usize)
-                    % ctx.currentsongs.len();
+                // Use i64 arithmetic to avoid usize wrapping when center_bar is negative.
+                let index =
+                    ((ctx.selectedindex as i64 + ctx.currentsongs.len() as i64 * 100 + i as i64
+                        - ctx.center_bar as i64)
+                        .rem_euclid(ctx.currentsongs.len() as i64)) as usize;
                 let sd = &ctx.currentsongs[index];
                 ba.sd = Some(index);
 

@@ -176,19 +176,25 @@ impl SkinObjectData {
             return;
         } else {
             let idx = self.index as usize;
-            let rate = self.rate;
-            let r1r = self.dst[idx].color.r;
-            let r1g = self.dst[idx].color.g;
-            let r1b = self.dst[idx].color.b;
-            let r1a = self.dst[idx].color.a;
-            let r2r = self.dst[idx + 1].color.r;
-            let r2g = self.dst[idx + 1].color.g;
-            let r2b = self.dst[idx + 1].color.b;
-            let r2a = self.dst[idx + 1].color.a;
-            self.color.r = r1r + (r2r - r1r) * rate;
-            self.color.g = r1g + (r2g - r1g) * rate;
-            self.color.b = r1b + (r2b - r1b) * rate;
-            self.color.a = r1a + (r2a - r1a) * rate;
+            if idx + 1 < self.dst.len() {
+                let rate = self.rate;
+                let r1r = self.dst[idx].color.r;
+                let r1g = self.dst[idx].color.g;
+                let r1b = self.dst[idx].color.b;
+                let r1a = self.dst[idx].color.a;
+                let r2r = self.dst[idx + 1].color.r;
+                let r2g = self.dst[idx + 1].color.g;
+                let r2b = self.dst[idx + 1].color.b;
+                let r2a = self.dst[idx + 1].color.a;
+                self.color.r = r1r + (r2r - r1r) * rate;
+                self.color.g = r1g + (r2g - r1g) * rate;
+                self.color.b = r1b + (r2b - r1b) * rate;
+                self.color.a = r1a + (r2a - r1a) * rate;
+            } else {
+                // idx+1 out of bounds: fall back to non-interpolated value
+                let c = self.dst[idx].color;
+                self.color.set(&c);
+            }
             return;
         }
         for off in self.off.iter().flatten() {
@@ -212,10 +218,13 @@ impl SkinObjectData {
         let idx = self.index as usize;
         self.angle = if self.rate == 0.0 || self.acc == 3 {
             self.dst[idx].angle
-        } else {
+        } else if idx + 1 < self.dst.len() {
             (self.dst[idx].angle as f32
                 + (self.dst[idx + 1].angle - self.dst[idx].angle) as f32 * self.rate)
                 as i32
+        } else {
+            // idx+1 out of bounds: fall back to non-interpolated value
+            self.dst[idx].angle
         };
         for off in self.off.iter().flatten() {
             self.angle += off.r as i32;
@@ -357,6 +366,53 @@ mod tests {
         assert!(data.draw);
         // Interpolated: 0.0 + (50.0 - 0.0) * 0.5 = 25.0
         assert!((data.region.x - 25.0).abs() < 0.01);
+    }
+
+    /// Regression: prepare_color must not panic when rate != 0.0 and
+    /// index points to the last dst entry (idx+1 out of bounds).
+    /// The bounds guard falls back to the non-interpolated color.
+    #[test]
+    fn test_prepare_color_idx_plus_one_out_of_bounds_no_panic() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(0.5, 0.6, 0.7, 0.8),
+            0,
+            0,
+        ));
+        // Force rate != 0.0 with index at last element (no idx+1 available)
+        data.rate = 0.5;
+        data.index = 0;
+
+        // Must not panic; should fall back to dst[0] color
+        data.prepare_color();
+        assert!((data.color.r - 0.5).abs() < 0.01);
+        assert!((data.color.g - 0.6).abs() < 0.01);
+        assert!((data.color.b - 0.7).abs() < 0.01);
+        assert!((data.color.a - 0.8).abs() < 0.01);
+    }
+
+    /// Regression: prepare_angle must not panic when rate != 0.0 and
+    /// index points to the last dst entry (idx+1 out of bounds).
+    /// The bounds guard falls back to the non-interpolated angle.
+    #[test]
+    fn test_prepare_angle_idx_plus_one_out_of_bounds_no_panic() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            90,
+            0,
+        ));
+        // Force rate != 0.0 with index at last element (no idx+1 available)
+        data.rate = 0.5;
+        data.index = 0;
+
+        // Must not panic; should fall back to dst[0] angle
+        data.prepare_angle();
+        assert_eq!(data.angle, 90);
     }
 
     /// Regression: when two consecutive DST entries share the same timestamp,

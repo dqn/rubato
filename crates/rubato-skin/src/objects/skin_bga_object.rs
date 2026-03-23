@@ -115,6 +115,12 @@ pub struct SkinBgaObject {
     practice_commands: Vec<PracticeDrawCommand>,
     /// Whether this BGA is currently in practice mode.
     practice_mode: bool,
+    /// Reusable font for practice mode text rendering.
+    /// Stored as a field to avoid per-frame allocation.
+    /// TODO: Initialize with a proper font source (e.g., default system font or skin config font)
+    /// so that practice mode text actually renders. Currently BitmapFont::new() has font: None,
+    /// which makes draw a no-op.
+    practice_font: rubato_render::font::BitmapFont,
 }
 
 impl SkinBgaObject {
@@ -125,6 +131,7 @@ impl SkinBgaObject {
             bga_draw: None,
             practice_commands: Vec::new(),
             practice_mode: false,
+            practice_font: rubato_render::font::BitmapFont::new(),
         }
     }
 
@@ -162,6 +169,12 @@ impl SkinBgaObject {
     /// Check if this BGA is in practice mode.
     pub fn is_practice_mode(&self) -> bool {
         self.practice_mode
+    }
+
+    /// Set the font used for practice mode text rendering.
+    /// Call this to provide a properly loaded font so practice text actually renders.
+    pub fn set_practice_font(&mut self, font: rubato_render::font::BitmapFont) {
+        self.practice_font = font;
     }
 
     /// Prepare BGA for rendering.
@@ -211,7 +224,9 @@ impl SkinBgaObject {
     /// Execute practice mode draw commands.
     /// Translated from: Java PracticeConfiguration.draw(Rectangle, SkinObjectRenderer, long, MainState)
     fn draw_practice(&mut self, sprite: &mut SkinObjectRenderer) {
-        for cmd in &self.practice_commands {
+        // Clone commands to avoid borrow conflict with &mut self (practice_font).
+        let commands: Vec<_> = self.practice_commands.clone();
+        for cmd in &commands {
             match cmd {
                 PracticeDrawCommand::DrawText { text, x, y, color } => {
                     let c = match color {
@@ -220,11 +235,7 @@ impl SkinBgaObject {
                         PracticeColor::Orange => Color::new(1.0, 0.65, 0.0, 1.0),
                         PracticeColor::White => Color::new(1.0, 1.0, 1.0, 1.0),
                     };
-                    // Draw text using sprite's font rendering.
-                    // BitmapFont is not available here (it lives in BMSPlayer/PracticeConfiguration).
-                    // Use a temporary BitmapFont for rendering.
-                    let mut font = rubato_render::font::BitmapFont::new();
-                    sprite.draw_font(&mut font, text, *x, *y, &c);
+                    sprite.draw_font(&mut self.practice_font, text, *x, *y, &c);
                 }
                 PracticeDrawCommand::DrawGraph { .. } => {
                     // Note distribution graph drawing requires SkinNoteDistributionGraph
@@ -426,5 +437,37 @@ mod tests {
         };
         BgaRenderer::set_type(&mut adapter3, BgaRenderType::Layer);
         assert_eq!(sprite.toast_type(), SkinObjectRenderer::TYPE_LAYER);
+    }
+
+    #[test]
+    fn test_practice_font_is_reused_across_draw_calls() {
+        let mut bga = SkinBgaObject::new(BGAEXPAND_FULL);
+        bga.set_practice_draw_commands(vec![PracticeDrawCommand::DrawText {
+            text: "test".to_string(),
+            x: 10.0,
+            y: 20.0,
+            color: PracticeColor::White,
+        }]);
+
+        let mut sprite = SkinObjectRenderer::new();
+        // Draw multiple times -- should not panic and should reuse the stored font.
+        bga.draw(&mut sprite);
+        bga.draw(&mut sprite);
+
+        // The practice_font field exists and is not re-created per frame.
+        // Verify the font is still the same object (scale is the default 16.0).
+        assert_eq!(bga.practice_font.scale, 16.0);
+    }
+
+    #[test]
+    fn test_set_practice_font_replaces_default() {
+        let mut bga = SkinBgaObject::new(BGAEXPAND_FULL);
+        assert_eq!(bga.practice_font.scale, 16.0);
+
+        let mut custom_font = rubato_render::font::BitmapFont::new();
+        custom_font.scale = 24.0;
+        bga.set_practice_font(custom_font);
+
+        assert_eq!(bga.practice_font.scale, 24.0);
     }
 }

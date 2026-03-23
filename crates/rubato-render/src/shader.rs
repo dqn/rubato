@@ -73,12 +73,13 @@ fn fs_ffmpeg(in: VertexOutput) -> @location(0) vec4<f32> {
     return in.color * c4;
 }
 
-// Layer shader: black pixels become transparent
+// Layer shader: near-black pixels become transparent
 // Java: if(r==0 && g==0 && b==0) { alpha=0 } else { normal }
+// Threshold 0.004 (~1/255) tolerates linear-filtering interpolation artifacts
 @fragment
 fn fs_layer(in: VertexOutput) -> @location(0) vec4<f32> {
     let c4 = textureSample(t_diffuse, s_diffuse, in.tex_coord);
-    if (c4.r == 0.0 && c4.g == 0.0 && c4.b == 0.0) {
+    if (c4.r < 0.004 && c4.g < 0.004 && c4.b < 0.004) {
         return in.color * vec4<f32>(c4.r, c4.g, c4.b, 0.0);
     } else {
         return in.color * c4;

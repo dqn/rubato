@@ -633,3 +633,65 @@ fn test_bar_renderer_mouse_pressed_no_hit() {
     let result = renderer.mouse_pressed(&bar, 0, 100, 200, &ctx);
     assert!(matches!(result, MousePressedAction::None));
 }
+
+/// Regression: when center_bar is negative, `center_bar as usize` wraps to
+/// usize::MAX, corrupting the index computation. The fix uses i64 arithmetic
+/// with rem_euclid to handle negative values correctly.
+#[test]
+fn test_bar_renderer_prepare_negative_center_bar() {
+    let mut renderer = BarRenderer::new(300, 100, 5);
+    let mut bar = SkinBar::new(0);
+
+    bar.barimageoff[0] = Some(make_test_image(10.0, 20.0, 100.0, 30.0));
+
+    let songs = vec![
+        make_song_bar_bar("a", Some("/a.bms")),
+        make_song_bar_bar("b", Some("/b.bms")),
+        make_song_bar_bar("c", Some("/c.bms")),
+    ];
+
+    // Negative center_bar should not panic or produce wrong indices
+    let ctx = PrepareContext {
+        center_bar: -1,
+        currentsongs: &songs,
+        selectedindex: 0,
+    };
+
+    renderer.prepare(&bar, 1000, &ctx);
+
+    // Should not panic, and bararea[0] should have a valid song reference
+    assert!(renderer.bararea[0].sd.is_some());
+    let idx = renderer.bararea[0].sd.unwrap();
+    assert!(
+        idx < songs.len(),
+        "index {} should be within song list bounds",
+        idx
+    );
+}
+
+/// Regression: mouse_pressed with negative center_bar should not panic.
+#[test]
+fn test_bar_renderer_mouse_pressed_negative_center_bar() {
+    let renderer = BarRenderer::new(300, 100, 5);
+    let mut bar = SkinBar::new(0);
+    let songs = vec![
+        make_song_bar_bar("a", Some("/a.bms")),
+        make_song_bar_bar("b", Some("/b.bms")),
+    ];
+    let state = MockMainState::default();
+
+    // Set up a clickable bar image so the hit-test loop body runs
+    bar.barimageoff[0] = Some(make_test_image(0.0, 0.0, 200.0, 200.0));
+
+    let ctx = MousePressedContext {
+        clickable_bar: &[0],
+        center_bar: -1,
+        currentsongs: &songs,
+        selectedindex: 0,
+        state: &state,
+        timer_now_time: 0,
+    };
+
+    // Should not panic
+    let _result = renderer.mouse_pressed(&bar, 0, 100, 100, &ctx);
+}

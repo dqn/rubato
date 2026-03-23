@@ -40,10 +40,25 @@ impl Default for Pixmap {
     }
 }
 
+/// Maximum pixmap allocation size (256 MB). Pixmaps exceeding this are
+/// replaced with an empty 0x0 pixmap to prevent OOM from adversarial data.
+const MAX_PIXMAP_BYTES: u64 = 256 * 1024 * 1024;
+
 impl Pixmap {
     pub fn new(width: i32, height: i32, _format: PixmapFormat) -> Self {
         let width = width.max(0);
         let height = height.max(0);
+        let alloc_size = (width as u64) * (height as u64) * 4;
+        if alloc_size > MAX_PIXMAP_BYTES {
+            log::warn!(
+                "Pixmap::new({}, {}) exceeds {} byte limit ({} bytes), returning empty pixmap",
+                width,
+                height,
+                MAX_PIXMAP_BYTES,
+                alloc_size,
+            );
+            return Self::default();
+        }
         let w = width as usize;
         let h = height as usize;
         Self {
@@ -306,11 +321,12 @@ impl Pixmap {
 }
 
 /// Interpolate x for a scanline at y along an edge from (x0,y0) to (x1,y1).
+/// Uses i64 intermediate arithmetic to prevent overflow for large coordinates.
 fn lerp_x(x0: i32, y0: i32, x1: i32, y1: i32, y: i32) -> i32 {
     if y1 == y0 {
         return x0;
     }
-    x0 + (x1 - x0) * (y - y0) / (y1 - y0)
+    (x0 as i64 + (x1 as i64 - x0 as i64) * (y as i64 - y0 as i64) / (y1 as i64 - y0 as i64)) as i32
 }
 
 #[cfg(test)]
@@ -615,5 +631,52 @@ mod tests {
                 assert_eq!(p.pixel(x, y), 0, "pixel ({x},{y}) should be untouched");
             }
         }
+    }
+
+    #[test]
+    fn test_new_pixmap_exceeding_max_allocation_returns_empty() {
+        // 32768 x 32768 x 4 = 4 GB, well above the 256 MB limit
+        let p = Pixmap::new(32768, 32768, PixmapFormat::RGBA8888);
+        assert_eq!(p.width, 0);
+        assert_eq!(p.height, 0);
+        assert!(p.data.is_empty());
+    }
+
+    #[test]
+    fn test_new_pixmap_at_reasonable_size_succeeds() {
+        // 256 x 256 x 4 = 256 KB, well within the limit
+        let p = Pixmap::new(256, 256, PixmapFormat::RGBA8888);
+        assert_eq!(p.width, 256);
+        assert_eq!(p.height, 256);
+        assert_eq!(p.data.len(), 256 * 256 * 4);
+    }
+
+    #[test]
+    fn test_lerp_x_large_coordinates_no_overflow() {
+        // Values that would overflow i32 multiplication: (x1-x0)*(y-y0)
+        // x0=0, x1=100_000, y0=0, y1=100_000, y=50_000 => expected x=50_000
+        // (100_000 * 50_000) = 5_000_000_000 which overflows i32
+        let result = lerp_x(0, 0, 100_000, 100_000, 50_000);
+        assert_eq!(result, 50_000);
+    }
+
+    #[test]
+    fn test_lerp_x_negative_large_coordinates_no_overflow() {
+        // Negative large values that would also overflow
+        let result = lerp_x(-100_000, -100_000, 100_000, 100_000, 0);
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn test_fill_triangle_large_coordinates_no_overflow() {
+        // Triangle with coordinates that would overflow i32 in lerp_x
+        // if intermediate arithmetic were not widened.
+        // This should not panic.
+        let mut p = Pixmap::new(10, 10, PixmapFormat::RGBA8888);
+        p.set_color_rgba(1.0, 1.0, 1.0, 1.0);
+        // Vertices far outside the pixmap but whose lerp arithmetic
+        // would overflow i32 without i64 widening.
+        p.fill_triangle(0, 0, 100_000, 100_000, -100_000, 100_000);
+        // No panic is the success criterion; pixels outside bounds are clipped.
     }
 }
