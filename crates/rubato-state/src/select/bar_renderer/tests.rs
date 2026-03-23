@@ -12,10 +12,13 @@ use rubato_types::skin_type::SkinType;
 
 /// Create a test SkinImage with draw=true and specified region.
 /// Uses a default TextureRegion (no real texture, but valid for layout tests).
+/// Sets `fixr` so that `SkinObjectData::prepare_region` preserves `draw=true`
+/// even when `dst` is empty (the default).
 fn make_test_image(x: f32, y: f32, w: f32, h: f32) -> SkinImage {
     let mut img = SkinImage::new_with_single(TextureRegion::default());
     img.data.draw = true;
     img.data.region = Rectangle::new(x, y, w, h);
+    img.data.fixr = Some(Rectangle::new(x, y, w, h));
     img
 }
 
