@@ -650,9 +650,13 @@ fn convert_image(
         let imgs_per_ref = srcimg.len() / (len as usize);
         if imgs_per_ref == 0 {
             // Not enough source images to distribute across refs.
-            // Java behavior for broken skin configs: silently produces empty entries.
-            // Return None to avoid creating a SkinImage with empty sub-arrays.
-            return None;
+            // Java creates the SkinImage with empty sub-arrays (TextureRegion[0])
+            // for each ref entry. Mirror that by creating `len` empty Vec entries.
+            let tr: Vec<Vec<TextureRegion>> = vec![Vec::new(); len as usize];
+            let timer_val = timer.unwrap_or(0);
+            return Some(SkinObject::Image(SkinImage::new_with_int_timer_ref_id(
+                tr, timer_val, cycle, ref_id,
+            )));
         }
         let mut tr: Vec<Vec<TextureRegion>> = Vec::with_capacity(len as usize);
         for i in 0..(len as usize) {
@@ -1222,8 +1226,13 @@ mod tests {
         );
     }
 
+    /// Regression: when imgs_per_ref == 0 (srcimg.len() < len), the old code
+    /// returned None, silently dropping the entire Image object (with all its
+    /// destinations, click events, offset IDs). Java creates the SkinImage with
+    /// empty sub-arrays instead. The fix mirrors Java by creating `len` empty
+    /// Vec entries so the object is preserved.
     #[test]
-    fn convert_image_returns_none_when_srcimg_fewer_than_len() {
+    fn convert_image_creates_object_with_empty_refs_when_srcimg_fewer_than_len() {
         use super::convert_image;
         use crate::json::json_skin_loader::{SourceData, SourceDataType};
         use crate::reexports::Texture;
@@ -1231,7 +1240,7 @@ mod tests {
         use std::path::Path;
 
         // Create a small 2x2 texture that will produce only 4 source images (divx=2, divy=2).
-        // Request len=8, so imgs_per_ref = 4/8 = 0 -> bug triggers empty Vec entries.
+        // Request len=8, so imgs_per_ref = 4/8 = 0.
         let tex = Texture {
             width: 64,
             height: 64,
@@ -1266,11 +1275,14 @@ mod tests {
             &HashMap::new(),
         );
 
-        // With imgs_per_ref == 0, the current code produces empty Vec entries.
-        // The fix should return None instead.
+        // Java creates the SkinImage with empty sub-arrays; the object must not be dropped.
         assert!(
-            result.is_none(),
-            "convert_image should return None when source images are fewer than len"
+            result.is_some(),
+            "convert_image should create an Image object even when imgs_per_ref == 0 (Java parity)"
+        );
+        assert!(
+            matches!(result.unwrap(), SkinObject::Image(_)),
+            "result should be a SkinObject::Image"
         );
     }
 
