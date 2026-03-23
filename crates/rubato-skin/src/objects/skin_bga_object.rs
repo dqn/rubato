@@ -485,14 +485,14 @@ mod tests {
         bga.draw(&mut sprite);
 
         // The practice_font field exists and is not re-created per frame.
-        // Verify the font is still the same object (scale is the default 16.0).
-        assert_eq!(bga.practice_font.scale, 16.0);
+        // Verify the font is still the same object (scale matches PRACTICE_FONT_SIZE).
+        assert_eq!(bga.practice_font.scale, PRACTICE_FONT_SIZE);
     }
 
     #[test]
     fn test_set_practice_font_replaces_default() {
         let mut bga = SkinBgaObject::new(BGAEXPAND_FULL);
-        assert_eq!(bga.practice_font.scale, 16.0);
+        assert_eq!(bga.practice_font.scale, PRACTICE_FONT_SIZE);
 
         let mut custom_font = rubato_render::font::BitmapFont::new();
         custom_font.scale = 24.0;

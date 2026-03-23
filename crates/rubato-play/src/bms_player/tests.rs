@@ -4052,8 +4052,6 @@ fn make_play_render_context_with_bpm_volume<'a>(
     bpm: (f64, f64, f64, f64),
     volume: (f32, f32, f32),
 ) -> skin_context::PlayRenderContext<'a> {
-    static DEFAULT_CONFIG: std::sync::OnceLock<rubato_types::config::Config> =
-        std::sync::OnceLock::new();
     static DEFAULT_SCORE_DATA: std::sync::OnceLock<
         rubato_types::score_data_property::ScoreDataProperty,
     > = std::sync::OnceLock::new();
