@@ -87,7 +87,7 @@ impl SkinGauge {
                     }
                 }
                 ANIMATION_FLICKERING => {
-                    self.animation = (time % self.duration) as i32;
+                    self.animation = (time.rem_euclid(self.duration)) as i32;
                 }
                 _ => {}
             }
@@ -222,5 +222,29 @@ mod tests {
         g.prepare(250, Some(&gauge));
         // 250 % 100 = 50
         assert_eq!(g.animation, 50);
+    }
+
+    /// Regression: ANIMATION_FLICKERING with negative time (practice mode time
+    /// rewinding) must produce a non-negative animation value. Rust's `%`
+    /// follows the dividend sign, so `(-7) % 100 == -7`. Using `rem_euclid`
+    /// ensures the result is always in [0, duration).
+    #[test]
+    fn test_flickering_negative_time_produces_non_negative() {
+        let gauge = make_groove_gauge();
+        let mut g = make_gauge(ANIMATION_FLICKERING, 4, 100);
+
+        for &t in &[-1i64, -7, -99, -100, -101, -500, -999] {
+            g.prepare(t, Some(&gauge));
+            assert!(
+                g.animation >= 0,
+                "animation must be non-negative for time={t}, got {}",
+                g.animation
+            );
+            assert!(
+                (g.animation as i64) < g.duration,
+                "animation must be < duration for time={t}, got {}",
+                g.animation
+            );
+        }
     }
 }
