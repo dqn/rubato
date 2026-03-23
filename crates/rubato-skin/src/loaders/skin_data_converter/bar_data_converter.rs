@@ -239,27 +239,38 @@ fn apply_scaled_destinations(
     scale_y: f32,
 ) {
     for dst in destinations {
-        data.set_destination_with_int_timer_ops(
-            &crate::skin_object::DestinationParams {
-                time: dst.time as i64,
-                x: dst.x as f32 * scale_x,
-                y: dst.y as f32 * scale_y,
-                w: dst.w as f32 * scale_x,
-                h: dst.h as f32 * scale_y,
-                acc: dst.acc,
-                a: dst.a,
-                r: dst.r,
-                g: dst.g,
-                b: dst.b,
-                blend: dst.blend,
-                filter: dst.filter,
-                angle: dst.angle,
-                center: dst.center,
-                loop_val: dst.loop_val,
-            },
-            dst.timer.unwrap_or(0),
-            &dst.op,
-        );
+        let timer_id = dst.timer.unwrap_or(0);
+        let params = crate::skin_object::DestinationParams {
+            time: dst.time as i64,
+            x: dst.x as f32 * scale_x,
+            y: dst.y as f32 * scale_y,
+            w: dst.w as f32 * scale_x,
+            h: dst.h as f32 * scale_y,
+            acc: dst.acc,
+            a: dst.a,
+            r: dst.r,
+            g: dst.g,
+            b: dst.b,
+            blend: dst.blend,
+            filter: dst.filter,
+            angle: dst.angle,
+            center: dst.center,
+            loop_val: dst.loop_val,
+        };
+
+        // Handle draw condition: replicate the logic from mod.rs for main skin objects.
+        // draw_id -1 is a Lua expression sentinel (always draw); skip boolean_property lookup.
+        if let Some(draw_id) = dst.draw
+            && draw_id != 0
+            && draw_id != -1
+            && let Some(draw_prop) =
+                crate::property::boolean_property_factory::boolean_property(draw_id)
+        {
+            data.set_destination_with_int_timer_draw(&params, timer_id, draw_prop);
+            continue;
+        }
+
+        data.set_destination_with_int_timer_ops(&params, timer_id, &dst.op);
     }
 }
 
@@ -328,5 +339,80 @@ fn resolve_graph_region(
             dst.h as f32 * scale_y,
         ),
         None => Rectangle::default(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::json::json_skin_loader::DestinationData;
+    use crate::skin_object::SkinObjectData;
+
+    #[test]
+    fn apply_scaled_destinations_propagates_draw_condition() {
+        let mut data = SkinObjectData::default();
+        // draw_id=1 is a valid boolean property (OPTION_PANEL1 in the factory)
+        let dst = DestinationData {
+            draw: Some(1),
+            a: 255,
+            r: 255,
+            g: 255,
+            b: 255,
+            ..Default::default()
+        };
+        apply_scaled_destinations(&mut data, &[dst], 1.0, 1.0);
+        assert!(
+            !data.dstdraw.is_empty(),
+            "draw condition from DestinationData.draw should be set on SkinObjectData.dstdraw"
+        );
+    }
+
+    #[test]
+    fn apply_scaled_destinations_skips_draw_zero() {
+        let mut data = SkinObjectData::default();
+        let dst = DestinationData {
+            draw: Some(0),
+            ..Default::default()
+        };
+        apply_scaled_destinations(&mut data, &[dst], 1.0, 1.0);
+        assert!(
+            data.dstdraw.is_empty(),
+            "draw_id=0 should not produce a draw condition"
+        );
+    }
+
+    #[test]
+    fn apply_scaled_destinations_skips_lua_sentinel() {
+        let mut data = SkinObjectData::default();
+        let dst = DestinationData {
+            draw: Some(-1),
+            ..Default::default()
+        };
+        apply_scaled_destinations(&mut data, &[dst], 1.0, 1.0);
+        assert!(
+            data.dstdraw.is_empty(),
+            "draw_id=-1 (Lua sentinel) should not produce a draw condition"
+        );
+    }
+
+    #[test]
+    fn apply_scaled_destinations_no_draw_falls_through_to_ops() {
+        let mut data = SkinObjectData::default();
+        let dst = DestinationData {
+            draw: None,
+            op: vec![1],
+            a: 255,
+            r: 255,
+            g: 255,
+            b: 255,
+            ..Default::default()
+        };
+        apply_scaled_destinations(&mut data, &[dst], 1.0, 1.0);
+        // With draw=None, the op-based path should be taken.
+        // Op ID 1 is a valid boolean property, so it goes into dstdraw via set_draw_condition_from_ops.
+        assert!(
+            !data.dstdraw.is_empty(),
+            "without draw field, ops should be processed via set_destination_with_int_timer_ops"
+        );
     }
 }
