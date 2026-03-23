@@ -146,7 +146,14 @@ fn convert_bar_sub_images(
                 filemap,
             )?;
             if let SkinObject::Image(mut img) = skin_obj {
-                apply_scaled_destinations(&mut img.data, &obj_data.destinations, scale_x, scale_y);
+                apply_scaled_destinations_with_offsets(
+                    &mut img.data,
+                    &obj_data.destinations,
+                    scale_x,
+                    scale_y,
+                    &obj_data.offset_ids,
+                    obj_data.stretch,
+                );
                 Some(img)
             } else {
                 None
@@ -178,20 +185,24 @@ fn convert_bar_sub_text(
             )?;
             match skin_obj {
                 SkinObject::TextFont(mut stf) => {
-                    apply_scaled_destinations(
+                    apply_scaled_destinations_with_offsets(
                         &mut stf.text_data.data,
                         &obj_data.destinations,
                         scale_x,
                         scale_y,
+                        &obj_data.offset_ids,
+                        obj_data.stretch,
                     );
                     Some(crate::skin_text::SkinTextEnum::Font(stf))
                 }
                 SkinObject::TextBitmap(mut stb) => {
-                    apply_scaled_destinations(
+                    apply_scaled_destinations_with_offsets(
                         &mut stb.text_data.data,
                         &obj_data.destinations,
                         scale_x,
                         scale_y,
+                        &obj_data.offset_ids,
+                        obj_data.stretch,
                     );
                     Some(crate::skin_text::SkinTextEnum::Bitmap(stb))
                 }
@@ -223,7 +234,14 @@ fn convert_bar_sub_numbers(
                 filemap,
             )?;
             if let SkinObject::Number(mut num) = skin_obj {
-                apply_scaled_destinations(&mut num.data, &obj_data.destinations, scale_x, scale_y);
+                apply_scaled_destinations_with_offsets(
+                    &mut num.data,
+                    &obj_data.destinations,
+                    scale_x,
+                    scale_y,
+                    &obj_data.offset_ids,
+                    obj_data.stretch,
+                );
                 Some(num)
             } else {
                 None
@@ -232,11 +250,23 @@ fn convert_bar_sub_numbers(
         .collect()
 }
 
+#[cfg(test)]
 fn apply_scaled_destinations(
     data: &mut crate::skin_object::SkinObjectData,
     destinations: &[crate::json::json_skin_loader::DestinationData],
     scale_x: f32,
     scale_y: f32,
+) {
+    apply_scaled_destinations_with_offsets(data, destinations, scale_x, scale_y, &[], -1);
+}
+
+fn apply_scaled_destinations_with_offsets(
+    data: &mut crate::skin_object::SkinObjectData,
+    destinations: &[crate::json::json_skin_loader::DestinationData],
+    scale_x: f32,
+    scale_y: f32,
+    offset_ids: &[i32],
+    stretch: i32,
 ) {
     for dst in destinations {
         let timer_id = dst.timer.unwrap_or(0);
@@ -271,6 +301,14 @@ fn apply_scaled_destinations(
         }
 
         data.set_destination_with_int_timer_ops(&params, timer_id, &dst.op);
+    }
+
+    // Apply offset IDs and stretch after all destinations are set (matching mod.rs logic)
+    if !offset_ids.is_empty() {
+        data.set_offset_id(offset_ids);
+    }
+    if stretch >= 0 {
+        data.set_stretch_by_id(stretch);
     }
 }
 
