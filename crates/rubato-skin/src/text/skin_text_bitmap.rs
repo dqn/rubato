@@ -20,6 +20,9 @@ struct DrawTextGlyphsParams<'a> {
     pub y: f32,
     pub _layout_width: f32,
     pub region_width: f32,
+    /// Effective bitmap glyph scale, potentially shrunk by OVERFLOW_SHRINK.
+    /// When None, draw_text_glyphs computes the default scale from size / original_size.
+    pub effective_scale: Option<f32>,
 }
 
 struct PositionedBitmapGlyphRegion {
@@ -136,7 +139,7 @@ impl SkinTextBitmap {
             let region_width = self.text_data.data.region.width;
             let region_height = self.text_data.data.region.height;
             let region_y = self.text_data.data.region.y;
-            let layout_width =
+            let (layout_width, effective_scale) =
                 self.compute_layout_width(&text, &color, region_width, region_height);
             self.draw_text_glyphs(DrawTextGlyphsParams {
                 sprite,
@@ -146,6 +149,7 @@ impl SkinTextBitmap {
                 y: region_y + offset_y + region_height,
                 _layout_width: layout_width,
                 region_width,
+                effective_scale,
             });
         } else {
             // Standard rendering path
@@ -161,7 +165,7 @@ impl SkinTextBitmap {
             // Shadow rendering: if shadow offset is non-zero, draw shadow first
             if shadow_offset.0 != 0.0 || shadow_offset.1 != 0.0 {
                 let shadow_color = Color::new(color.r / 2.0, color.g / 2.0, color.b / 2.0, color.a);
-                let layout_width =
+                let (layout_width, effective_scale) =
                     self.compute_layout_width(&text, &shadow_color, region_width, region_height);
                 self.draw_text_glyphs(DrawTextGlyphsParams {
                     sprite,
@@ -171,11 +175,12 @@ impl SkinTextBitmap {
                     y: region_y - shadow_offset.1 + offset_y + region_height,
                     _layout_width: layout_width,
                     region_width,
+                    effective_scale,
                 });
             }
 
             // Main text rendering
-            let layout_width =
+            let (layout_width, effective_scale) =
                 self.compute_layout_width(&text, &color, region_width, region_height);
             self.draw_text_glyphs(DrawTextGlyphsParams {
                 sprite,
@@ -185,6 +190,7 @@ impl SkinTextBitmap {
                 y: region_y + offset_y + region_height,
                 _layout_width: layout_width,
                 region_width,
+                effective_scale,
             });
         }
 
@@ -222,14 +228,16 @@ impl SkinTextBitmap {
 
     /// Compute layout width applying overflow mode.
     /// Corresponds to Java setLayout() logic for measuring and applying shrink/truncate.
-    /// Returns the effective text width after overflow processing.
+    /// Returns (effective_width, effective_scale). The effective_scale is the shrunk
+    /// bitmap glyph scale when OVERFLOW_SHRINK is active; None otherwise, meaning the
+    /// caller should use the default scale (self.size / original_size).
     fn compute_layout_width(
         &mut self,
         text: &str,
         _color: &Color,
         region_width: f32,
         _region_height: f32,
-    ) -> f32 {
+    ) -> (f32, Option<f32>) {
         let scale = if self.source.original_size() > 0.0 {
             self.size / self.source.original_size()
         } else {
@@ -248,7 +256,7 @@ impl SkinTextBitmap {
             let layout = measure();
             self.layout.width = layout.width;
             self.layout.height = layout.height;
-            return layout.width;
+            return (layout.width, None);
         }
 
         match self.text_data.overflow() {
@@ -256,7 +264,7 @@ impl SkinTextBitmap {
                 let layout = measure();
                 self.layout.width = layout.width;
                 self.layout.height = layout.height;
-                layout.width
+                (layout.width, None)
             }
             OVERFLOW_SHRINK => {
                 let layout = measure();
@@ -272,31 +280,30 @@ impl SkinTextBitmap {
                             self.font.as_mut().map(|font| {
                                 let current_scale = font.scale();
                                 // Only shrink X axis, keeping Y (height) unchanged.
+                                // Keep scale_x set so draw_text_glyphs uses it.
                                 font.scale_x = Some(current_scale * region_width / actual_width);
-                                let shrunk = font.measure(text);
-                                font.scale_x = None;
-                                shrunk
+                                font.measure(text)
                             })
                         })
                         .unwrap_or_default();
                     self.layout.width = shrunk.width;
                     self.layout.height = shrunk.height;
-                    return shrunk.width;
+                    return (shrunk.width, Some(shrunk_scale));
                 }
-                actual_width
+                (actual_width, None)
             }
             OVERFLOW_TRUNCATE => {
                 // Truncate text to fit within region width
                 let layout = measure();
                 self.layout.width = layout.width.min(region_width);
                 self.layout.height = layout.height;
-                self.layout.width
+                (self.layout.width, None)
             }
             _ => {
                 let layout = measure();
                 self.layout.width = layout.width;
                 self.layout.height = layout.height;
-                layout.width
+                (layout.width, None)
             }
         }
     }
@@ -311,11 +318,13 @@ impl SkinTextBitmap {
         let x = params.x;
         let y = params.y;
         let region_width = params.region_width;
-        let scale = if self.source.original_size() > 0.0 {
-            self.size / self.source.original_size()
-        } else {
-            0.0
-        };
+        let scale = params.effective_scale.unwrap_or_else(|| {
+            if self.source.original_size() > 0.0 {
+                self.size / self.source.original_size()
+            } else {
+                0.0
+            }
+        });
         let Some((glyphs, _total_width, _line_height)) =
             self.source.layout_bitmap_glyph_regions(text, scale)
         else {
@@ -1142,6 +1151,113 @@ mod tests {
             lowercase_top,
             quads
         );
+    }
+
+    /// OVERFLOW_SHRINK must draw glyphs at the shrunk scale, not the original scale.
+    /// Bug: compute_layout_width correctly measures at the shrunk scale, but
+    /// draw_text_glyphs recomputes scale as self.size / original_size (unshrunk),
+    /// causing text to overflow the destination region.
+    #[test]
+    fn test_overflow_shrink_draws_glyphs_at_shrunk_scale() {
+        let font_path = ecfn_select_song_font_path();
+        if !font_path.exists() {
+            return;
+        }
+
+        // Use a large font size so that text is guaranteed wider than the narrow region.
+        let source = SkinTextBitmapSource::new(font_path.clone(), false);
+        let mut bitmap = SkinTextBitmap::new(source, 50.0);
+        bitmap.text_data.data.draw = true;
+        bitmap.text_data.overflow = OVERFLOW_SHRINK;
+        let region_width = 100.0; // Narrow region to force shrink
+        bitmap.text_data.data.region = Rectangle::new(0.0, 0.0, region_width, 50.0);
+        bitmap.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        bitmap.set_text("WWWWWWWWWWWW".to_string()); // Wide text
+
+        let mut renderer = SkinObjectRenderer::new();
+        renderer.sprite.enable_capture();
+        bitmap.draw_with_offset(&mut renderer, 0.0, 0.0);
+
+        let quads = renderer.sprite.captured_quads();
+        assert!(
+            !quads.is_empty(),
+            "shrunk bitmap text should still emit glyph quads"
+        );
+
+        // The rightmost glyph edge must not exceed the region width.
+        // Before fix: glyphs are drawn at original (unshrunk) scale and overflow.
+        // After fix: glyphs are drawn at shrunk scale and fit within region_width.
+        let max_right = quads
+            .iter()
+            .map(|quad| quad.x + quad.w)
+            .fold(f32::NEG_INFINITY, f32::max);
+        assert!(
+            max_right <= region_width + 1.0,
+            "OVERFLOW_SHRINK glyphs must fit within region width {region_width}, \
+             but rightmost edge was {max_right} (drawn at unshrunk scale)"
+        );
+    }
+
+    /// When shadow is enabled with OVERFLOW_SHRINK, both shadow and main text
+    /// must use the shrunk scale.
+    #[test]
+    fn test_overflow_shrink_shadow_also_uses_shrunk_scale() {
+        let font_path = ecfn_select_song_font_path();
+        if !font_path.exists() {
+            return;
+        }
+
+        let source = SkinTextBitmapSource::new(font_path.clone(), false);
+        let mut bitmap = SkinTextBitmap::new(source, 50.0);
+        bitmap.text_data.data.draw = true;
+        bitmap.text_data.overflow = OVERFLOW_SHRINK;
+        bitmap.text_data.set_shadow_offset(2.0, 2.0);
+        let region_width = 100.0;
+        bitmap.text_data.data.region = Rectangle::new(0.0, 0.0, region_width, 50.0);
+        bitmap.text_data.data.color = Color::new(1.0, 1.0, 1.0, 1.0);
+        bitmap.set_text("WWWWWWWWWWWW".to_string());
+
+        let mut renderer = SkinObjectRenderer::new();
+        renderer.sprite.enable_capture();
+        bitmap.draw_with_offset(&mut renderer, 0.0, 0.0);
+
+        let quads = renderer.sprite.captured_quads();
+        // With shadow, we expect two sets of quads (shadow + main).
+        // The main text quads (second half) must fit within region_width.
+        // The shadow quads are offset by shadow_offset.0 (2.0), so they may
+        // slightly exceed, but the glyph widths themselves should be shrunk.
+        assert!(
+            quads.len() >= 2,
+            "should have shadow + main quads, got {}",
+            quads.len()
+        );
+
+        // Check that glyph widths are consistent between shadow and main.
+        // Split into two halves: first half = shadow, second half = main.
+        let half = quads.len() / 2;
+        let shadow_quads = &quads[..half];
+        let main_quads = &quads[half..];
+
+        // Main text glyphs must fit within region width
+        let main_max_right = main_quads
+            .iter()
+            .map(|quad| quad.x + quad.w)
+            .fold(f32::NEG_INFINITY, f32::max);
+        assert!(
+            main_max_right <= region_width + 1.0,
+            "OVERFLOW_SHRINK main text must fit within region width {region_width}, \
+             but rightmost edge was {main_max_right}"
+        );
+
+        // Shadow glyph widths must match main glyph widths (both use shrunk scale)
+        for (s, m) in shadow_quads.iter().zip(main_quads.iter()) {
+            assert!(
+                (s.w - m.w).abs() < 0.01,
+                "shadow glyph width ({}) must match main glyph width ({}) under OVERFLOW_SHRINK",
+                s.w,
+                m.w
+            );
+        }
     }
 
     #[test]
