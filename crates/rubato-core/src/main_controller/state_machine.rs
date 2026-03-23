@@ -273,6 +273,27 @@ impl MainController {
             audio.set_model(model);
         }
 
+        // Register BMS resource images (stagefile=100, backbmp=101, banner=102) into
+        // the skin's image registry so SkinSourceReference-backed objects can render them.
+        // In Java, MainState.getImage(id) reads from BMSResource directly at draw time;
+        // in Rust, we populate the skin's registry once here.
+        if let Some(ref resource) = self.resource
+            && let Some(bms_res) = resource.bms_resource()
+        {
+            let msd = new_state.main_state_data_mut();
+            if let Some(ref mut skin) = msd.skin {
+                if let Some(tr) = bms_res.stagefile() {
+                    skin.register_image(crate::bms_resource::IMAGE_STAGEFILE, tr.clone());
+                }
+                if let Some(tr) = bms_res.backbmp() {
+                    skin.register_image(crate::bms_resource::IMAGE_BACKBMP, tr.clone());
+                }
+                if let Some(tr) = bms_res.banner() {
+                    skin.register_image(crate::bms_resource::IMAGE_BANNER, tr.clone());
+                }
+            }
+        }
+
         // Copy skin config offsets into both MainStateData.offsets (HashMap, for render contexts)
         // and MainController.offset[] (Vec, for trait delegation).
         // Java: MainState.setSkin() copies skin.getOffset() entries into main.offset[].

@@ -633,6 +633,10 @@ impl rubato_core::main_state::SkinDrawable for Skin {
             note_expansion_rate: self.play_note_expansion_rate,
         }
     }
+
+    fn register_image(&mut self, id: i32, texture: rubato_render::texture::TextureRegion) {
+        self.register_image(id, texture);
+    }
 }
 
 #[cfg(test)]
@@ -987,6 +991,75 @@ mod skin_drawable_delegation_tests {
         // These should delegate to no-op defaults on FullMockContext without panicking
         adapter.notify_audio_config_changed();
         adapter.select_song_mode(15);
+    }
+
+    /// Verify SkinDrawable::register_image populates the skin's image registry
+    /// so that SkinSourceReference-backed objects can resolve BMS resource images.
+    #[test]
+    fn test_register_image_via_skin_drawable_populates_registry() {
+        use crate::skin_property::{IMAGE_BACKBMP, IMAGE_BANNER, IMAGE_STAGEFILE};
+        use crate::types::skin_header::SkinHeader;
+        use rubato_core::main_state::SkinDrawable;
+        use rubato_render::pixmap::{Pixmap, PixmapFormat};
+        use rubato_render::texture::{Texture, TextureRegion};
+
+        let mut skin = Skin::new(SkinHeader::new());
+
+        // Before registration, the BMS resource image IDs should not be present
+        assert!(skin.registered_image(IMAGE_STAGEFILE).is_none());
+        assert!(skin.registered_image(IMAGE_BACKBMP).is_none());
+        assert!(skin.registered_image(IMAGE_BANNER).is_none());
+
+        // Register images via the SkinDrawable trait method
+        let mk_tex = |w, h| {
+            let pix = Pixmap::new(w, h, PixmapFormat::RGBA8888);
+            TextureRegion::from_texture(Texture::from_pixmap(&pix))
+        };
+        let skin_drawable: &mut dyn SkinDrawable = &mut skin;
+        skin_drawable.register_image(IMAGE_STAGEFILE, mk_tex(640, 480));
+        skin_drawable.register_image(IMAGE_BACKBMP, mk_tex(256, 256));
+        skin_drawable.register_image(IMAGE_BANNER, mk_tex(300, 80));
+
+        // After registration, the images should be resolvable
+        let sf = skin.registered_image(IMAGE_STAGEFILE).unwrap();
+        assert_eq!(sf.region_width, 640);
+        assert_eq!(sf.region_height, 480);
+
+        let bb = skin.registered_image(IMAGE_BACKBMP).unwrap();
+        assert_eq!(bb.region_width, 256);
+        assert_eq!(bb.region_height, 256);
+
+        let bn = skin.registered_image(IMAGE_BANNER).unwrap();
+        assert_eq!(bn.region_width, 300);
+        assert_eq!(bn.region_height, 80);
+    }
+
+    /// Verify that registered images are accessible through TimerOnlyMainState's
+    /// skin_image() method, which is the runtime path SkinSourceReference uses.
+    #[test]
+    fn test_registered_images_resolve_through_timer_only_main_state() {
+        use crate::reexports::MainState;
+        use crate::skin_property::IMAGE_STAGEFILE;
+        use rubato_render::pixmap::{Pixmap, PixmapFormat};
+        use rubato_render::texture::{Texture, TextureRegion};
+
+        let pix = Pixmap::new(320, 240, PixmapFormat::RGBA8888);
+        let tr = TextureRegion::from_texture(Texture::from_pixmap(&pix));
+
+        let mut registry = HashMap::new();
+        registry.insert(IMAGE_STAGEFILE, tr);
+
+        let mut ctx = FullMockContext::new();
+        let adapter = TimerOnlyMainState::from_render_context_with_images(&mut ctx, &registry);
+
+        let resolved = adapter.skin_image(IMAGE_STAGEFILE);
+        assert!(resolved.is_some());
+        let resolved = resolved.unwrap();
+        assert_eq!(resolved.region_width, 320);
+        assert_eq!(resolved.region_height, 240);
+
+        // Unregistered ID should return None
+        assert!(adapter.skin_image(999).is_none());
     }
 }
 

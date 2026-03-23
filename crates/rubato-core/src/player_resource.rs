@@ -510,6 +510,10 @@ impl PlayerResource {
         self.bmsresource.as_ref()
     }
 
+    pub fn bms_resource_mut(&mut self) -> Option<&mut BMSResource> {
+        self.bmsresource.as_mut()
+    }
+
     pub fn set_tablename(&mut self, tablename: &str) {
         self.tablename = tablename.to_string();
         self.tablefull = None;

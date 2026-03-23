@@ -474,6 +474,16 @@ pub trait SkinDrawable: Send {
     fn play_skin_properties(&self) -> PlaySkinProperties {
         PlaySkinProperties::default()
     }
+
+    /// Register a texture by image ID for SkinSourceReference resolution at draw time.
+    ///
+    /// Used to inject BMS resource images (stagefile=100, backbmp=101, banner=102)
+    /// into the skin's image registry so that SkinSourceReference-backed objects
+    /// can render them. In Java, MainState.getImage(id) accesses these directly
+    /// from the BMSResource; in Rust, we populate the skin's registry instead.
+    fn register_image(&mut self, _id: i32, _texture: rubato_render::texture::TextureRegion) {
+        // default no-op
+    }
 }
 
 /// Play-skin-specific metadata extracted from the loaded skin.

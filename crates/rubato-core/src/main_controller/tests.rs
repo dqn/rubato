@@ -2656,3 +2656,287 @@ fn update_skin_history_updates_existing_entry() {
         .expect("should find updated entry");
     assert!(entry.properties().is_some());
 }
+
+// --- BMS resource image registration during state transition ---
+
+/// Integration test using shared state to verify BMS resource images
+/// are registered during transition_to_state.
+#[test]
+fn test_transition_registers_stagefile_and_banner_into_skin() {
+    use crate::bms_resource::{IMAGE_BACKBMP, IMAGE_BANNER, IMAGE_STAGEFILE};
+    use rubato_render::pixmap::{Pixmap, PixmapFormat};
+
+    let registered = Arc::new(Mutex::new(Vec::<(
+        i32,
+        rubato_render::texture::TextureRegion,
+    )>::new()));
+    let registered_clone = Arc::clone(&registered);
+
+    /// Mock SkinDrawable that captures register_image calls via shared state.
+    struct SharedImageCaptureSkin {
+        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
+    }
+
+    impl crate::main_state::SkinDrawable for SharedImageCaptureSkin {
+        fn draw_all_objects_timed(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn update_custom_objects_timed(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn mouse_pressed_at(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+            _button: i32,
+            _x: i32,
+            _y: i32,
+        ) {
+        }
+        fn mouse_dragged_at(
+            &mut self,
+            _ctx: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+            _button: i32,
+            _x: i32,
+            _y: i32,
+        ) {
+        }
+        fn prepare_skin(&mut self, _state_type: Option<MainStateType>) {}
+        fn dispose_skin(&mut self) {}
+        fn fadeout(&self) -> i32 {
+            0
+        }
+        fn input(&self) -> i32 {
+            0
+        }
+        fn scene(&self) -> i32 {
+            0
+        }
+        fn get_width(&self) -> f32 {
+            1280.0
+        }
+        fn get_height(&self) -> f32 {
+            720.0
+        }
+        fn swap_sprite_batch(&mut self, _batch: &mut rubato_render::sprite_batch::SpriteBatch) {}
+        fn register_image(&mut self, id: i32, texture: rubato_render::texture::TextureRegion) {
+            self.registered.lock().unwrap().push((id, texture));
+        }
+    }
+
+    struct SharedImageCaptureState {
+        state_data: MainStateData,
+        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
+    }
+
+    impl MainState for SharedImageCaptureState {
+        fn state_type(&self) -> Option<MainStateType> {
+            Some(MainStateType::Play)
+        }
+        fn main_state_data(&self) -> &MainStateData {
+            &self.state_data
+        }
+        fn main_state_data_mut(&mut self) -> &mut MainStateData {
+            &mut self.state_data
+        }
+        fn create(&mut self) {
+            self.state_data.skin = Some(Box::new(SharedImageCaptureSkin {
+                registered: Arc::clone(&self.registered),
+            }));
+        }
+        fn render(&mut self) {}
+    }
+
+    struct SharedImageCaptureFactory {
+        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
+    }
+
+    impl StateFactory for SharedImageCaptureFactory {
+        fn create_state(
+            &self,
+            _state_type: MainStateType,
+            _controller: &mut MainController,
+        ) -> Option<StateCreateResult> {
+            Some(StateCreateResult {
+                state: Box::new(SharedImageCaptureState {
+                    state_data: MainStateData::new(TimerManager::new()),
+                    registered: Arc::clone(&self.registered),
+                }),
+                target_score: None,
+            })
+        }
+    }
+
+    let mut mc = make_test_controller();
+    mc.set_state_factory(Box::new(SharedImageCaptureFactory {
+        registered: Arc::clone(&registered),
+    }));
+
+    // Set up a PlayerResource with BMS resource images
+    let mut resource = PlayerResource::new(Config::default(), PlayerConfig::default());
+    resource
+        .bms_resource_mut()
+        .unwrap()
+        .set_stagefile(Some(Pixmap::new(640, 480, PixmapFormat::RGBA8888)));
+    resource
+        .bms_resource_mut()
+        .unwrap()
+        .set_banner(Some(Pixmap::new(300, 80, PixmapFormat::RGBA8888)));
+    mc.restore_player_resource(resource);
+
+    // Trigger state transition
+    mc.change_state(MainStateType::Play);
+
+    // Verify register_image was called for stagefile and banner
+    let regs = registered_clone.lock().unwrap();
+    assert!(
+        regs.iter().any(|(id, tr)| *id == IMAGE_STAGEFILE
+            && tr.region_width == 640
+            && tr.region_height == 480),
+        "stagefile (ID {}) should be registered with 640x480; got {:?}",
+        IMAGE_STAGEFILE,
+        regs
+    );
+    assert!(
+        regs.iter().any(|(id, tr)| *id == IMAGE_BANNER
+            && tr.region_width == 300
+            && tr.region_height == 80),
+        "banner (ID {}) should be registered with 300x80; got {:?}",
+        IMAGE_BANNER,
+        regs
+    );
+    // backbmp is not set in this test, so it should NOT be registered
+    assert!(
+        !regs.iter().any(|(id, _)| *id == IMAGE_BACKBMP),
+        "backbmp (ID {}) should not be registered when not set",
+        IMAGE_BACKBMP
+    );
+}
+
+/// Verify that when no BMS resource images exist, no register_image calls are made.
+#[test]
+fn test_transition_without_bms_images_does_not_register() {
+    let registered = Arc::new(Mutex::new(Vec::<(
+        i32,
+        rubato_render::texture::TextureRegion,
+    )>::new()));
+    let registered_clone = Arc::clone(&registered);
+
+    // Reuse SharedImageCapture types from above by defining inline
+    struct NoImageSkin {
+        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
+    }
+    impl crate::main_state::SkinDrawable for NoImageSkin {
+        fn draw_all_objects_timed(
+            &mut self,
+            _: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn update_custom_objects_timed(
+            &mut self,
+            _: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn mouse_pressed_at(
+            &mut self,
+            _: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+            _: i32,
+            _: i32,
+            _: i32,
+        ) {
+        }
+        fn mouse_dragged_at(
+            &mut self,
+            _: &mut dyn rubato_types::skin_render_context::SkinRenderContext,
+            _: i32,
+            _: i32,
+            _: i32,
+        ) {
+        }
+        fn prepare_skin(&mut self, _: Option<MainStateType>) {}
+        fn dispose_skin(&mut self) {}
+        fn fadeout(&self) -> i32 {
+            0
+        }
+        fn input(&self) -> i32 {
+            0
+        }
+        fn scene(&self) -> i32 {
+            0
+        }
+        fn get_width(&self) -> f32 {
+            1280.0
+        }
+        fn get_height(&self) -> f32 {
+            720.0
+        }
+        fn swap_sprite_batch(&mut self, _: &mut rubato_render::sprite_batch::SpriteBatch) {}
+        fn register_image(&mut self, id: i32, texture: rubato_render::texture::TextureRegion) {
+            self.registered.lock().unwrap().push((id, texture));
+        }
+    }
+
+    struct NoImageState {
+        state_data: MainStateData,
+        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
+    }
+    impl MainState for NoImageState {
+        fn state_type(&self) -> Option<MainStateType> {
+            Some(MainStateType::Play)
+        }
+        fn main_state_data(&self) -> &MainStateData {
+            &self.state_data
+        }
+        fn main_state_data_mut(&mut self) -> &mut MainStateData {
+            &mut self.state_data
+        }
+        fn create(&mut self) {
+            self.state_data.skin = Some(Box::new(NoImageSkin {
+                registered: Arc::clone(&self.registered),
+            }));
+        }
+        fn render(&mut self) {}
+    }
+
+    struct NoImageFactory {
+        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
+    }
+    impl StateFactory for NoImageFactory {
+        fn create_state(
+            &self,
+            _: MainStateType,
+            _: &mut MainController,
+        ) -> Option<StateCreateResult> {
+            Some(StateCreateResult {
+                state: Box::new(NoImageState {
+                    state_data: MainStateData::new(TimerManager::new()),
+                    registered: Arc::clone(&self.registered),
+                }),
+                target_score: None,
+            })
+        }
+    }
+
+    let mut mc = make_test_controller();
+    mc.set_state_factory(Box::new(NoImageFactory {
+        registered: Arc::clone(&registered),
+    }));
+
+    // PlayerResource with NO BMS images (default)
+    mc.restore_player_resource(PlayerResource::new(
+        Config::default(),
+        PlayerConfig::default(),
+    ));
+
+    mc.change_state(MainStateType::Play);
+
+    let regs = registered_clone.lock().unwrap();
+    assert!(
+        regs.is_empty(),
+        "no images should be registered when BMS resource has no images; got {:?}",
+        regs
+    );
+}

@@ -12,6 +12,13 @@ use crate::pixmap_resource_pool::PixmapResourcePool;
 use crate::player_config::PlayerConfig;
 use std::path::Path;
 
+/// Image ID for stagefile (loading screen image defined in BMS #STAGEFILE).
+pub const IMAGE_STAGEFILE: i32 = 100;
+/// Image ID for backbmp (background image defined in BMS #BACKBMP).
+pub const IMAGE_BACKBMP: i32 = 101;
+/// Image ID for banner (banner image defined in BMS #BANNER).
+pub const IMAGE_BANNER: i32 = 102;
+
 /// TextureRegion re-exported from beatoraja-render (LibGDX equivalent)
 pub use rubato_render::texture::TextureRegion;
 
@@ -415,5 +422,14 @@ mod tests {
         let mut res = make_bms_resource();
         res.set_bms_file(&model, &bms_path, &config, &BMSPlayerMode::PLAY);
         assert!(!res.is_bga_on());
+    }
+
+    #[test]
+    fn test_bms_resource_image_id_constants() {
+        // These constants must match the skin property system's image IDs
+        // (rubato-skin's SkinProperty IMAGE_STAGEFILE/BACKBMP/BANNER).
+        assert_eq!(IMAGE_STAGEFILE, 100);
+        assert_eq!(IMAGE_BACKBMP, 101);
+        assert_eq!(IMAGE_BANNER, 102);
     }
 }
