@@ -219,7 +219,7 @@ impl SkinHitErrorVisualizer {
                 if self.draw_decay {
                     shape.fill_rectangle(x, self.window_length - i, self.line_width, i * 2);
                 } else {
-                    shape.fill_rectangle(x, 0, self.line_width, self.recent.len() as i32 * 2);
+                    shape.fill_rectangle(x, 0, self.line_width, self.window_length * 2);
                 }
 
                 i -= 1;
@@ -408,6 +408,36 @@ mod tests {
             viz.judge_area, ja,
             "judge_area must be populated from state after prepare()"
         );
+    }
+
+    #[test]
+    fn non_decay_fill_height_matches_pixmap_height() {
+        // Regression: non-decay mode used recent.len() * 2 as fill height,
+        // which could exceed the Pixmap height (window_length * 2).
+        let ja = vec![
+            vec![-20, 20],
+            vec![-40, 40],
+            vec![-80, 80],
+            vec![-150, 150],
+            vec![-1000, 1000],
+        ];
+        let mut config = default_config();
+        config.draw_decay = 0; // non-decay mode
+        config.window_length = 10;
+        let mut viz = SkinHitErrorVisualizer::new(config);
+        viz._model_set = true;
+        viz.judge_area = ja;
+
+        // recent.len() (20) > window_length (10)
+        viz.recent = vec![5i64; 20];
+        viz.index = 0;
+
+        let mut renderer = SkinObjectRenderer::new();
+        viz.draw(&mut renderer);
+
+        // Pixmap height must be window_length * 2, not recent.len() * 2
+        let shape = viz.shape.as_ref().expect("shape should be created");
+        assert_eq!(shape.height, viz.window_length * 2);
     }
 
     #[test]
