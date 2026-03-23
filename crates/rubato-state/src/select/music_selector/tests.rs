@@ -768,7 +768,6 @@ fn test_render_skin_draws_ecfn_songlist_bitmap_bartext_quads() {
             rival: false,
             state: &adapter,
             lnmode: selector.config.play_settings.lnmode,
-            loader_finished: false,
         };
         bar_renderer.render(&mut renderer, skin_bar, &render_ctx);
 
@@ -951,6 +950,86 @@ fn test_process_input_with_context_basic() {
     // (since no start/select keys are pressed, falls into the else branch)
     selector.process_input_with_context(&mut input);
     assert_eq!(selector.panelstate, 0);
+}
+
+#[test]
+fn test_process_input_skipped_when_search_has_focus() {
+    use crate::select::music_select_input_processor::MusicSelectInputProcessor;
+
+    let mut selector = MusicSelector::new();
+    selector.musicinput = Some(MusicSelectInputProcessor::new(300, 50, 10));
+
+    // Set up a focused search field
+    let resolution = Resolution::default();
+    let mut stf = SearchTextField::new(&() as &dyn std::any::Any, &resolution);
+    stf.has_focus = true;
+    selector.search = Some(stf);
+
+    // Set panelstate to a non-zero sentinel value
+    selector.panelstate = 3;
+
+    let config = rubato_core::config::Config::default();
+    let player_config = PlayerConfig::default();
+    let mut input = BMSPlayerInputProcessor::new(&config, &player_config);
+
+    // With search focused, game input processing should be skipped.
+    // panelstate should remain unchanged because musicinput.input() is never called.
+    selector.process_input_with_context(&mut input);
+    assert_eq!(
+        selector.panelstate, 3,
+        "panelstate must not change when search field has focus"
+    );
+}
+
+#[test]
+fn test_process_input_not_skipped_when_search_unfocused() {
+    use crate::select::music_select_input_processor::MusicSelectInputProcessor;
+
+    let mut selector = MusicSelector::new();
+    selector.musicinput = Some(MusicSelectInputProcessor::new(300, 50, 10));
+
+    // Set up an unfocused search field
+    let resolution = Resolution::default();
+    let stf = SearchTextField::new(&() as &dyn std::any::Any, &resolution);
+    // stf.has_focus is false by default
+    selector.search = Some(stf);
+
+    // Set panelstate to a non-zero sentinel
+    selector.panelstate = 3;
+
+    let config = rubato_core::config::Config::default();
+    let player_config = PlayerConfig::default();
+    let mut input = BMSPlayerInputProcessor::new(&config, &player_config);
+
+    // With search unfocused, game input processing should proceed normally.
+    // musicinput.input() will set panel_state to Some(0) because no keys are pressed.
+    selector.process_input_with_context(&mut input);
+    assert_eq!(
+        selector.panelstate, 0,
+        "panelstate must be updated when search field is not focused"
+    );
+}
+
+#[test]
+fn test_process_input_not_skipped_when_no_search_field() {
+    use crate::select::music_select_input_processor::MusicSelectInputProcessor;
+
+    let mut selector = MusicSelector::new();
+    selector.musicinput = Some(MusicSelectInputProcessor::new(300, 50, 10));
+    // selector.search is None by default
+
+    selector.panelstate = 3;
+
+    let config = rubato_core::config::Config::default();
+    let player_config = PlayerConfig::default();
+    let mut input = BMSPlayerInputProcessor::new(&config, &player_config);
+
+    // With no search field, game input processing should proceed normally.
+    selector.process_input_with_context(&mut input);
+    assert_eq!(
+        selector.panelstate, 0,
+        "panelstate must be updated when no search field exists"
+    );
 }
 
 #[test]

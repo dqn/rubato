@@ -127,9 +127,11 @@ impl SearchTextField {
                 frame.show(ui, |ui| {
                     let font_size = (egui_h * 0.8).max(12.0);
                     let hint = state.message_text.clone();
+                    // Java: search.setMaxLength(50)
                     let text_edit = egui::TextEdit::singleline(&mut state.text)
                         .desired_width(egui_w - 4.0)
                         .hint_text(hint)
+                        .char_limit(50)
                         .font(egui::FontId::proportional(font_size))
                         .text_color(egui::Color32::WHITE);
 
