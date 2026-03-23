@@ -42,6 +42,7 @@ pub struct SkinNoteObject {
 /// Line image data for section/BPM/stop/time lines.
 pub struct LineImage {
     pub region: crate::reexports::TextureRegion,
+    pub dst_x: f32,
     pub dst_width: f32,
     pub dst_height: f32,
 }
@@ -217,13 +218,24 @@ impl SkinNoteObject {
         }
     }
 
-    /// Draw a line image at the given y_offset.
-    /// index: 0=section, 2=BPM, 4=stop, 6=time (even indices for 1P).
+    /// Draw line images at the given y_offset for both 1P and 2P.
+    /// index: 0=section, 2=BPM, 4=stop, 6=time (even indices for 1P, odd for 2P).
     fn draw_line_image(&self, sprite: &mut SkinObjectRenderer, index: usize, y_offset: i32) {
+        // Draw 1P line (even index)
         if let Some(li) = &self.line_images[index] {
             sprite.draw(
                 &li.region,
-                self.data.region.x,
+                li.dst_x,
+                self.data.region.y + y_offset as f32,
+                li.dst_width,
+                li.dst_height,
+            );
+        }
+        // Draw 2P line (odd index) for double-play mode
+        if let Some(li) = &self.line_images[index + 1] {
+            sprite.draw(
+                &li.region,
+                li.dst_x,
                 self.data.region.y + y_offset as f32,
                 li.dst_width,
                 li.dst_height,

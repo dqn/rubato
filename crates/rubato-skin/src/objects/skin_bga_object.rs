@@ -13,6 +13,9 @@ use rubato_play::skin_bga::{
 use rubato_render::color::Color;
 use rubato_render::texture::TextureRegion;
 
+use crate::graphs::skin_note_distribution_graph::{
+    NoteDistributionDrawParams, SkinNoteDistributionGraph, TYPE_EARLYLATE, TYPE_JUDGE, TYPE_NORMAL,
+};
 use crate::reexports::{MainState, Rectangle};
 use crate::skin_object::{SkinObjectData, SkinObjectRenderer};
 use crate::skin_property;
@@ -115,6 +118,8 @@ pub struct SkinBgaObject {
     practice_commands: Vec<PracticeDrawCommand>,
     /// Whether this BGA is currently in practice mode.
     practice_mode: bool,
+    /// Note distribution graphs for practice mode (TYPE_NORMAL, TYPE_JUDGE, TYPE_EARLYLATE).
+    practice_graphs: [SkinNoteDistributionGraph; 3],
 }
 
 impl SkinBgaObject {
@@ -125,6 +130,11 @@ impl SkinBgaObject {
             bga_draw: None,
             practice_commands: Vec::new(),
             practice_mode: false,
+            practice_graphs: [
+                SkinNoteDistributionGraph::new(TYPE_NORMAL, 500, 0, 0, 0, 0),
+                SkinNoteDistributionGraph::new(TYPE_JUDGE, 500, 0, 0, 0, 0),
+                SkinNoteDistributionGraph::new(TYPE_EARLYLATE, 500, 0, 0, 0, 0),
+            ],
         }
     }
 
@@ -198,9 +208,9 @@ impl SkinBgaObject {
     /// In Java:
     ///   if (PRACTICE) { player.getPracticeConfiguration().draw(...) }
     ///   else { resource.getBGAManager().drawBGA(...) }
-    pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
+    pub fn draw(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
         if self.practice_mode {
-            self.draw_practice(sprite);
+            self.draw_practice(sprite, state);
         } else if let Some(ref bga_draw) = self.bga_draw {
             let region = self.data.region;
             let mut draw = lock_or_recover(bga_draw);
@@ -210,8 +220,10 @@ impl SkinBgaObject {
 
     /// Execute practice mode draw commands.
     /// Translated from: Java PracticeConfiguration.draw(Rectangle, SkinObjectRenderer, long, MainState)
-    fn draw_practice(&mut self, sprite: &mut SkinObjectRenderer) {
-        for cmd in &self.practice_commands {
+    fn draw_practice(&mut self, sprite: &mut SkinObjectRenderer, state: &dyn MainState) {
+        // Take commands to avoid borrow conflict with self.practice_graphs.
+        let commands = std::mem::take(&mut self.practice_commands);
+        for cmd in &commands {
             match cmd {
                 PracticeDrawCommand::DrawText { text, x, y, color } => {
                     let c = match color {
@@ -220,19 +232,34 @@ impl SkinBgaObject {
                         PracticeColor::Orange => Color::new(1.0, 0.65, 0.0, 1.0),
                         PracticeColor::White => Color::new(1.0, 1.0, 1.0, 1.0),
                     };
-                    // Draw text using sprite's font rendering.
-                    // BitmapFont is not available here (it lives in BMSPlayer/PracticeConfiguration).
-                    // Use a temporary BitmapFont for rendering.
                     let mut font = rubato_render::font::BitmapFont::new();
                     sprite.draw_font(&mut font, text, *x, *y, &c);
                 }
-                PracticeDrawCommand::DrawGraph { .. } => {
-                    // Note distribution graph drawing requires SkinNoteDistributionGraph
-                    // which is in beatoraja-skin. This will be wired when the full graph
-                    // rendering pipeline is connected.
+                PracticeDrawCommand::DrawGraph {
+                    graph_type,
+                    region,
+                    start_time,
+                    end_time,
+                    freq,
+                } => {
+                    let idx = (*graph_type as usize).min(2);
+                    let rect = Rectangle::new(region.0, region.1, region.2, region.3);
+                    let time = state.now_time_for(skin_property::TIMER_PLAY);
+                    self.practice_graphs[idx].draw_with_params(
+                        sprite,
+                        NoteDistributionDrawParams {
+                            time,
+                            state,
+                            region: &rect,
+                            starttime: *start_time,
+                            endtime: *end_time,
+                            freq: *freq,
+                        },
+                    );
                 }
             }
         }
+        self.practice_commands = commands;
     }
 
     pub fn dispose(&mut self) {
@@ -321,7 +348,8 @@ mod tests {
         bga.data.region = Rectangle::new(10.0, 20.0, 300.0, 200.0);
 
         let mut sprite = SkinObjectRenderer::new();
-        bga.draw(&mut sprite);
+        let state = crate::test_helpers::MockMainState::default();
+        bga.draw(&mut sprite, &state);
 
         let mock_locked = mock.lock().expect("mutex poisoned");
         assert_eq!(mock_locked.draw_calls.len(), 1);
@@ -335,8 +363,9 @@ mod tests {
     fn test_draw_no_bga_draw_is_noop() {
         let mut bga = SkinBgaObject::new(BGAEXPAND_FULL);
         let mut sprite = SkinObjectRenderer::new();
+        let state = crate::test_helpers::MockMainState::default();
         // Should not panic
-        bga.draw(&mut sprite);
+        bga.draw(&mut sprite, &state);
     }
 
     #[test]
@@ -400,8 +429,9 @@ mod tests {
         bga.data.region = Rectangle::new(0.0, 0.0, 640.0, 480.0);
 
         let mut sprite = SkinObjectRenderer::new();
-        // Should not panic — no BGA data but draws blank
-        bga.draw(&mut sprite);
+        let state = crate::test_helpers::MockMainState::default();
+        // Should not panic -- no BGA data but draws blank
+        bga.draw(&mut sprite, &state);
     }
 
     #[test]

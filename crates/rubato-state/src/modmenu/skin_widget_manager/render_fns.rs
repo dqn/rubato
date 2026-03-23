@@ -303,9 +303,9 @@ pub(super) fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestina
 
     let move_enabled = lock_or_recover(&MOVE_OVERLAY_ENABLED);
 
-    egui::Window::new("widget-overlay-popup")
-        .fixed_pos(egui::pos2(x, y))
-        .fixed_size(egui::vec2(w.max(100.0), h.max(40.0)))
+    let resp = egui::Window::new("widget-overlay-popup")
+        .default_pos(egui::pos2(x, y))
+        .default_size(egui::vec2(w.max(100.0), h.max(40.0)))
         .title_bar(false)
         .collapsible(false)
         .resizable(true)
@@ -318,15 +318,20 @@ pub(super) fn render_move_overlay(ui: &mut egui::Ui, dst: &mut SkinWidgetDestina
                 )),
         )
         .show(ui.ctx(), |ui| {
-            ui.label(format!("x = {:.1} y = {:.1}", x, dst.dst_y()));
+            ui.label(format!("x = {:.1} y = {:.1}", dst.dst_x(), dst.dst_y()));
             ui.label(format!("w = {:.1} h = {:.1}", w, h));
-
-            // NOTE: This approach is actually moving the "REAL" widget in-time
-            dst.set_dst_x_with_event(x, false);
-            dst.set_dst_y_with_event(dst.dst_y(), false);
-            dst.set_dst_w_with_event(w, false);
-            dst.set_dst_h_with_event(h, false);
         });
+
+    // Read back actual window position after drag and convert screen-space to skin-space.
+    if let Some(inner) = resp {
+        let new_pos = inner.response.rect.min;
+        let new_skin_x = new_pos.x;
+        let new_skin_y = window_height - new_pos.y - h;
+        dst.set_dst_x_with_event(new_skin_x, false);
+        dst.set_dst_y_with_event(new_skin_y, false);
+        dst.set_dst_w_with_event(w, false);
+        dst.set_dst_h_with_event(h, false);
+    }
 
     // Focus state machine: 0 -> 1 -> 2 -> submit
     // In egui we can't easily detect window focus, so we use a simplified approach:

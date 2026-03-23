@@ -2,10 +2,12 @@ use crate::reexports::{MainState, TextureRegion};
 use crate::sources::skin_source::SkinSource;
 
 #[cfg(feature = "ffmpeg")]
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+#[cfg(feature = "ffmpeg")]
+use std::sync::{mpsc, Arc, Mutex};
 
 // ============================================================
-// MovieDecoder — ffmpeg-backed video frame decoder
+// MovieDecoder -- ffmpeg-backed video frame decoder
 // ============================================================
 
 #[cfg(feature = "ffmpeg")]
@@ -25,8 +27,8 @@ struct MovieDecoder {
 // SAFETY: MovieDecoder contains ffmpeg types (scaling::Context, codec::decoder::Video,
 // format::context::Input) that are !Send due to internal raw pointers to C FFmpeg structs
 // (SwsContext, AVCodecContext, AVFormatContext). However, MovieDecoder is only ever
-// accessed through a Mutex<Option<MovieDecoder>> inside SkinSourceMovie, so concurrent
-// access is impossible. We assert Send so Mutex<MovieDecoder> can be Sync.
+// accessed from its owning background thread after creation, so concurrent
+// access is impossible. We assert Send so it can be moved into the thread.
 #[cfg(feature = "ffmpeg")]
 unsafe impl Send for MovieDecoder {}
 
@@ -161,18 +163,82 @@ impl MovieDecoder {
 }
 
 // ============================================================
+// Background thread decode loop
+// ============================================================
+
+#[cfg(feature = "ffmpeg")]
+enum MovieCommand {
+    Halt,
+}
+
+#[cfg(feature = "ffmpeg")]
+struct DecodedFrame {
+    rgba_data: Arc<Vec<u8>>,
+    width: u32,
+    height: u32,
+}
+
+/// Background decode thread main loop.
+/// Watches `requested_time` for changes. When the time changes, decodes the
+/// frame at that time and stores it in `shared_frame`.
+#[cfg(feature = "ffmpeg")]
+fn movie_decode_main(
+    mut decoder: MovieDecoder,
+    requested_time: Arc<AtomicI64>,
+    shared_frame: Arc<Mutex<Option<DecodedFrame>>>,
+    cmd_rx: mpsc::Receiver<MovieCommand>,
+) {
+    let mut last_decoded_time: i64 = i64::MIN;
+
+    loop {
+        // Check for halt command (non-blocking)
+        match cmd_rx.try_recv() {
+            Ok(MovieCommand::Halt) | Err(mpsc::TryRecvError::Disconnected) => break,
+            Err(mpsc::TryRecvError::Empty) => {}
+        }
+
+        let time = requested_time.load(Ordering::Acquire);
+
+        // Only decode if time has changed
+        if time != last_decoded_time && time >= 0 {
+            if let Some((pixels, width, height)) = decoder.decode_frame(time) {
+                let frame = DecodedFrame {
+                    rgba_data: Arc::new(pixels),
+                    width,
+                    height,
+                };
+                if let Ok(mut guard) = shared_frame.lock() {
+                    *guard = Some(frame);
+                }
+                last_decoded_time = time;
+            }
+        }
+
+        // Sleep briefly to avoid spinning
+        std::thread::sleep(std::time::Duration::from_millis(8));
+    }
+}
+
+// ============================================================
 // SkinSourceMovie
 // ============================================================
 
 /// Skin source movie (SkinSourceMovie.java)
+/// Decodes video frames in a background thread to avoid blocking the render thread.
 pub struct SkinSourceMovie {
     path: String,
     _timer: i32,
-    _playing: bool,
     disposed: bool,
-    _region: TextureRegion,
     #[cfg(feature = "ffmpeg")]
-    decoder: Mutex<Option<MovieDecoder>>,
+    requested_time: Arc<AtomicI64>,
+    #[cfg(feature = "ffmpeg")]
+    shared_frame: Arc<Mutex<Option<DecodedFrame>>>,
+    #[cfg(feature = "ffmpeg")]
+    cmd_tx: Option<mpsc::Sender<MovieCommand>>,
+    #[cfg(feature = "ffmpeg")]
+    thread_handle: Option<std::thread::JoinHandle<()>>,
+    #[cfg(feature = "ffmpeg")]
+    has_decoder: bool,
 }
 
 impl SkinSourceMovie {
@@ -182,38 +248,85 @@ impl SkinSourceMovie {
 
     pub fn new_with_timer(path: &str, timer: i32) -> Self {
         #[cfg(feature = "ffmpeg")]
-        let decoder = Mutex::new(MovieDecoder::new(path));
+        {
+            let requested_time = Arc::new(AtomicI64::new(i64::MIN));
+            let shared_frame: Arc<Mutex<Option<DecodedFrame>>> = Arc::new(Mutex::new(None));
 
+            if let Some(decoder) = MovieDecoder::new(path) {
+                let (cmd_tx, cmd_rx) = mpsc::channel();
+                let time_clone = Arc::clone(&requested_time);
+                let frame_clone = Arc::clone(&shared_frame);
+                let path_owned = path.to_string();
+
+                let thread_handle = std::thread::Builder::new()
+                    .name(format!("movie-decode:{}", path))
+                    .spawn(move || {
+                        movie_decode_main(decoder, time_clone, frame_clone, cmd_rx);
+                        log::debug!("Movie decode thread exited: {}", path_owned);
+                    })
+                    .ok();
+
+                Self {
+                    path: path.to_string(),
+                    _timer: timer,
+                    disposed: false,
+                    requested_time,
+                    shared_frame,
+                    cmd_tx: Some(cmd_tx),
+                    thread_handle,
+                    has_decoder: true,
+                }
+            } else {
+                Self {
+                    path: path.to_string(),
+                    _timer: timer,
+                    disposed: false,
+                    requested_time,
+                    shared_frame,
+                    cmd_tx: None,
+                    thread_handle: None,
+                    has_decoder: false,
+                }
+            }
+        }
+
+        #[cfg(not(feature = "ffmpeg"))]
         Self {
             path: path.to_string(),
             _timer: timer,
-            _playing: false,
             disposed: false,
-            _region: TextureRegion::new(),
-            #[cfg(feature = "ffmpeg")]
-            decoder,
         }
     }
 }
+
+// SAFETY: SkinSourceMovie fields are all Send+Sync:
+// - Arc<AtomicI64>, Arc<Mutex<...>>, mpsc::Sender are Send+Sync
+// - Option<JoinHandle<()>> is Send
+// - The thread_handle is only joined in dispose() which takes &mut self
+unsafe impl Sync for SkinSourceMovie {}
 
 impl SkinSource for SkinSourceMovie {
     fn get_image(&self, time: i64, _state: &dyn MainState) -> Option<TextureRegion> {
         #[cfg(feature = "ffmpeg")]
         {
+            if !self.has_decoder {
+                return None;
+            }
+
             use crate::reexports::Texture;
 
-            let mut guard = rubato_types::sync_utils::lock_or_recover(&self.decoder);
-            let decoder = guard.as_mut()?;
-            let (rgba_data, width, height) = decoder.decode_frame(time)?;
+            // Update requested time for background thread
+            self.requested_time.store(time, Ordering::Release);
 
-            // Build a Texture from the decoded dimensions.
-            // Actual GPU upload happens later when a GpuContext is available.
-            let _ = &rgba_data; // RGBA data available for future GPU upload
+            // Pick up latest decoded frame
+            let guard = rubato_types::sync_utils::lock_or_recover(&self.shared_frame);
+            let frame = guard.as_ref()?;
+
             let texture = Texture {
-                width: width as i32,
-                height: height as i32,
+                width: frame.width as i32,
+                height: frame.height as i32,
                 disposed: false,
-                rgba_data: Some(std::sync::Arc::new(rgba_data)),
+                rgba_data: Some(Arc::clone(&frame.rgba_data)),
                 ..Default::default()
             };
             Some(TextureRegion::from_texture(texture))
@@ -222,7 +335,6 @@ impl SkinSource for SkinSourceMovie {
         #[cfg(not(feature = "ffmpeg"))]
         {
             let _ = (time, _state);
-            // FFmpeg video decoding requires feature = "ffmpeg"
             None
         }
     }
@@ -235,10 +347,12 @@ impl SkinSource for SkinSourceMovie {
         if !self.disposed {
             #[cfg(feature = "ffmpeg")]
             {
-                // Drop the decoder to release ffmpeg resources
-                if let Ok(mut guard) = self.decoder.lock() {
-                    *guard = None;
+                // Send halt command and drop the sender
+                if let Some(tx) = self.cmd_tx.take() {
+                    let _ = tx.send(MovieCommand::Halt);
                 }
+                // Drop the thread handle to detach (don't join -- decode can be slow)
+                self.thread_handle.take();
             }
             self.disposed = true;
             log::debug!("Disposed movie source: {}", self.path);

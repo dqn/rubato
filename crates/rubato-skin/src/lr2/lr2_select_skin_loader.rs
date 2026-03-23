@@ -74,6 +74,11 @@ pub struct LR2SelectSkinLoaderState {
     pub srch: f32,
     pub dstw: f32,
     pub dsth: f32,
+
+    /// True when the current SRC_TEXT has string_id == STRING_SEARCHWORD.
+    is_search_text: bool,
+    /// Search text destination rectangle captured from DST_TEXT.
+    search_text_region: Option<Rectangle>,
 }
 
 impl LR2SelectSkinLoaderState {
@@ -108,6 +113,8 @@ impl LR2SelectSkinLoaderState {
             srch,
             dstw,
             dsth,
+            is_search_text: false,
+            search_text_region: None,
         }
     }
 
@@ -861,6 +868,28 @@ impl LR2SelectSkinLoaderState {
                         );
                 }
             }
+            "SRC_TEXT" => {
+                // Delegate to base, then detect STRING_SEARCHWORD.
+                let values = LR2SkinCSVLoaderState::parse_int(str_parts);
+                self.is_search_text =
+                    values[3] == crate::skin_property::STRING_SEARCHWORD && values[5] != 0;
+                self.csv.process_csv_command(cmd, str_parts, None);
+            }
+            "DST_TEXT" => {
+                // Delegate to base, then capture search text region.
+                self.csv.process_csv_command(cmd, str_parts, None);
+                if self.is_search_text {
+                    let values = LR2SkinCSVLoaderState::parse_int(str_parts);
+                    let sw = safe_div_f32(self.dstw, self.srcw);
+                    let sh = safe_div_f32(self.dsth, self.srch);
+                    self.search_text_region = Some(Rectangle::new(
+                        values[3] as f32 * sw,
+                        self.dsth - (values[4] + values[6]) as f32 * sh,
+                        values[5] as f32 * sw,
+                        values[6] as f32 * sh,
+                    ));
+                }
+            }
             "SRC_BAR_RANK" | "DST_BAR_RANK" | "SRC_README" | "DST_README" => {
                 // No-op
             }
@@ -942,6 +971,11 @@ impl LR2SkinLoaderAccess for LR2SelectSkinLoaderState {
         }
         if let Some(obj) = self.bpmgraphobj.take() {
             skin.add(SkinObject::BpmGraph(obj));
+        }
+
+        // Propagate search text region captured from SRC_TEXT/DST_TEXT.
+        if let Some(region) = self.search_text_region.take() {
+            skin.search_text_region = Some(region);
         }
 
         log::debug!("LR2SelectSkinLoader: assembled objects into skin");
@@ -1212,5 +1246,99 @@ mod tests {
             "timer should be values[10]={}",
             timer_val
         );
+    }
+
+    #[test]
+    fn src_text_searchword_sets_search_text_flag() {
+        let mut loader = make_loader_with_texture();
+        // SRC_TEXT: (cmd),null,font_index,string_id,align,editable,panel
+        // string_id = STRING_SEARCHWORD (30), editable = 1
+        let mut parts = vec!["0".to_string(); 22];
+        parts[2] = "0".to_string(); // font_index
+        parts[3] = "30".to_string(); // STRING_SEARCHWORD
+        parts[4] = "0".to_string(); // align
+        parts[5] = "1".to_string(); // editable
+        loader.process_select_command("SRC_TEXT", &parts);
+        assert!(loader.is_search_text);
+    }
+
+    #[test]
+    fn src_text_non_searchword_does_not_set_flag() {
+        let mut loader = make_loader_with_texture();
+        let mut parts = vec!["0".to_string(); 22];
+        parts[2] = "0".to_string();
+        parts[3] = "0".to_string(); // STRING_TITLE, not SEARCHWORD
+        parts[5] = "1".to_string();
+        loader.process_select_command("SRC_TEXT", &parts);
+        assert!(!loader.is_search_text);
+    }
+
+    #[test]
+    fn dst_text_captures_search_text_region() {
+        let mut loader = make_loader_with_texture();
+        // First, SRC_TEXT with SEARCHWORD
+        let mut src_parts = vec!["0".to_string(); 22];
+        src_parts[2] = "0".to_string();
+        src_parts[3] = "30".to_string();
+        src_parts[5] = "1".to_string();
+        loader.process_select_command("SRC_TEXT", &src_parts);
+
+        // DST_TEXT: (cmd),null,time,x,y,w,h,...
+        let mut dst_parts = vec!["0".to_string(); 22];
+        dst_parts[2] = "0".to_string(); // time
+        dst_parts[3] = "100".to_string(); // x
+        dst_parts[4] = "200".to_string(); // y
+        dst_parts[5] = "300".to_string(); // w
+        dst_parts[6] = "50".to_string(); // h
+        dst_parts[7] = "0".to_string(); // acc
+        dst_parts[8] = "255".to_string(); // a
+        dst_parts[9] = "255".to_string(); // r
+        dst_parts[10] = "255".to_string(); // g
+        dst_parts[11] = "255".to_string(); // b
+        loader.process_select_command("DST_TEXT", &dst_parts);
+
+        let region = loader.search_text_region.expect("search_text_region should be set");
+        // Scale: dst/src = 1280/640 = 2.0 (w), 960/480 = 2.0 (h)
+        assert!((region.x - 200.0).abs() < 0.1); // 100 * 2.0
+        assert!((region.width - 600.0).abs() < 0.1); // 300 * 2.0
+        assert!((region.height - 100.0).abs() < 0.1); // 50 * 2.0
+    }
+
+    #[test]
+    fn dst_text_does_not_capture_without_searchword() {
+        let mut loader = make_loader_with_texture();
+        // SRC_TEXT without SEARCHWORD
+        let mut src_parts = vec!["0".to_string(); 22];
+        src_parts[2] = "0".to_string();
+        src_parts[3] = "0".to_string(); // STRING_TITLE
+        src_parts[5] = "1".to_string();
+        loader.process_select_command("SRC_TEXT", &src_parts);
+
+        let mut dst_parts = vec!["0".to_string(); 22];
+        dst_parts[3] = "100".to_string();
+        dst_parts[5] = "300".to_string();
+        dst_parts[6] = "50".to_string();
+        dst_parts[8] = "255".to_string();
+        loader.process_select_command("DST_TEXT", &dst_parts);
+
+        assert!(loader.search_text_region.is_none());
+    }
+
+    #[test]
+    fn assemble_propagates_search_text_region() {
+        let mut loader = make_loader_with_texture();
+        loader.search_text_region = Some(Rectangle::new(10.0, 20.0, 100.0, 50.0));
+
+        let mut header = crate::skin_header::SkinHeader::new();
+        header.set_source_resolution(Resolution { width: 640.0, height: 480.0 });
+        header.set_destination_resolution(Resolution { width: 1280.0, height: 960.0 });
+        let mut skin = crate::skin::Skin::new(header);
+        loader.assemble_objects(&mut skin);
+
+        let region = skin.search_text_region.expect("skin should have search_text_region");
+        assert!((region.x - 10.0).abs() < f32::EPSILON);
+        assert!((region.y - 20.0).abs() < f32::EPSILON);
+        assert!((region.width - 100.0).abs() < f32::EPSILON);
+        assert!((region.height - 50.0).abs() < f32::EPSILON);
     }
 }
