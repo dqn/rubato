@@ -586,6 +586,10 @@ impl SpriteBatch {
         // For pixmap-backed textures (no path), generate a synthetic key from the
         // stable pixmap_id so the GPU texture cache key remains constant even after
         // Arc::make_mut reallocates rgba_data.
+        // NOTE: Textures with neither path nor pixmap_id will have key=None and fall
+        // back to the white 1x1 texture. This currently only affects ffmpeg BGA frames
+        // (feature non-functional). When ffmpeg support is fixed, those frames need
+        // either a path or pixmap_id to be uploaded.
         let key = texture.path.clone().or_else(|| {
             texture
                 .pixmap_id

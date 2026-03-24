@@ -70,6 +70,10 @@ impl BitmapFontData {
                 data.scale_w = parse_fnt_field(line, "scaleW=").unwrap_or(256) as f32;
                 data.scale_h = parse_fnt_field(line, "scaleH=").unwrap_or(256) as f32;
             } else if line.starts_with("page ") {
+                // NOTE: page id= is ignored; pages are stored in declaration order.
+                // BMFont spec requires sequential IDs starting at 0, so this works
+                // for conforming fonts. Non-sequential page IDs would cause wrong
+                // texture lookups in glyph.page indexing.
                 if let Some(file) = parse_fnt_string(line, "file=") {
                     let image_path = if let Some(dir) = base_dir {
                         dir.join(&file).to_string_lossy().to_string()
