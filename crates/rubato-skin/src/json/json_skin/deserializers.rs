@@ -262,7 +262,7 @@ fn deserialize_vec_with_conditionals<T: serde::de::DeserializeOwned>(
                 }
             }
         } else if item.is_object() && item.get("if").is_some() && item.get("values").is_some() {
-            // Object-based conditional: {"if":[...], "values":[...]}
+            // Object-based conditional (plural): {"if":[...], "values":[...]}
             // Include values only if the "if" conditions are satisfied.
             let conds = item
                 .get("if")
@@ -276,6 +276,20 @@ fn deserialize_vec_with_conditionals<T: serde::de::DeserializeOwned>(
                     let val: T = serde_json::from_value(v.clone()).map_err(|e| e.to_string())?;
                     result.push(val);
                 }
+            }
+        } else if item.is_object() && item.get("if").is_some() && item.get("value").is_some() {
+            // Object-based conditional (singular): {"if":[...], "value":{...}}
+            // Include the single value only if the "if" conditions are satisfied.
+            let conds = item
+                .get("if")
+                .and_then(|v| v.as_array())
+                .cloned()
+                .unwrap_or_default();
+            if conditions_satisfied(&conds)
+                && let Some(value) = item.get("value")
+            {
+                let val: T = serde_json::from_value(value.clone()).map_err(|e| e.to_string())?;
+                result.push(val);
             }
         } else {
             // Direct object

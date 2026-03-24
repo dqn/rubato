@@ -153,6 +153,11 @@ impl JsonSkinSerializer {
 
     /// Pre-process a JSON value, resolving conditional branches and includes.
     /// This corresponds to ObjectSerializer.read in Java.
+    ///
+    /// NOTE: These preprocess methods are not currently called from the main load path
+    /// in JSONSkinLoader::load(). If a JSON skin uses {"include":"..."} blocks, they
+    /// will be silently ignored. No shipped skins currently use includes, so this is
+    /// a latent gap rather than an active bug.
     pub fn preprocess_object(&self, value: &Value, base_path: &Path) -> Option<Value> {
         if let Some(arr) = value.as_array() {
             // Conditional branch: take first clause satisfying its conditions

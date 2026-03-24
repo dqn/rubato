@@ -71,16 +71,18 @@ impl BlendMode {
                     operation: wgpu::BlendOperation::Add,
                 },
             },
+            // Java: glBlendEquation(GL_FUNC_SUBTRACT) + setBlendFunction(SRC_ALPHA, ONE)
+            // result = src * SRC_ALPHA - dst * ONE
             BlendMode::Subtractive => wgpu::BlendState {
                 color: wgpu::BlendComponent {
-                    src_factor: wgpu::BlendFactor::Zero,
-                    dst_factor: wgpu::BlendFactor::Src,
-                    operation: wgpu::BlendOperation::ReverseSubtract,
+                    src_factor: wgpu::BlendFactor::SrcAlpha,
+                    dst_factor: wgpu::BlendFactor::One,
+                    operation: wgpu::BlendOperation::Subtract,
                 },
                 alpha: wgpu::BlendComponent {
-                    src_factor: wgpu::BlendFactor::Zero,
+                    src_factor: wgpu::BlendFactor::One,
                     dst_factor: wgpu::BlendFactor::One,
-                    operation: wgpu::BlendOperation::Add,
+                    operation: wgpu::BlendOperation::Subtract,
                 },
             },
             BlendMode::Multiply => wgpu::BlendState {
@@ -171,8 +173,9 @@ mod tests {
     }
 
     #[test]
-    fn test_blend_state_subtractive_has_reverse_subtract() {
+    fn test_blend_state_subtractive_has_subtract() {
         let state = BlendMode::Subtractive.to_wgpu_blend_state();
-        assert_eq!(state.color.operation, wgpu::BlendOperation::ReverseSubtract);
+        // Java GL_FUNC_SUBTRACT = src*srcFactor - dst*dstFactor = wgpu Subtract
+        assert_eq!(state.color.operation, wgpu::BlendOperation::Subtract);
     }
 }

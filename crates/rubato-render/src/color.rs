@@ -695,6 +695,10 @@ impl Matrix4 {
         let tmb = top - bottom;
         let fmn = far - near;
 
+        if rml == 0.0 || tmb == 0.0 || fmn == 0.0 {
+            return;
+        }
+
         self.values = [0.0; 16];
         self.values[0] = 2.0 / rml;
         self.values[5] = 2.0 / tmb;

@@ -70,6 +70,7 @@ impl Texture {
                 ..Default::default()
             }
         } else {
+            log::warn!("Failed to decode image: {}", path);
             Self::default()
         }
     }

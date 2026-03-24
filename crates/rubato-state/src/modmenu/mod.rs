@@ -34,6 +34,9 @@ pub use rubato_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderLoader;
 pub use rubato_skin::lua::lua_skin_loader::LuaSkinLoader;
 
 /// Type alias for backward compatibility -- callers use `MainController`.
+/// Accepted trade-off: the modmenu (egui launcher/settings) uses NullMainController,
+/// so controller-backed skin menu actions (e.g., freeze timers) are no-ops.
+/// Wiring a real MainController here requires restructuring the egui integration.
 pub type MainController = NullMainController;
 
 // Re-exports for moved types

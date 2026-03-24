@@ -132,12 +132,13 @@ impl MainState for MusicSelector {
                         skin_bar.set_graph(graph);
                     }
                     self.bar_rendering.select_center_bar = bar_data.center_bar;
+                    self.bar_rendering.clickable_bar = bar_data.clickable_bar;
                     self.bar_rendering.skin_bar = Some(skin_bar);
                     self.bar_rendering.bar = Some(BarRenderer::new(300, 100, 5));
                     log::info!(
                         "Bar data extracted: center_bar={}, clickable={}",
                         bar_data.center_bar,
-                        bar_data.clickable_bar.len()
+                        self.bar_rendering.clickable_bar.len()
                     );
                 }
 
@@ -450,6 +451,56 @@ impl MainState for MusicSelector {
 
         self.main_state_data.timer = timer;
         self.main_state_data.skin = Some(skin);
+
+        // Bar click detection — Java: SkinBar.mousePressed() delegates to BarRenderer.mousePressed()
+        // In Rust: SkinBar.mouse_pressed() is a stub; call BarRenderer directly.
+        let bar_action = {
+            use crate::select::bar_renderer::{MousePressedAction, MousePressedContext};
+            if let (Some(bar_renderer), Some(skin_bar)) =
+                (&self.bar_rendering.bar, &self.bar_rendering.skin_bar)
+            {
+                let timer_snapshot = rubato_skin::reexports::Timer::with_timers(
+                    self.main_state_data.timer.now_time(),
+                    self.main_state_data.timer.now_micro_time(),
+                    self.main_state_data.timer.export_timer_array(),
+                );
+                let adapter = MinimalSkinMainState::new(&timer_snapshot);
+                let ctx = MousePressedContext {
+                    clickable_bar: &self.bar_rendering.clickable_bar,
+                    center_bar: self.bar_rendering.select_center_bar,
+                    currentsongs: &self.manager.currentsongs,
+                    selectedindex: self.manager.selectedindex,
+                    state: &adapter,
+                    timer_now_time: self.main_state_data.timer.now_micro_time(),
+                };
+                bar_renderer.mouse_pressed(skin_bar, button, x, y, &ctx)
+            } else {
+                MousePressedAction::None
+            }
+        };
+        match bar_action {
+            crate::select::bar_renderer::MousePressedAction::Select(index) => {
+                if index < self.manager.currentsongs.len() {
+                    let bar = self.manager.currentsongs[index].clone();
+                    self.select(&bar);
+                }
+            }
+            crate::select::bar_renderer::MousePressedAction::Close => {
+                self.ensure_local_score_cache();
+                let mut ctx = BarManager::make_context(
+                    &self.app_config,
+                    &mut self.config,
+                    &*self.songdb,
+                    self.ranking.scorecache.as_mut(),
+                );
+                self.manager.close_with_context(Some(&mut ctx));
+                self.load_bar_contents();
+                if let Some(bar) = self.bar_rendering.bar.as_mut() {
+                    bar.update_bar_text();
+                }
+            }
+            crate::select::bar_renderer::MousePressedAction::None => {}
+        }
     }
 
     fn handle_skin_mouse_dragged(&mut self, button: i32, x: i32, y: i32) {

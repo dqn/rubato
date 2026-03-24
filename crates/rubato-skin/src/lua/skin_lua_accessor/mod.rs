@@ -60,7 +60,11 @@ impl SkinLuaAccessor {
                 .expect("Failed to create sandboxed Lua VM"),
         );
 
-        // Capture the initial package.path before any modifications
+        // Capture the initial package.path before any modifications.
+        // Accepted trade-off: the base package.path includes system Lua module paths,
+        // so require() is not fully restricted to skin-owned modules. Since skins are
+        // user-installed from trusted sources and os/io are removed, the risk is low.
+        // Full restriction would require clearing base_package_path entirely.
         let base_package_path = lua
             .globals()
             .get::<LuaTable>("package")

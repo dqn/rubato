@@ -735,6 +735,7 @@ pub struct BarRenderingState {
     pub bar: Option<BarRenderer>,
     pub skin_bar: Option<super::skin_bar::SkinBar>,
     pub select_center_bar: i32,
+    pub clickable_bar: Vec<i32>,
 }
 
 /// Music selector screen

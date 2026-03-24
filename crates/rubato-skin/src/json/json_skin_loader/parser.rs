@@ -240,6 +240,10 @@ pub struct CustomCategoryData {
     pub items: Vec<CustomItemData>,
 }
 
+// Accepted trade-off: SkinConfigProperty is currently a stub (empty struct).
+// In Java, this carries user-saved option/file selections for custom skin config.
+// The default option values from the skin JSON header are used instead. User
+// customization overrides are not yet implemented.
 #[derive(Clone, Debug, Default)]
 pub struct SkinConfigProperty;
 
