@@ -789,12 +789,11 @@ impl ObsWsClient {
         });
     }
 
-    /// Send a raw message through the WebSocket via the mpsc channel.
+    /// Send a raw WebSocket message via the bounded mpsc channel (capacity 64).
     /// The dedicated writer task serializes all writes to the sink, so concurrent
-    /// callers never race on the sink and no messages are lost.
-    /// Send a raw WebSocket message. Uses try_send with a bounded channel (capacity 64).
-    /// Messages are dropped with a warning if the channel is full (OBS not consuming fast enough).
-    /// This is acceptable because OBS state-change events are idempotent and the latest value wins.
+    /// callers never race on the sink. Messages are dropped with a warning if the
+    /// channel is full (OBS not consuming fast enough). This is acceptable because
+    /// OBS state-change events are idempotent and the latest value wins.
     async fn send_raw(inner: &Arc<Mutex<ObsWsClientInner>>, message: &str) {
         let sender = {
             let guard = lock_or_recover(inner);
