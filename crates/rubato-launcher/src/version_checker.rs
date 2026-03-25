@@ -60,10 +60,14 @@ impl VersionChecker {
             .user_agent("rubato")
             .timeout(std::time::Duration::from_secs(10))
             .build()?;
-        let resp: serde_json::Value = client
+        let response = client
             .get("https://api.github.com/repos/seraxis/lr2oraja-endlessdream/releases/latest")
-            .send()?
-            .json()?;
+            .send()?;
+        let bytes = response.bytes()?;
+        if bytes.len() > 4 * 1024 * 1024 {
+            anyhow::bail!("Response too large: {} bytes", bytes.len());
+        }
+        let resp: serde_json::Value = serde_json::from_slice(&bytes)?;
         let name = resp["name"].as_str().unwrap_or("").to_string();
         let html_url = resp["html_url"].as_str().unwrap_or("").to_string();
         Ok((name, html_url))
