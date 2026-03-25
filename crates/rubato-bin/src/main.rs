@@ -341,17 +341,11 @@ impl ApplicationHandler for RubatoApp {
             && let Some(window) = &self.window
         {
             let response = state.on_window_event(window, &event);
-            // Known limitation: keyboard events bypass egui consumption check for game
-            // input. Typing in egui text fields may trigger game shortcuts.
-            // Skip game logic for events that egui has consumed (e.g. text
-            // input, pointer clicks inside an egui widget). Keyboard and
-            // redraw events must ALWAYS reach the game's input system.
-            if response.consumed
-                && !matches!(
-                    event,
-                    WindowEvent::RedrawRequested | WindowEvent::KeyboardInput { .. }
-                )
-            {
+            // Skip game logic for events that egui has consumed. For keyboard
+            // events, egui-winit sets consumed=true only when an egui widget
+            // has keyboard focus (e.g. search text field, modmenu input).
+            // RedrawRequested is never consumed by egui but exempted as a safety net.
+            if response.consumed && !matches!(event, WindowEvent::RedrawRequested) {
                 return;
             }
         }
