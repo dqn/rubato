@@ -209,6 +209,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
                     .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume)
                     * 100.0) as i32
             }
+            // Hi-speed integer part (NUMBER_HISPEED: 310)
+            310 => self
+                .current_play_config_ref()
+                .map_or(i32::MIN, |pc| pc.hispeed as i32),
+            // Hi-speed afterdot (NUMBER_HISPEED_AFTERDOT: 311)
+            311 => self
+                .current_play_config_ref()
+                .map_or(i32::MIN, |pc| ((pc.hispeed * 100.0) as i32) % 100),
             _ => {
                 let playtime = self.resource.player_data().playtime;
                 shared_render_context::integer_value(
@@ -577,6 +585,14 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
                     .map_or(DEFAULT_AUDIO_VOLUME, |a| a.bgvolume)
                     * 100.0) as i32
             }
+            // Hi-speed integer part (NUMBER_HISPEED: 310)
+            310 => self
+                .current_play_config_ref()
+                .map_or(i32::MIN, |pc| pc.hispeed as i32),
+            // Hi-speed afterdot (NUMBER_HISPEED_AFTERDOT: 311)
+            311 => self
+                .current_play_config_ref()
+                .map_or(i32::MIN, |pc| ((pc.hispeed * 100.0) as i32) % 100),
             _ => {
                 let playtime = self.result.resource.player_data().playtime;
                 shared_render_context::integer_value(
