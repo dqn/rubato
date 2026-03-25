@@ -10,6 +10,8 @@ impl BMSPlayer {
         let mut timer = std::mem::take(&mut self.main_state_data.timer);
 
         {
+            // Known limitation: PlayMouseContext cannot dispatch custom events (IDs 1000-1999)
+            // because the skin is take()-ed before context creation. See AGENTS.md.
             let mut ctx = PlayMouseContext {
                 timer: &mut timer,
                 player: self,

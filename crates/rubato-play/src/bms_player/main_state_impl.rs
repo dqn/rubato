@@ -380,6 +380,12 @@ impl MainState for BMSPlayer {
             bga.get_misslayer_duration =
                 self.player_config.display_settings.misslayer_duration as i64;
 
+            // Clear old movies unconditionally so stale slots from the previous
+            // chart do not leak through when the new chart has fewer (or no) BGA
+            // entries or when base_dir is None.
+            bga.stop();
+            bga.set_movie_count(0);
+
             // Load BGA images and movies from model.bgamap.
             // Java: BMSResource dispatches image/movie loading after setModel().
             let base_dir = self

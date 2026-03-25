@@ -65,7 +65,8 @@ fn init_song_database_impl(update_all: bool, set_accessor: bool) {
         &config.paths.bmsroot,
     ) {
         Ok(accessor) => {
-            // Scan BMS files and populate song.db so the select screen has songs.
+            // Known limitation: runs a full scan on every launch. A background or
+            // on-demand scan would reduce startup time for large libraries.
             // Java: MainLoader calls updateSongDatas() before creating the controller.
             info!("Scanning BMS files from configured paths...");
             accessor.update_song_datas(None, &config.paths.bmsroot, update_all, false, None);
@@ -129,7 +130,8 @@ pub(crate) fn import_lr2_scores(config: &rubato_core::config::Config) {
 
 /// Wire the Kira-based audio driver so keysounds, BGM, and UI sounds work.
 pub(crate) fn init_audio_driver(controller: &mut MainController) -> Result<()> {
-    // Java: audio = new GdxSoundDriver(config.getSongResourceGen())
+    // Known limitation: audio driver selection from config is not yet implemented.
+    // Always uses GdxSoundDriver regardless of config.audio.driver setting.
     let song_resource_gen = controller.config().render.song_resource_gen;
     let audio_driver = rubato_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen)?;
     controller.set_audio_driver(Box::new(audio_driver));

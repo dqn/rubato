@@ -154,6 +154,8 @@ pub fn capture_render_snapshot(
                 data.dstop
             );
         }
+        // Known parity difference: Rust type names (e.g., NoteDistributionGraph) differ
+        // from Java names (e.g., SkinNoteDistributionGraph). Permanent diffs, not output bugs.
         let object_type = object.type_name();
         let blend = data.dstblend;
 
@@ -766,10 +768,14 @@ pub fn compare_snapshots(java: &RenderSnapshot, rust: &RenderSnapshot) -> Vec<St
             java.commands.len(),
             rust.commands.len()
         ));
-        return diffs;
     }
 
-    for (i, (jc, rc)) in java.commands.iter().zip(rust.commands.iter()).enumerate() {
+    let min_len = java.commands.len().min(rust.commands.len());
+    for (i, (jc, rc)) in java.commands[..min_len]
+        .iter()
+        .zip(rust.commands[..min_len].iter())
+        .enumerate()
+    {
         let prefix = format!("cmd[{}]", i);
 
         if jc.object_type != rc.object_type {
@@ -808,6 +814,20 @@ pub fn compare_snapshots(java: &RenderSnapshot, rust: &RenderSnapshot) -> Vec<St
         compare_optional_rect(&prefix, "dst", &jc.dst, &rc.dst, 1.0, &mut diffs);
         compare_optional_color(&prefix, &jc.color, &rc.color, &mut diffs);
         compare_detail(&prefix, &jc.detail, &rc.detail, &mut diffs);
+    }
+
+    // Report extra commands in the longer list
+    for i in min_len..java.commands.len() {
+        diffs.push(format!(
+            "cmd[{}] extra in java: type={} visible={}",
+            i, java.commands[i].object_type, java.commands[i].visible
+        ));
+    }
+    for i in min_len..rust.commands.len() {
+        diffs.push(format!(
+            "cmd[{}] extra in rust: type={} visible={}",
+            i, rust.commands[i].object_type, rust.commands[i].visible
+        ));
     }
 
     diffs

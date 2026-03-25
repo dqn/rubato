@@ -79,6 +79,12 @@ impl BMSResource {
     ) -> bool {
         // Dispose old stagefile and try to load the new one
         self.stagefile = None;
+        self.stagefile_pix = None;
+        // Dispose old backbmp and try to load the new one
+        self.backbmp = None;
+        // Dispose old banner and try to load the new one
+        self.banner = None;
+        self.banner_pix = None;
         if let Some(parent) = f.parent() {
             if !model.stagefile.is_empty()
                 && rubato_audio::audio_driver::is_bms_resource_path_safe(&model.stagefile)
@@ -92,8 +98,6 @@ impl BMSResource {
                 }
             }
 
-            // Dispose old backbmp and try to load the new one
-            self.backbmp = None;
             if !model.backbmp.is_empty()
                 && rubato_audio::audio_driver::is_bms_resource_path_safe(&model.backbmp)
             {
@@ -102,6 +106,17 @@ impl BMSResource {
                 {
                     let tex = Texture::from_pixmap(&pix);
                     self.backbmp = Some(TextureRegion::from_texture(tex));
+                }
+            }
+
+            if !model.banner.is_empty()
+                && rubato_audio::audio_driver::is_bms_resource_path_safe(&model.banner)
+            {
+                let banner_path = parent.join(&model.banner);
+                if let Some(pix) = PixmapResourcePool::load_picture(&banner_path.to_string_lossy())
+                {
+                    let tex = Texture::from_pixmap(&pix);
+                    self.banner = Some(TextureRegion::from_texture(tex));
                 }
             }
         }

@@ -141,7 +141,8 @@ fn launch() -> Result<()> {
     // eframe::run_native() blocks until the window is closed.
     let result = rubato_launcher::run_launcher(config, player, &title)?;
 
-    // Handle launcher actions
+    // Known limitation: launcher actions (Load All BMS, etc.) are one-shot and exit the
+    // process instead of returning to the launcher UI.
     if result.load_all_bms_requested {
         info!("Load All BMS requested, performing full song database scan...");
         subsystem_init::init_song_database_with_options(true);
@@ -340,6 +341,8 @@ impl ApplicationHandler for RubatoApp {
             && let Some(window) = &self.window
         {
             let response = state.on_window_event(window, &event);
+            // Known limitation: keyboard events bypass egui consumption check for game
+            // input. Typing in egui text fields may trigger game shortcuts.
             // Skip game logic for events that egui has consumed (e.g. text
             // input, pointer clicks inside an egui widget). Keyboard and
             // redraw events must ALWAYS reach the game's input system.
@@ -1182,6 +1185,8 @@ fn spawn_child_with_timeout(exe: PathBuf, args: &[&str]) -> Result<std::process:
 mod tests {
     use super::*;
 
+    // Known limitation: tests use Unix-specific commands (true/false/sleep).
+    // This project targets macOS only.
     #[test]
     fn spawn_child_with_timeout_succeeds_for_fast_command() {
         // `true` exits immediately with status 0

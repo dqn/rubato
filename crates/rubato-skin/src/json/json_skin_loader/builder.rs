@@ -252,7 +252,7 @@ impl JSONSkinLoader {
                 name: pr.name.clone().unwrap_or_default(),
                 path: pr.path.clone().unwrap_or_default(),
                 def: pr.def.clone(),
-                selected_filename: None,
+                selected_filename: pr.def.as_ref().filter(|d| !d.is_empty()).cloned(),
             };
 
             for (cat_idx, category) in sk.category.iter().enumerate() {

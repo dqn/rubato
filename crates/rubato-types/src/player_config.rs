@@ -728,6 +728,8 @@ impl PlayerConfig {
     }
 }
 
+// Known limitation: treats any subdirectory as an existing profile. Stale directories
+// without config_player.json may prevent player1 auto-creation in init().
 pub fn read_all_player_id(playerpath: &str) -> Vec<String> {
     let mut result = Vec::new();
     let path = Path::new(playerpath);

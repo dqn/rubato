@@ -141,6 +141,9 @@ impl MidiInputProcessor {
                     } else {
                         0
                     };
+                    // Known limitation: MIDI event arrival time is approximated by main-thread
+                    // poll time. Precise timestamping would require carrying the callback timestamp
+                    // through the channel.
                     if let Err(e) = tx.send((command, data1, data2)) {
                         log::warn!(
                             "MIDI event dropped (channel disconnected): command=0x{:02X}, data1={}, data2={} - {}",

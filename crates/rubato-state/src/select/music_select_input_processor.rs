@@ -34,7 +34,7 @@ impl MusicSelectInputProcessor {
             durationlow,
             durationhigh,
             analog_scroll_buffer: 0,
-            analog_ticks_per_scroll,
+            analog_ticks_per_scroll: analog_ticks_per_scroll.max(1),
             is_option_key_pressed: false,
             is_option_key_released: false,
             time_change_duration: 0,

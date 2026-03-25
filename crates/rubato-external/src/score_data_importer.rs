@@ -127,9 +127,9 @@ impl ScoreDataImporter {
                 old.update(score, true);
                 result.push(old);
             } else {
-                // Always accumulate imported play/clear counts for existing scores
-                old.playcount = old.playcount.max(score.playcount);
-                old.clearcount = old.clearcount.max(score.clearcount);
+                // Accumulate imported play/clear counts for existing scores
+                old.playcount = old.playcount.saturating_add(score.playcount);
+                old.clearcount = old.clearcount.saturating_add(score.clearcount);
                 if old.update(score, true) {
                     result.push(old);
                 } else if score.playcount > 0 || score.clearcount > 0 {

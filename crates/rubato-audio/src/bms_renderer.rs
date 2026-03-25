@@ -61,6 +61,8 @@ impl BMSRenderer {
 
         // Calculate output buffer size
         // (number of samples = sampling rate * seconds)
+        // Known limitation: buffer sized to last_milli_time() may truncate the tail of
+        // the final keysound. This matches Java's BMSRenderer behavior.
         let mut end_time = model.last_milli_time();
 
         // Apply time limit if specified (0 = no limit)

@@ -229,6 +229,8 @@ impl HttpDownloadProcessor {
     }
 
     /// Retry a download task
+    // Known limitation: retried tasks bypass submitted_urls guard. Concurrent retries
+    // of the same URL may race on extraction paths.
     pub fn retry_download_task(&self, download_task: Arc<Mutex<DownloadTask>>) {
         {
             let mut task = lock_or_recover(&download_task);
@@ -564,7 +566,8 @@ fn extract_compressed_file(
         has_new_files = true;
     }
 
-    // Find the first newly created subdirectory.
+    // Known limitation: only the first top-level directory from archive extraction is
+    // indexed. Multi-root archives require a manual full scan to pick up remaining folders.
     let mut extracted_dir = None;
     if let Ok(entries) = fs::read_dir(&dest) {
         for entry in entries.flatten() {

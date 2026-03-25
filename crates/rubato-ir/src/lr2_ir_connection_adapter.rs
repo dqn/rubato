@@ -49,6 +49,8 @@ impl Default for LR2IRConnectionAdapter {
     }
 }
 
+// Known limitation: LR2IR adapter is a minimal stub. Rival lists, full-score fetches,
+// ID validation, and player-aware ranking are not yet implemented.
 impl IRConnection for LR2IRConnectionAdapter {
     fn login(&self, account: &IRAccount) -> IRResponse<IRPlayerData> {
         let userid = &account.id;

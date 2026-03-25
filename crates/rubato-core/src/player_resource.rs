@@ -172,6 +172,7 @@ impl PlayerResource {
         self.combo = 0;
         self.maxcombo = 0;
         self.bms_paths = None;
+        self.songdata = None;
         self.set_tablename("");
         self.set_tablelevel("");
     }
@@ -240,7 +241,9 @@ impl PlayerResource {
         }
         let name = std::mem::take(&mut self.tablename);
         let lev = std::mem::take(&mut self.tablelevel);
+        let songdata = self.songdata.take();
         self.clear();
+        self.songdata = songdata;
         self.tablename = name;
         self.tablelevel = lev;
         self.tablefull = None;

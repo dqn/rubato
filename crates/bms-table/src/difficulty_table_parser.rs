@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -222,6 +222,8 @@ impl DifficultyTableParser {
                         }
                     }
                 }
+                // Known limitation: meta tag parsing assumes exact attribute order
+                // (name before content). Tags with reversed or extra attributes may not match.
                 if line.to_lowercase().contains("<meta name=\"bmstable\"") {
                     let parts: Vec<&str> = line.split('"').collect();
                     if parts.len() > 3 {
@@ -319,6 +321,10 @@ impl DifficultyTableParser {
                     }
                 }
             }
+            // Deduplicate levels while preserving order
+            let mut seen = HashSet::new();
+            levels.retain(|l| seen.insert(l.clone()));
+
             // Only clear existing data after all fetches succeed, preventing
             // data loss on transient network failures.
             dt.table.remove_all_elements();

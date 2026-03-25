@@ -97,6 +97,8 @@ impl BitmapFontData {
                 };
                 data.glyphs.insert(id, glyph);
             }
+            // Known limitation: BMFont kerning pairs are not parsed. Character spacing
+            // may differ from Java for fonts with kerning tables.
         }
 
         if data.glyphs.is_empty() || data.image_paths.is_empty() {

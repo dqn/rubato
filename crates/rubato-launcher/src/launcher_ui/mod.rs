@@ -349,7 +349,8 @@ impl LauncherUi {
                         self.show_whats_new = false;
                     }
                 });
-            self.show_whats_new = open;
+            // Respect both the X button (open) and the OK button (self.show_whats_new)
+            self.show_whats_new = open && self.show_whats_new;
         }
 
         if self.chart_details_open {
@@ -371,7 +372,8 @@ impl LauncherUi {
                         self.chart_details_open = false;
                     }
                 });
-            self.chart_details_open = open;
+            // Respect both the X button (open) and the OK button (self.chart_details_open)
+            self.chart_details_open = open && self.chart_details_open;
         }
     }
 
@@ -387,10 +389,19 @@ impl LauncherUi {
         self.chart_details_open = true;
     }
 
+    /// Sanitize a profile name to prevent path traversal.
+    /// Only allows alphanumeric characters, hyphens, underscores, and spaces.
+    fn sanitize_profile_name(name: &str) -> String {
+        name.chars()
+            .filter(|c| c.is_alphanumeric() || *c == '-' || *c == '_' || *c == ' ')
+            .collect()
+    }
+
     fn commit_config(&mut self) {
-        self.config.playername = Some(self.player_name.clone());
+        let safe_name = Self::sanitize_profile_name(&self.player_name);
+        self.config.playername = Some(safe_name.clone());
         // Sync player.id so PlayerConfig::write() saves to the correct profile directory
-        self.player.id = Some(self.player_name.clone());
+        self.player.id = Some(safe_name);
         // Commit selected play mode
         self.player.mode = Some(self.current_mode());
         // Commit BMS root paths

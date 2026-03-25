@@ -215,15 +215,19 @@ impl BMSONDecoder {
                 i32::MAX
             };
             if scrolly <= stopy && scrolly <= bpmy {
-                ensure_timeline(&mut tlcache, scrolly, resolution, mode_key);
-                tlcache
-                    .get_mut(&scrolly)
-                    .expect("timeline in cache")
-                    .timeline
-                    .scroll = scroll_events[scrollpos].rate;
+                if scrolly >= 0 {
+                    ensure_timeline(&mut tlcache, scrolly, resolution, mode_key);
+                    tlcache
+                        .get_mut(&scrolly)
+                        .expect("timeline in cache")
+                        .timeline
+                        .scroll = scroll_events[scrollpos].rate;
+                }
                 scrollpos += 1;
             } else if bpmy <= stopy {
-                if bpm_events[bpmpos].bpm > 0.0 {
+                if bpmy < 0 {
+                    // skip negative y positions
+                } else if bpm_events[bpmpos].bpm > 0.0 {
                     ensure_timeline(&mut tlcache, bpmy, resolution, mode_key);
                     tlcache
                         .get_mut(&bpmy)
@@ -241,7 +245,9 @@ impl BMSONDecoder {
                 }
                 bpmpos += 1;
             } else if stopy != i32::MAX {
-                if stop_events[stoppos].duration >= 0 {
+                if stopy < 0 {
+                    // skip negative y positions
+                } else if stop_events[stoppos].duration >= 0 {
                     ensure_timeline(&mut tlcache, stopy, resolution, mode_key);
                     let tl = &mut tlcache.get_mut(&stopy).expect("timeline in cache").timeline;
                     let bpm = tl.bpm;
@@ -273,6 +279,9 @@ impl BMSONDecoder {
 
         // Bar lines
         for bl in &bmson_data.lines {
+            if bl.y < 0 {
+                continue;
+            }
             ensure_timeline(&mut tlcache, bl.y, resolution, mode_key);
             tlcache
                 .get_mut(&bl.y)
@@ -287,16 +296,19 @@ impl BMSONDecoder {
             + bmson_data.mine_channels.len();
         let mut wavmap: Vec<String> = Vec::with_capacity(total_channels);
         let mut id: i32 = 0;
-        let mut starttime: i64 = 0;
 
         for sc in &bmson_data.sound_channels {
             wavmap.push(sc.name.clone());
+            let mut starttime: i64 = 0;
             let mut notes = sc.notes.clone();
             notes.sort_by_key(|n| n.y);
             let length = notes.len();
             for i in 0..length {
                 let n = &notes[i];
                 let n_y = n.y;
+                if n_y < 0 {
+                    continue;
+                }
                 let n_x = n.x;
                 let n_c = n.c;
                 let n_l = n.l;
@@ -622,6 +634,9 @@ impl BMSONDecoder {
             let mut notes = sc.notes.clone();
             notes.sort_by_key(|n| n.y);
             for n in &notes {
+                if n.y < 0 {
+                    continue;
+                }
                 ensure_timeline(&mut tlcache, n.y, resolution, mode_key);
                 let key = if n.x > 0 && n.x <= keyassign.len() as i32 {
                     keyassign[(n.x - 1) as usize]
@@ -646,6 +661,9 @@ impl BMSONDecoder {
             let mut notes = sc.notes.clone();
             notes.sort_by_key(|n| n.y);
             for n in &notes {
+                if n.y < 0 {
+                    continue;
+                }
                 ensure_timeline(&mut tlcache, n.y, resolution, mode_key);
                 let key = if n.x > 0 && n.x <= keyassign.len() as i32 {
                     keyassign[(n.x - 1) as usize]
@@ -722,7 +740,8 @@ impl BMSONDecoder {
                         Vec::with_capacity(bga_seq.sequence.len());
                     for seq in &bga_seq.sequence {
                         if seq.id != i32::MIN {
-                            sequence.push(LayerSequence::new(seq.time, seq.id));
+                            let mapped_id = idmap.get(&seq.id).copied().unwrap_or(seq.id);
+                            sequence.push(LayerSequence::new(seq.time, mapped_id));
                         } else {
                             sequence.push(LayerSequence::new_end(seq.time));
                         }

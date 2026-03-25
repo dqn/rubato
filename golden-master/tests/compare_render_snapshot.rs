@@ -827,13 +827,16 @@ fn rust_only_snapshot_ecfn_result2_clear() {
 
 fn capture_at_time(skin_path: &str, state_json: &str, time_ms: i64) -> RenderSnapshot {
     let mut provider = load_state(state_json);
+    let original_time = provider.time_ms;
+    let delta = time_ms - original_time;
     provider.time_ms = time_ms;
 
-    // Update timer values proportionally to time
+    // Adjust timer elapsed values by the time delta, preserving each timer's
+    // original start-time relationship: new_elapsed = old_elapsed + delta.
     let timer_keys: Vec<i32> = provider.timers.keys().copied().collect();
     for key in timer_keys {
         if let Some(val) = provider.timers.get_mut(&key) {
-            *val = time_ms;
+            *val = (*val + delta).max(0);
         }
     }
 

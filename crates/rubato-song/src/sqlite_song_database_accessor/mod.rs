@@ -161,11 +161,13 @@ impl SQLiteSongDatabaseAccessor {
                 self.base.validate(&conn)?;
                 conn.execute(
                     "INSERT INTO song SELECT \
-                     md5, sha256, title, subtitle, genre, artist, subartist, tag, path,\
-                     folder, stagefile, banner, backbmp, preview, parent, level, difficulty,\
-                     maxbpm, minbpm, length, mode, judge, feature, content,\
-                     date, favorite, adddate, notes, charthash \
-                     FROM old_song GROUP BY path HAVING MAX(adddate)",
+                     s.md5, s.sha256, s.title, s.subtitle, s.genre, s.artist, s.subartist, s.tag, s.path,\
+                     s.folder, s.stagefile, s.banner, s.backbmp, s.preview, s.parent, s.level, s.difficulty,\
+                     s.maxbpm, s.minbpm, s.length, s.mode, s.judge, s.feature, s.content,\
+                     s.date, s.favorite, s.adddate, s.notes, s.charthash \
+                     FROM old_song s \
+                     INNER JOIN (SELECT path, MAX(adddate) AS max_adddate FROM old_song GROUP BY path) g \
+                     ON s.path = g.path AND s.adddate = g.max_adddate",
                     [],
                 )?;
                 conn.execute("DROP TABLE old_song", [])?;
@@ -434,38 +436,49 @@ impl SongDatabaseAccessor for SQLiteSongDatabaseAccessor {
             return Vec::new();
         }
 
-        // Build parameterized IN clause
-        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
-        let mut conditions = Vec::new();
+        // SQLite has a 999 bind parameter limit. Batch each hash type
+        // separately in chunks of 900 (leaving headroom) and collect results.
+        const BATCH_SIZE: usize = 900;
 
-        if !md5_hashes.is_empty() {
-            let placeholders: Vec<String> = md5_hashes
+        let mut songs: Vec<SongData> = Vec::new();
+
+        for chunk in md5_hashes.chunks(BATCH_SIZE) {
+            let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+            let placeholders: Vec<String> = chunk
                 .iter()
                 .enumerate()
-                .map(|(i, _)| format!("?{}", params.len() + i + 1))
+                .map(|(i, _)| format!("?{}", i + 1))
                 .collect();
-            conditions.push(format!("md5 IN ({})", placeholders.join(",")));
-            for h in &md5_hashes {
+            for h in chunk {
                 params.push(Box::new(h.to_string()));
             }
+            let sql = format!(
+                "SELECT * FROM song WHERE md5 IN ({})",
+                placeholders.join(",")
+            );
+            let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+                params.iter().map(|p| p.as_ref()).collect();
+            songs.extend(self.query_songs(&sql, &param_refs));
         }
 
-        if !sha256_hashes.is_empty() {
-            let placeholders: Vec<String> = sha256_hashes
+        for chunk in sha256_hashes.chunks(BATCH_SIZE) {
+            let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+            let placeholders: Vec<String> = chunk
                 .iter()
                 .enumerate()
-                .map(|(i, _)| format!("?{}", params.len() + i + 1))
+                .map(|(i, _)| format!("?{}", i + 1))
                 .collect();
-            conditions.push(format!("sha256 IN ({})", placeholders.join(",")));
-            for h in &sha256_hashes {
+            for h in chunk {
                 params.push(Box::new(h.to_string()));
             }
+            let sql = format!(
+                "SELECT * FROM song WHERE sha256 IN ({})",
+                placeholders.join(",")
+            );
+            let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+                params.iter().map(|p| p.as_ref()).collect();
+            songs.extend(self.query_songs(&sql, &param_refs));
         }
-
-        let sql = format!("SELECT * FROM song WHERE {}", conditions.join(" OR "));
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
-            params.iter().map(|p| p.as_ref()).collect();
-        let mut songs = self.query_songs(&sql, &param_refs);
 
         // Performance note: O(n*m) linear scan matches Java parity. Consider HashMap<&str, &ScoreData>
         // lookup for large libraries if profiling shows this as a bottleneck.
@@ -1281,6 +1294,9 @@ impl BMSFolder {
                     false
                 };
                 if matched {
+                    // Accepted trade-off: skip re-parsing when chart mtime is unchanged,
+                    // matching Java's incremental scan. Preview audio changes without chart
+                    // edits require a full rescan.
                     if let Some(rec) = record.as_ref()
                         && rec.chart.date == last_modified_time
                     {

@@ -284,16 +284,22 @@ impl LR2SelectSkinLoaderState {
                 if values[1] < 0 || values[1] >= BARLEVEL_COUNT as i32 {
                     return;
                 }
-                let mut divx = values[7];
-                if divx <= 0 {
-                    divx = 1;
-                }
-                let mut divy = values[8];
-                if divy <= 0 {
-                    divy = 1;
-                }
+                let divx = values[7].clamp(1, 256);
+                let divy = values[8].clamp(1, 256);
 
-                if divx * divy >= 10 {
+                let div_total = match divx.checked_mul(divy) {
+                    Some(v) => v,
+                    None => {
+                        log::warn!(
+                            "SRC_BAR_LEVEL: divx*divy overflow (divx={}, divy={}), skipping",
+                            divx,
+                            divy
+                        );
+                        return;
+                    }
+                };
+
+                if div_total >= 10 {
                     let images = self.csv.source_image(&values);
                     if let Some(images) = images {
                         let idx = values[1] as usize;

@@ -71,6 +71,9 @@ impl rubato_types::timer_access::TimerAccess for MainState {
     }
 }
 
+// Known limitation: screenshot/webhook MainState adapter returns default values for skin
+// properties. Song metadata and clear type will be missing until full SkinRenderContext
+// delegation is wired.
 impl rubato_types::skin_render_context::SkinRenderContext for MainState {}
 
 impl rubato_skin::reexports::MainState for MainState {}

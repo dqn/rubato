@@ -100,7 +100,7 @@ impl ScoreDataProperty {
 
         self.rivalscore = exscore;
         self.rivalscorerate = if totalnotes == 0 {
-            1.0f32
+            0.0f32
         } else {
             exscore as f32 / (totalnotes as f32 * 2.0)
         };
@@ -608,7 +608,7 @@ mod tests {
 
         prop.update_score_and_rival(Some(&sd), None);
         assert_eq!(prop.rivalscore, 0);
-        assert_eq!(prop.rivalscorerate, 1.0); // zero totalnotes for rival
+        assert_eq!(prop.rivalscorerate, 0.0); // zero totalnotes for rival
     }
 
     // -- Target score --

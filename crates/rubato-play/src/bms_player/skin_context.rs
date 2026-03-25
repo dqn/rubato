@@ -67,6 +67,8 @@ pub(super) struct PlayRenderContext<'a> {
     /// Score data from the player's score database (best score for this chart).
     /// Used by skin property ID 370 (clear type) and Lua `main_state.score_data`.
     pub(super) score_data: Option<&'a rubato_types::score_data::ScoreData>,
+    /// Pre-computed judge area (timing windows per judge level) for timing visualizer widgets.
+    pub(super) judge_area: Option<Vec<Vec<i32>>>,
     /// Pending actions outbox for side effects (audio play/stop) that cannot be
     /// executed directly during rendering.
     pub(super) pending: &'a mut super::PendingActions,
@@ -223,6 +225,10 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
 
     fn recent_judges_index(&self) -> usize {
         rubato_types::skin_render_context::SkinRenderContext::recent_judges_index(self.timer)
+    }
+
+    fn judge_area(&self) -> Option<Vec<Vec<i32>>> {
+        self.judge_area.clone()
     }
 
     fn lane_shuffle_pattern_value(&self, player: usize, lane: usize) -> i32 {
@@ -1089,6 +1095,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1153,6 +1160,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1325,6 +1333,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1433,6 +1442,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1518,6 +1528,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1580,6 +1591,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1706,6 +1718,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::new(rubato_core::bms_player_mode::Mode::Play),
@@ -1836,6 +1849,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::PLAY,
@@ -1905,6 +1919,7 @@ mod tests {
             play_config,
             target_score: None,
             score_data: None,
+            judge_area: None,
             playtime: 0,
             total_notes: 0,
             play_mode: BMSPlayerMode::PLAY,

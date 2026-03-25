@@ -82,6 +82,18 @@ impl PCM {
             pcm = Some(PCM::Short(ShortPCM::load_pcm(&loader)?));
         }
 
+        // Validate the file's sample rate before attempting conversion
+        if let Some(ref p) = pcm
+            && p.sample_rate() <= 0
+        {
+            warn!(
+                "Invalid sample rate {} in audio file: {:?}",
+                p.sample_rate(),
+                p
+            );
+            bail!("Invalid sample rate in audio file");
+        }
+
         // Channel/sample rate conversion if driver requires it
         let mut pcm = pcm;
         if let Some(ref mut p) = pcm

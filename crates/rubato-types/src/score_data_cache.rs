@@ -32,6 +32,11 @@ impl ScoreDataCache {
         }
     }
 
+    fn cache_key(song: &SongData) -> &str {
+        let sha = &song.file.sha256;
+        if sha.is_empty() { &song.file.md5 } else { sha }
+    }
+
     fn cache_index(song: &SongData, lnmode: i32) -> usize {
         if song.chart.has_undefined_long_note() {
             lnmode.clamp(0, 2) as usize
@@ -43,13 +48,13 @@ impl ScoreDataCache {
     /// Read score data for the given song and LN mode
     pub fn read_score_data(&mut self, song: &SongData, lnmode: i32) -> Option<&ScoreData> {
         let cacheindex = Self::cache_index(song, lnmode);
-        let sha256 = &song.file.sha256;
-        if !self.scorecache[cacheindex].contains_key(sha256.as_str()) {
+        let key = Self::cache_key(song);
+        if !self.scorecache[cacheindex].contains_key(key) {
             let score = (self.read_single)(song, lnmode);
-            self.scorecache[cacheindex].insert(sha256.clone(), score);
+            self.scorecache[cacheindex].insert(key.to_owned(), score);
         }
         self.scorecache[cacheindex]
-            .get(sha256.as_str())
+            .get(key)
             .and_then(|s| s.as_ref())
     }
 
@@ -64,10 +69,10 @@ impl ScoreDataCache {
 
         for song in songs {
             let cacheindex = Self::cache_index(song, lnmode);
-            let sha256 = &song.file.sha256;
-            if self.scorecache[cacheindex].contains_key(sha256.as_str()) {
+            let key = Self::cache_key(song);
+            if self.scorecache[cacheindex].contains_key(key) {
                 let score = self.scorecache[cacheindex]
-                    .get(sha256.as_str())
+                    .get(key)
                     .and_then(|s| s.as_ref());
                 collector(song, score);
             } else {
@@ -86,7 +91,7 @@ impl ScoreDataCache {
         let combined_collector = |song: &SongData, score: Option<&ScoreData>| {
             let cacheindex = Self::cache_index(song, lnmode_copy);
             if let Ok(mut results) = cached_results.lock() {
-                results.push((cacheindex, song.file.sha256.clone(), score.cloned()));
+                results.push((cacheindex, Self::cache_key(song).to_owned(), score.cloned()));
             }
             collector(song, score);
         };
@@ -101,7 +106,7 @@ impl ScoreDataCache {
 
     pub fn exists_score_data_cache(&self, song: &SongData, lnmode: i32) -> bool {
         let cacheindex = Self::cache_index(song, lnmode);
-        self.scorecache[cacheindex].contains_key(song.file.sha256.as_str())
+        self.scorecache[cacheindex].contains_key(Self::cache_key(song))
     }
 
     pub fn clear(&mut self) {
@@ -113,6 +118,6 @@ impl ScoreDataCache {
     pub fn update(&mut self, song: &SongData, lnmode: i32) {
         let cacheindex = Self::cache_index(song, lnmode);
         let score = (self.read_single)(song, lnmode);
-        self.scorecache[cacheindex].insert(song.file.sha256.clone(), score);
+        self.scorecache[cacheindex].insert(Self::cache_key(song).to_owned(), score);
     }
 }

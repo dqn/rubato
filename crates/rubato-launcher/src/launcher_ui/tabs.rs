@@ -41,6 +41,8 @@ impl LauncherUi {
                 Resolution::WQHD,
                 Resolution::ULTRAHD,
             ];
+            // Known limitation: resolution list is hardcoded from the Resolution enum rather
+            // than filtered by display capabilities. Users may select unsupported fullscreen modes.
             let res_label = format!("{}", self.config.display.resolution);
             egui::ComboBox::from_id_salt("video_tab_resolution")
                 .selected_text(&res_label)

@@ -499,6 +499,8 @@ impl BarManager {
                     }
                     Bar::SearchWord(b) => l.extend(b.children(songdb)),
                     Bar::ContextMenu(b) => l.extend(b.children(&self.tables, songdb)),
+                    Bar::SameFolder(b) => l.extend(b.children(songdb)),
+                    Bar::LeaderBoard(b) => l.extend(b.children()),
                     _ => {}
                 }
             }

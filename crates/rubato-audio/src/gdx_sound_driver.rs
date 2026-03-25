@@ -190,6 +190,8 @@ impl AudioDriver for GdxSoundDriver {
     }
 
     fn dispose_path(&mut self, path: &str) {
+        // Known limitation: stops playback but does not cancel pending background loads.
+        // A stale preview may start briefly after rapid song browsing.
         self.stop_path(path);
     }
 

@@ -248,6 +248,41 @@ impl BMSPlayer {
                 cumulative_playtime_seconds: self.cumulative_playtime_seconds,
                 current_duration: lr_ref.map_or(0, |lr| lr.current_duration()),
                 pending: &mut self.pending,
+                judge_area: {
+                    let mode = self
+                        .model
+                        .mode()
+                        .copied()
+                        .unwrap_or(bms_model::mode::Mode::BEAT_7K);
+                    let rule = BMSPlayerRule::for_mode(&mode);
+                    let mut jwr = if self.player_config.judge_settings.custom_judge {
+                        [
+                            self.player_config
+                                .judge_settings
+                                .key_judge_window_rate_perfect_great,
+                            self.player_config
+                                .judge_settings
+                                .key_judge_window_rate_great,
+                            self.player_config.judge_settings.key_judge_window_rate_good,
+                        ]
+                    } else {
+                        [100, 100, 100]
+                    };
+                    for con in &self.constraints {
+                        use rubato_core::course_data::CourseDataConstraint;
+                        match con {
+                            CourseDataConstraint::NoGreat => {
+                                jwr[1] = 0;
+                                jwr[2] = 0;
+                            }
+                            CourseDataConstraint::NoGood => {
+                                jwr[2] = 0;
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(rule.judge.note_judge(self.model.judgerank, &jwr))
+                },
             };
             skin.update_custom_objects_timed(&mut ctx);
             skin.swap_sprite_batch(sprite);
