@@ -647,19 +647,22 @@ fn convert_image(
 
     if len > 1 {
         // Multiple reference images
-        let imgs_per_ref = srcimg.len() / (len as usize);
+        // Clamp to a sane maximum to prevent OOM from malicious skin files.
+        // 1024 reference entries far exceeds any realistic skin.
+        let len = (len as usize).min(1024);
+        let imgs_per_ref = srcimg.len() / len;
         if imgs_per_ref == 0 {
             // Not enough source images to distribute across refs.
             // Java creates the SkinImage with empty sub-arrays (TextureRegion[0])
             // for each ref entry. Mirror that by creating `len` empty Vec entries.
-            let tr: Vec<Vec<TextureRegion>> = vec![Vec::new(); len as usize];
+            let tr: Vec<Vec<TextureRegion>> = vec![Vec::new(); len];
             let timer_val = timer.unwrap_or(0);
             return Some(SkinObject::Image(SkinImage::new_with_int_timer_ref_id(
                 tr, timer_val, cycle, ref_id,
             )));
         }
-        let mut tr: Vec<Vec<TextureRegion>> = Vec::with_capacity(len as usize);
-        for i in 0..(len as usize) {
+        let mut tr: Vec<Vec<TextureRegion>> = Vec::with_capacity(len);
+        for i in 0..len {
             let mut row: Vec<TextureRegion> = Vec::with_capacity(imgs_per_ref);
             for j in 0..imgs_per_ref {
                 row.push(srcimg[i * imgs_per_ref + j].clone());
@@ -1283,6 +1286,59 @@ mod tests {
         assert!(
             matches!(result.unwrap(), SkinObject::Image(_)),
             "result should be a SkinObject::Image"
+        );
+    }
+
+    /// Regression: a malicious skin file with an extremely large `len` value must not
+    /// cause OOM. The `len` is clamped to 1024 before any allocation.
+    #[test]
+    fn convert_image_clamps_huge_len_to_prevent_oom() {
+        use super::convert_image;
+        use crate::json::json_skin_loader::{SourceData, SourceDataType};
+        use crate::reexports::Texture;
+        use std::collections::HashMap;
+        use std::path::Path;
+
+        let tex = Texture {
+            width: 64,
+            height: 64,
+            ..Default::default()
+        };
+        let mut source_map = HashMap::new();
+        source_map.insert(
+            "test_src".to_string(),
+            SourceData {
+                path: "test.png".to_string(),
+                loaded: true,
+                data: Some(SourceDataType::Texture(tex)),
+            },
+        );
+
+        // len = i32::MAX would allocate billions of Vec entries without clamping.
+        // After clamping to 1024, this should complete without OOM.
+        let result = convert_image(
+            &Some("test_src".to_string()),
+            0,
+            0,
+            64,
+            64,
+            2,
+            2,
+            Some(0),
+            0,
+            i32::MAX, // absurdly large len from malicious skin
+            100,
+            false,
+            &mut source_map,
+            Path::new("/tmp"),
+            false,
+            &HashMap::new(),
+        );
+
+        // imgs_per_ref = 4 / 1024 = 0, so we get empty refs (clamped to 1024)
+        assert!(
+            result.is_some(),
+            "convert_image should not OOM with huge len"
         );
     }
 
