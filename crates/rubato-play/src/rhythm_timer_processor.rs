@@ -103,7 +103,7 @@ impl RhythmTimerProcessor {
         let mut rhythm_on = false;
         if freq > 0
             && self.sections < self.sectiontimes.len()
-            && (self.sectiontimes[self.sections] * 100 / freq as i64) <= play_timer_micro
+            && (self.sectiontimes[self.sections] * (100 / freq as i64)) <= play_timer_micro
         {
             self.sections += 1;
             rhythm_on = true;
@@ -111,7 +111,7 @@ impl RhythmTimerProcessor {
         }
         if freq > 0 && !self.quarter_note_times.is_empty() {
             if self.quarter_note < self.quarter_note_times.len()
-                && (self.quarter_note_times[self.quarter_note] * 100 / freq as i64)
+                && (self.quarter_note_times[self.quarter_note] * (100 / freq as i64))
                     <= play_timer_micro
             {
                 self.quarter_note += 1;
@@ -119,7 +119,7 @@ impl RhythmTimerProcessor {
             } else if self.quarter_note == self.quarter_note_times.len()
                 && freq > 0
                 && nowbpm > 0.0
-                && ((self.now_quarter_note_time + (60000.0 / nowbpm) as i64) * 100 / freq as i64)
+                && ((self.now_quarter_note_time + (60000.0 / nowbpm) as i64) * (100 / freq as i64))
                     <= now
             {
                 self.now_quarter_note_time = now;
