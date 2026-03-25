@@ -265,7 +265,7 @@ pub(super) fn process_command_word(
                         }
                     }
                 } else {
-                    match i32::from_str_radix(&arg.to_uppercase(), 36) {
+                    match chart_decoder::parse_int36_str(arg, 0) {
                         Ok(v) => model.lnobj = v,
                         Err(_) => {
                             return Some(DecodeLog::new(
