@@ -114,21 +114,21 @@ impl PlayDataAccessor {
         let scoredb = self.scoredb.as_ref()?;
         let mut pd = scoredb.player_datas(2);
         if pd.len() > 1 {
-            pd[0].playcount -= pd[1].playcount;
-            pd[0].clear -= pd[1].clear;
-            pd[0].epg -= pd[1].epg;
-            pd[0].lpg -= pd[1].lpg;
-            pd[0].egr -= pd[1].egr;
-            pd[0].lgr -= pd[1].lgr;
-            pd[0].egd -= pd[1].egd;
-            pd[0].lgd -= pd[1].lgd;
-            pd[0].ebd -= pd[1].ebd;
-            pd[0].lbd -= pd[1].lbd;
-            pd[0].epr -= pd[1].epr;
-            pd[0].lpr -= pd[1].lpr;
-            pd[0].ems -= pd[1].ems;
-            pd[0].lms -= pd[1].lms;
-            pd[0].playtime -= pd[1].playtime;
+            pd[0].playcount = (pd[0].playcount - pd[1].playcount).max(0);
+            pd[0].clear = (pd[0].clear - pd[1].clear).max(0);
+            pd[0].epg = (pd[0].epg - pd[1].epg).max(0);
+            pd[0].lpg = (pd[0].lpg - pd[1].lpg).max(0);
+            pd[0].egr = (pd[0].egr - pd[1].egr).max(0);
+            pd[0].lgr = (pd[0].lgr - pd[1].lgr).max(0);
+            pd[0].egd = (pd[0].egd - pd[1].egd).max(0);
+            pd[0].lgd = (pd[0].lgd - pd[1].lgd).max(0);
+            pd[0].ebd = (pd[0].ebd - pd[1].ebd).max(0);
+            pd[0].lbd = (pd[0].lbd - pd[1].lbd).max(0);
+            pd[0].epr = (pd[0].epr - pd[1].epr).max(0);
+            pd[0].lpr = (pd[0].lpr - pd[1].lpr).max(0);
+            pd[0].ems = (pd[0].ems - pd[1].ems).max(0);
+            pd[0].lms = (pd[0].lms - pd[1].lms).max(0);
+            pd[0].playtime = (pd[0].playtime - pd[1].playtime).max(0);
             Some(pd.remove(0))
         } else if pd.len() == 1 {
             Some(pd.remove(0))
@@ -262,8 +262,9 @@ impl PlayDataAccessor {
             let idx = std::cmp::max(
                 newscore.play_option.option % 10,
                 (newscore.play_option.option / 10) % 10,
-            ) as usize;
-            if idx < option_trophy.len() {
+            );
+            if idx >= 0 && (idx as usize) < option_trophy.len() {
+                let idx = idx as usize;
                 new_trophies.insert(option_trophy[idx]);
             }
         }
