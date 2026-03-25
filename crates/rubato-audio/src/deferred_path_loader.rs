@@ -41,10 +41,17 @@ impl DeferredPathLoader {
         }
     }
 
+    /// Maximum number of concurrent background load threads.
+    const MAX_CONCURRENT_LOADS: usize = 8;
+
     /// Queue a background load for the given path if not already loading.
     /// Also records the play request so it can be fulfilled when loading completes.
+    ///
+    /// When the maximum number of concurrent loads is reached, the play request
+    /// is recorded but the load is skipped. During rapid song scrolling, this
+    /// prevents spawning unbounded OS threads for each unique preview track.
     pub fn request_load(&mut self, path: &str, volume: f32, loop_play: bool) {
-        if !self.loading.contains(path) {
+        if !self.loading.contains(path) && self.loading.len() < Self::MAX_CONCURRENT_LOADS {
             self.loading.insert(path.to_string());
             let tx = self.tx.clone();
             let path_owned = path.to_string();
