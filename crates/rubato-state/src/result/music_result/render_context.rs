@@ -266,8 +266,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
                 self.resource.play_mode().mode == rubato_core::bms_player_mode::Mode::Autoplay
                     || self.resource.play_mode().mode == rubato_core::bms_player_mode::Mode::Replay
             }
-            // Practice mode indicator (Java: BooleanPropertyFactory OPTION_STATE_PRACTICE=1080)
-            1080 => self.resource.play_mode().mode == rubato_core::bms_player_mode::Mode::Practice,
             42 | 43 | 90 | 91 | 1046 => shared_render_context::boolean_value(
                 self.data,
                 self.resource.course_score_data(),
@@ -654,11 +652,6 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultMouseContext
                     == rubato_core::bms_player_mode::Mode::Autoplay
                     || self.result.resource.play_mode().mode
                         == rubato_core::bms_player_mode::Mode::Replay
-            }
-            // Practice mode indicator (Java: BooleanPropertyFactory OPTION_STATE_PRACTICE=1080)
-            1080 => {
-                self.result.resource.play_mode().mode
-                    == rubato_core::bms_player_mode::Mode::Practice
             }
             42 | 43 | 90 | 91 | 1046 => shared_render_context::boolean_value(
                 &self.result.data,

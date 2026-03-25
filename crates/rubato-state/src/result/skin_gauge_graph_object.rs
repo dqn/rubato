@@ -251,10 +251,6 @@ impl SkinGaugeGraphObject {
     }
 
     pub fn draw(&mut self, sprite: &mut SkinObjectRenderer) {
-        if self.current_type < 0 {
-            return;
-        }
-
         // Copy region dimensions to avoid borrow conflicts
         let region_x = self.object_data.region.x;
         let region_y = self.object_data.region.y;
