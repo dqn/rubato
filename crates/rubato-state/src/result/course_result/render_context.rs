@@ -265,6 +265,15 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
 
     fn boolean_value(&self, id: i32) -> bool {
         match id {
+            // Autoplay indicators (Java: BooleanPropertyFactory OPTION_AUTOPLAYOFF=32, OPTION_AUTOPLAYON=33)
+            32 => {
+                self.resource.play_mode().mode != rubato_core::bms_player_mode::Mode::Autoplay
+                    && self.resource.play_mode().mode != rubato_core::bms_player_mode::Mode::Replay
+            }
+            33 => {
+                self.resource.play_mode().mode == rubato_core::bms_player_mode::Mode::Autoplay
+                    || self.resource.play_mode().mode == rubato_core::bms_player_mode::Mode::Replay
+            }
             42 | 43 | 90 | 91 | 1046 => shared_render_context::boolean_value(
                 self.data,
                 self.resource.course_score_data(),
@@ -644,6 +653,19 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
 
     fn boolean_value(&self, id: i32) -> bool {
         match id {
+            // Autoplay indicators (Java: BooleanPropertyFactory OPTION_AUTOPLAYOFF=32, OPTION_AUTOPLAYON=33)
+            32 => {
+                self.result.resource.play_mode().mode
+                    != rubato_core::bms_player_mode::Mode::Autoplay
+                    && self.result.resource.play_mode().mode
+                        != rubato_core::bms_player_mode::Mode::Replay
+            }
+            33 => {
+                self.result.resource.play_mode().mode
+                    == rubato_core::bms_player_mode::Mode::Autoplay
+                    || self.result.resource.play_mode().mode
+                        == rubato_core::bms_player_mode::Mode::Replay
+            }
             42 | 43 | 90 | 91 | 1046 => shared_render_context::boolean_value(
                 &self.result.data,
                 self.result.resource.course_score_data(),
