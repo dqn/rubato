@@ -134,7 +134,8 @@ impl LR2GhostData {
         let mut rng = LR2Random::with_seed(seed);
         let mut targets: [i32; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
         for lane in 1..7 {
-            let swap = (lane + rng.next_int(7 - lane as i32 + 1) as usize).min(7);
+            let rand_val = rng.next_int(7 - lane as i32 + 1);
+            let swap = ((lane as i32) + rand_val).clamp(1, 7) as usize;
             targets.swap(lane, swap);
         }
         let mut lanes: [i32; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
@@ -409,6 +410,52 @@ mod tests {
         assert_eq!(ghost.bad(), 1);
         assert_eq!(ghost.poor(), 1);
         assert_eq!(ghost.judgements().len(), 5);
+    }
+
+    #[test]
+    fn test_parse_lane_randomization_stays_in_bounds() {
+        // Verify that lane randomization produces valid lane orders for
+        // many seeds, including extreme values. Each digit of the encoded
+        // lane order must be in [1, 7] and the set must be a permutation
+        // of {1..7}.
+        let test_seeds: Vec<i32> = (0..200)
+            .chain(
+                [i32::MIN, i32::MIN + 1, i32::MAX, i32::MAX - 1, -1, -2]
+                    .iter()
+                    .copied(),
+            )
+            .collect();
+        for seed in test_seeds {
+            let csv = format!("name,option,seed,ghost\nplayer1,0,{},E2", seed);
+            let ghost = LR2GhostData::parse(&csv);
+            assert!(ghost.is_some(), "parse failed for seed={}", seed);
+            let ghost = ghost.unwrap();
+            let mut lane_order = ghost.lane_order();
+            let mut digits = Vec::new();
+            for _ in 0..7 {
+                digits.push(lane_order % 10);
+                lane_order /= 10;
+            }
+            digits.reverse();
+            for (i, &d) in digits.iter().enumerate() {
+                assert!(
+                    (1..=7).contains(&d),
+                    "seed={}: lane digit {} is {} (out of [1,7])",
+                    seed,
+                    i,
+                    d
+                );
+            }
+            let mut sorted = digits.clone();
+            sorted.sort();
+            assert_eq!(
+                sorted,
+                vec![1, 2, 3, 4, 5, 6, 7],
+                "seed={}: lane order is not a valid permutation: {:?}",
+                seed,
+                digits
+            );
+        }
     }
 
     #[test]
