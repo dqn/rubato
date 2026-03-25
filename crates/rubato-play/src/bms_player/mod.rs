@@ -16,7 +16,7 @@ pub(crate) use crate::rhythm_timer_processor::RhythmTimerProcessor;
 pub(crate) use bms_model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
 pub(crate) use bms_model::bms_model_utils;
 pub(crate) use bms_model::mode::Mode;
-pub(crate) use bms_model::note::Note;
+pub(crate) use bms_model::note::{Note, TYPE_LONGNOTE, TYPE_UNDEFINED};
 pub(crate) use rubato_core::bms_player_mode::BMSPlayerMode;
 pub(crate) use rubato_core::main_state::{MainState, MainStateData, MainStateType};
 pub(crate) use rubato_core::pattern::autoplay_modifier::AutoplayModifier;

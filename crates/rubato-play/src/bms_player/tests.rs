@@ -5843,17 +5843,18 @@ fn build_replay_data_uses_config_gauge_when_no_gauge_present() {
     );
 }
 
-// --- create_score_data LN-end filter lnmode-based regression tests ---
+// --- create_score_data LN-end filter lntype-based regression tests ---
+// Java BMSPlayer.createScoreData() uses chart lntype + note type to decide
+// which LN ends to exclude, NOT the player's lnmode setting.
 
 #[test]
-fn create_score_data_ln_end_excluded_in_cn_mode() {
-    // Regression: LN-end filter used note_type+lntype which could diverge from
-    // MusicResult.java's lnmode-based approach. In CN mode (lnmode=1), all LN
-    // ends should be excluded from timing stats regardless of note_type.
+fn create_score_data_cn_end_included_in_timing_stats() {
+    // TYPE_CHARGENOTE ends ARE judged, so they should be included in timing
+    // stats regardless of lnmode. Java BMSPlayer.createScoreData() only excludes
+    // ends that are classic LN (TYPE_LONGNOTE or TYPE_UNDEFINED+LNTYPE_LONGNOTE).
     let mut model = BMSModel::new();
     model.set_mode(Mode::BEAT_7K);
     model.judgerank = 100;
-    model.lnmode = 1; // CN mode
 
     let mut tl = bms_model::time_line::TimeLine::new(0.0, 0, 8);
 
@@ -5863,7 +5864,7 @@ fn create_score_data_ln_end_excluded_in_cn_mode() {
     normal.set_micro_play_time(1000);
     tl.set_note(0, Some(normal));
 
-    // LN end with TYPE_CHARGENOTE in CN mode -> should be excluded
+    // LN end with TYPE_CHARGENOTE -> included (CN ends are judged)
     let mut ln_end = bms_model::note::Note::new_long(1);
     ln_end.set_end(true);
     ln_end.set_long_note_type(bms_model::note::TYPE_CHARGENOTE);
@@ -5871,7 +5872,7 @@ fn create_score_data_ln_end_excluded_in_cn_mode() {
     ln_end.set_micro_play_time(5000);
     tl.set_note(1, Some(ln_end));
 
-    // LN start (not end) in CN mode: state=2, playtime=2000 -> included
+    // LN start (not end): state=2, playtime=2000 -> included
     let mut ln_start = bms_model::note::Note::new_long(1);
     ln_start.set_state(2);
     ln_start.set_micro_play_time(2000);
@@ -5884,17 +5885,17 @@ fn create_score_data_ln_end_excluded_in_cn_mode() {
 
     let score = player.create_score_data(DeviceType::Keyboard).unwrap();
 
-    // Only normal(1000) and ln_start(2000) should be counted
+    // All three notes should be counted: normal(1000) + cn_end(5000) + ln_start(2000)
     assert_eq!(
-        score.timing_stats.total_duration, 3000,
-        "CN mode: LN end should be excluded from timing stats"
+        score.timing_stats.total_duration, 8000,
+        "TYPE_CHARGENOTE LN end should be included in timing stats"
     );
-    assert_eq!(score.timing_stats.avgjudge, 1500); // 3000 / 2
+    assert_eq!(score.timing_stats.avgjudge, 2666); // 8000 / 3
 }
 
 #[test]
 fn create_score_data_ln_end_included_in_hcn_mode() {
-    // In HCN mode (lnmode=2), LN ends ARE judged and should be included in timing stats.
+    // TYPE_HELLCHARGENOTE ends ARE judged, so included in timing stats.
     let mut model = BMSModel::new();
     model.set_mode(Mode::BEAT_7K);
     model.judgerank = 100;
@@ -5933,7 +5934,7 @@ fn create_score_data_ln_end_included_in_hcn_mode() {
 
 #[test]
 fn create_score_data_ln_end_excluded_in_default_ln_mode() {
-    // Default mode: lnmode=0, lntype=LNTYPE_LONGNOTE -> LN ends excluded (same as before)
+    // TYPE_UNDEFINED end + lntype=LNTYPE_LONGNOTE -> classic LN end, excluded
     let mut model = BMSModel::new();
     model.set_mode(Mode::BEAT_7K);
     model.judgerank = 100;

@@ -209,24 +209,22 @@ impl BMSPlayer {
         for tl in &self.model.timelines {
             for i in 0..lanes {
                 if let Some(note) = tl.note(i) {
-                    // Java MusicResult.java line 353-354 (lnmode-based approach):
-                    //   !((model.getLnmode() == 1 || (model.getLnmode() == 0
-                    //       && model.getLntype() == LNTYPE_LONGNOTE))
-                    //       && n instanceof LongNote && ((LongNote) n).isEnd())
+                    // Java BMSPlayer.createScoreData() lines 870-873:
+                    //   !(((model.getLntype() == LNTYPE_LONGNOTE && ln.getType() == TYPE_UNDEFINED)
+                    //       || ln.getType() == TYPE_LONGNOTE)
+                    //       && ((LongNote) n).isEnd())
                     //
-                    // Excludes LN ends when:
-                    //   - lnmode==1 (CN mode: LN ends are not judged)
-                    //   - lnmode==0 AND lntype==LNTYPE_LONGNOTE (standard LN: ends not judged)
-                    // Includes LN ends when lnmode==2 (HCN: ends are judged).
+                    // Excludes LN ends when the note is treated as classic LN
+                    // (press-and-release, end not judged). Includes LN ends for
+                    // CN/HCN types where the end IS judged.
                     let include = match note {
                         Note::Normal(_) => true,
-                        Note::Long { .. } => {
-                            // note.is_long() is always true here (inside Long arm)
-                            let is_ln_end = (self.model.lnmode == 1
-                                || (self.model.lnmode == 0
-                                    && self.model.lntype() == LNTYPE_LONGNOTE))
-                                && note.is_end();
-                            !is_ln_end
+                        Note::Long { note_type, end, .. } => {
+                            let is_classic_ln_end = ((self.model.lntype() == LNTYPE_LONGNOTE
+                                && *note_type == TYPE_UNDEFINED)
+                                || *note_type == TYPE_LONGNOTE)
+                                && *end;
+                            !is_classic_ln_end
                         }
                         _ => false,
                     };
