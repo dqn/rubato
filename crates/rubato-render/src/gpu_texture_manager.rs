@@ -145,10 +145,8 @@ impl GpuTextureManager {
         self.used_this_frame.insert(Arc::clone(key));
         // Pixmap-backed textures (keyed by stable monotonic ID) may have their
         // underlying data mutated between frames. Always re-upload them.
-        // NOTE: SkinSourceMovie reuses a stable path key while replacing rgba_data
-        // each decoded frame. Since that key does not start with "__pixmap_", movie
-        // textures will freeze on their first frame. When ffmpeg support is fixed,
-        // either use a __pixmap_ prefix or add an explicit dirty flag.
+        // SkinSourceMovie uses a `__pixmap_movie_` prefix so its frames are
+        // also re-uploaded every frame via this same path.
         let is_pixmap = key.starts_with("__pixmap_");
         if self.entries.contains_key(key) && !is_pixmap {
             return;
