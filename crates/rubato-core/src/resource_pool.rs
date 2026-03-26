@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Mutex, MutexGuard};
 
 /// ResourceCacheElement - wraps a resource with a generation counter
@@ -112,7 +113,9 @@ where
     }
 
     /// Advance generation counters and dispose resources that have exceeded maxgen.
-    /// `dispose_fn` is called for each evicted resource.
+    /// `dispose_fn` is called for each evicted resource. If `dispose_fn` panics on
+    /// one resource, the panic is caught and logged so that remaining resources
+    /// still get their `dispose_fn` called.
     pub fn dispose_old<F>(&self, mut dispose_fn: F)
     where
         F: FnMut(V),
@@ -136,7 +139,9 @@ where
         };
 
         for resource in evicted {
-            dispose_fn(resource);
+            if let Err(e) = catch_unwind(AssertUnwindSafe(|| dispose_fn(resource))) {
+                log::error!("ResourcePool::dispose_old: dispose_fn panicked: {:?}", e);
+            }
         }
     }
 
@@ -146,7 +151,8 @@ where
         map.len()
     }
 
-    /// Dispose all resources
+    /// Dispose all resources. If `dispose_fn` panics on one resource, the panic
+    /// is caught and logged so that remaining resources still get disposed.
     pub fn dispose<F>(&self, mut dispose_fn: F)
     where
         F: FnMut(V),
@@ -157,7 +163,9 @@ where
         };
 
         for resource in drained {
-            dispose_fn(resource);
+            if let Err(e) = catch_unwind(AssertUnwindSafe(|| dispose_fn(resource))) {
+                log::error!("ResourcePool::dispose: dispose_fn panicked: {:?}", e);
+            }
         }
     }
 
@@ -403,19 +411,16 @@ mod tests {
         pool.get(&"a".to_string(), |_| Some(1), |_| {});
         pool.get(&"b".to_string(), |_| Some(2), |_| {});
 
-        // Panic inside dispose_fn. Because dispose_fn runs outside the lock,
-        // the pool's Mutex should not be poisoned.
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            pool.dispose(|_v| {
-                panic!("intentional panic in dispose_fn");
-            });
-        }));
-        assert!(result.is_err());
+        // Panics inside dispose_fn are caught per-resource, so all resources
+        // are disposed even if dispose_fn panics on each one.
+        pool.dispose(|_v| {
+            panic!("intentional panic in dispose_fn");
+        });
 
+        // All resources should have been drained (panic was caught internally).
+        assert_eq!(pool.size(), 0);
         // The pool's lock must not be poisoned; further operations should work.
         assert!(!pool.resource_map.is_poisoned());
-        // Some resources may have been drained before the panic, but the pool
-        // should still be usable for new insertions.
         pool.get(&"c".to_string(), |_| Some(3), |_| {});
         assert!(pool.exists(&"c".to_string()));
     }
@@ -424,19 +429,21 @@ mod tests {
     fn test_dispose_old_fn_panic_does_not_poison_lock() {
         let pool: ResourcePool<String, i32> = ResourcePool::new(0);
         pool.get(&"x".to_string(), |_| Some(10), |_| {});
+        pool.get(&"y".to_string(), |_| Some(20), |_| {});
 
         // maxgen=0 means generation 0 == maxgen, so dispose_old evicts immediately.
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            pool.dispose_old(|_v| {
-                panic!("intentional panic in dispose_old callback");
-            });
-        }));
-        assert!(result.is_err());
+        // Panics inside dispose_fn are caught per-resource, so all evicted
+        // resources are disposed even if dispose_fn panics on each one.
+        pool.dispose_old(|_v| {
+            panic!("intentional panic in dispose_old callback");
+        });
 
+        // All resources should have been evicted (panic was caught internally).
+        assert_eq!(pool.size(), 0);
         // The pool's lock must not be poisoned.
         assert!(!pool.resource_map.is_poisoned());
-        pool.get(&"y".to_string(), |_| Some(20), |_| {});
-        assert!(pool.exists(&"y".to_string()));
+        pool.get(&"z".to_string(), |_| Some(30), |_| {});
+        assert!(pool.exists(&"z".to_string()));
     }
 
     #[test]
