@@ -41,3 +41,6 @@ crates/bms-model/fuzz/Cargo.lock
 *.db-wal
 .agent/tmp/
 abs_test
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key
