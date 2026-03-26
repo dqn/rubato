@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::app_context::AppContext;
 use crate::score_data_property::ScoreDataProperty;
 use crate::timer_manager::TimerManager;
 use rubato_audio::audio_system::AudioSystem;
@@ -58,8 +59,28 @@ pub trait MainState {
 
     fn render(&mut self);
 
+    /// Render with direct access to the application context.
+    ///
+    /// States that need to interact with audio, config, or other shared
+    /// resources can override this instead of `render()` to avoid the
+    /// command queue proxy round-trip. The default implementation falls
+    /// back to the plain `render()` method.
+    fn render_with_ctx(&mut self, _ctx: &mut AppContext) {
+        self.render();
+    }
+
     fn input(&mut self) {
         // default empty
+    }
+
+    /// Process input with direct access to the application context.
+    ///
+    /// States that need to interact with audio, config, or other shared
+    /// resources can override this instead of `input()` to avoid the
+    /// command queue proxy round-trip. The default implementation falls
+    /// back to the plain `input()` method.
+    fn input_with_ctx(&mut self, _ctx: &mut AppContext) {
+        self.input();
     }
 
     /// Sync live controller input into a state-local wrapper before `input()`.

@@ -146,9 +146,11 @@ impl MainController {
             current.update_loading_progress(audio_progress, bga_on);
         }
 
-        // current.render()
-        if let Some(ref mut current) = self.current {
-            current.render();
+        // current.render() -- take the state out to avoid borrow conflict
+        // between `self.current` and `self.ctx`.
+        if let Some(mut current) = self.current.take() {
+            current.render_with_ctx(&mut self.ctx);
+            self.current = Some(current);
         }
 
         if let Some(ref mut current) = self.current
@@ -485,8 +487,11 @@ impl MainController {
             {
                 current.sync_input_from(input);
             }
-            if let Some(ref mut current) = self.current {
-                current.input();
+            // Take the state out to avoid borrow conflict between
+            // `self.current` and `self.ctx`.
+            if let Some(mut current) = self.current.take() {
+                current.input_with_ctx(&mut self.ctx);
+                self.current = Some(current);
             }
             if let Some(ref mut input) = self.ctx.input
                 && let Some(ref mut current) = self.current
