@@ -52,6 +52,7 @@ impl MainController {
         let playdata = Some(PlayDataAccessor::new(&config));
 
         // Phase 5+: IR initialization, Discord RPC, OBS listener
+        #[allow(deprecated)]
         let state_listener: Vec<Box<dyn MainStateListener>> = Vec::new();
 
         // Create input processor
@@ -84,6 +85,7 @@ impl MainController {
             sound: Some(sound),
             offset,
             state_listener,
+            event_senders: Vec::new(),
             command_queue: rubato_types::main_controller_access::MainControllerCommandQueue::new(),
             integration: IntegrationState::default(),
             shared_music_selector: None,
@@ -227,14 +229,35 @@ impl MainController {
     /// Add a state listener (e.g. DiscordListener, ObsListener).
     ///
     /// Translated from Java: stateListener.add(...)
+    ///
+    /// **Deprecated**: Use `add_event_sender()` with an `AppEvent` channel instead.
+    #[deprecated(note = "Use add_event_sender() with an AppEvent channel instead")]
+    #[allow(deprecated)]
     pub fn add_state_listener(&mut self, listener: Box<dyn MainStateListener>) {
         self.state_listener.push(listener);
+    }
+
+    /// Register a channel sender for receiving `AppEvent`s.
+    ///
+    /// Events are sent via `try_send` to avoid blocking the render thread.
+    /// Disconnected senders are pruned automatically on each broadcast.
+    pub fn add_event_sender(
+        &mut self,
+        sender: std::sync::mpsc::SyncSender<rubato_types::app_event::AppEvent>,
+    ) {
+        self.event_senders.push(sender);
     }
 
     /// Set the state event log for observability (E2E testing).
     ///
     /// When set, state machine events (transitions, lifecycle, handoffs) are
     /// pushed to the shared log so test harnesses can assert on them.
+    ///
+    /// **Deprecated**: Use `add_event_sender()` with an `AppEvent` channel instead.
+    /// The channel delivers `AppEvent::Lifecycle(StateEvent)` for the same events.
+    #[deprecated(
+        note = "Use add_event_sender() with an AppEvent channel instead. The channel delivers AppEvent::Lifecycle(StateEvent)."
+    )]
     pub fn set_state_event_log(
         &mut self,
         log: std::sync::Arc<std::sync::Mutex<Vec<rubato_types::state_event::StateEvent>>>,
@@ -257,12 +280,54 @@ impl MainController {
         self.lifecycle.prevtime
     }
 
-    /// Emit a state event to the log (if set). No-op when log is None.
+    /// Emit a state event to the event log and to all channel-based receivers.
     pub(super) fn emit_state_event(&self, event: rubato_types::state_event::StateEvent) {
         if let Some(ref log) = self.state_event_log
             && let Ok(mut guard) = log.lock()
         {
-            guard.push(event);
+            guard.push(event.clone());
+        }
+        self.broadcast_app_event(rubato_types::app_event::AppEvent::Lifecycle(event));
+    }
+
+    /// Broadcast an `AppEvent` to all registered channel senders.
+    ///
+    /// Uses `try_send` to avoid blocking the render thread. Disconnected
+    /// senders are silently ignored (pruned on next mutable access).
+    pub(super) fn broadcast_app_event(&self, event: rubato_types::app_event::AppEvent) {
+        for sender in &self.event_senders {
+            let _ = sender.try_send(event.clone());
+        }
+    }
+
+    /// Build and broadcast a `StateChanged` event using current controller state.
+    pub(super) fn broadcast_state_changed(&self, status: i32) {
+        if self.event_senders.is_empty() {
+            return;
+        }
+        if let Some(ref current) = self.current {
+            let screen_type = current
+                .state_type()
+                .map(ScreenType::from_state_type)
+                .unwrap_or(ScreenType::Other);
+            let state_type = current.state_type();
+
+            let song_info = self.resource.as_ref().and_then(|r| r.songdata()).map(|sd| {
+                rubato_types::app_event::SongInfo {
+                    title: sd.metadata.title.clone(),
+                    subtitle: sd.metadata.subtitle.clone(),
+                    artist: sd.metadata.artist.clone(),
+                    mode: sd.chart.mode,
+                }
+            });
+
+            let data = rubato_types::app_event::StateChangedData {
+                screen_type,
+                state_type,
+                status,
+                song_info,
+            };
+            self.broadcast_app_event(rubato_types::app_event::AppEvent::StateChanged(data));
         }
     }
 }

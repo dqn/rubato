@@ -27,11 +27,16 @@ pub trait MainStateAccess {
 /// Trait for listeners that observe MainState changes.
 ///
 /// Translated from Java: MainStateListener interface
+///
+/// **Deprecated**: Use `AppEvent` channel via `MainController::add_event_sender()` instead.
+/// This trait is kept for backward compatibility during migration.
+#[deprecated(note = "Use AppEvent channel via MainController::add_event_sender() instead")]
 pub trait MainStateListener {
     fn update(&mut self, state: &dyn MainStateAccess, status: i32);
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
     struct TestState;

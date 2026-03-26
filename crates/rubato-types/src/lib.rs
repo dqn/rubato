@@ -166,6 +166,9 @@ pub mod sync_utils;
 // State machine observability events (E2E testing)
 pub mod state_event;
 
+// Unified application events (channel-based delivery)
+pub mod app_event;
+
 // Test support utilities (behind feature gate or in test builds)
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;

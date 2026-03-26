@@ -17,7 +17,7 @@ use rubato_core::main_loader::MainLoader;
 use rubato_core::main_state::MainStateType;
 use rubato_core::player_config::PlayerConfig;
 use rubato_launcher::state_factory::LauncherStateFactory;
-use rubato_types::main_state_access::{MainStateAccess, MainStateListener};
+use rubato_types::app_event::AppEvent;
 
 // ---------------------------------------------------------------------------
 // Helper: create controller via MainLoader::play() (production path)
@@ -122,35 +122,28 @@ fn create_then_render_first_frame() {
 }
 
 // ---------------------------------------------------------------------------
-// F. State listeners are dispatched on state change
+// F. Event senders receive StateChanged on state change
 // ---------------------------------------------------------------------------
 
-struct TestListener {
-    called: Arc<AtomicBool>,
-}
-
-impl MainStateListener for TestListener {
-    fn update(&mut self, _state: &dyn MainStateAccess, _status: i32) {
-        self.called.store(true, Ordering::SeqCst);
-    }
-}
-
 #[test]
-fn state_listeners_dispatched_on_change() {
+fn event_senders_receive_state_changed_on_transition() {
     let mut mc = play_default();
     mc.set_state_factory(Box::new(LauncherStateFactory::new()));
 
-    let called = Arc::new(AtomicBool::new(false));
-    mc.add_state_listener(Box::new(TestListener {
-        called: called.clone(),
-    }));
+    let (tx, rx) = std::sync::mpsc::sync_channel::<AppEvent>(256);
+    mc.add_event_sender(tx);
 
     mc.change_state(MainStateType::MusicSelect);
 
-    assert!(
-        called.load(Ordering::SeqCst),
-        "listener should have been called"
-    );
+    // Drain events and check for a StateChanged event
+    let mut found = false;
+    while let Ok(event) = rx.try_recv() {
+        if matches!(event, AppEvent::StateChanged(_)) {
+            found = true;
+            break;
+        }
+    }
+    assert!(found, "should have received a StateChanged event");
 }
 
 // ---------------------------------------------------------------------------
@@ -180,17 +173,25 @@ fn full_production_wiring_sequence() {
     // 2. set_state_factory()
     mc.set_state_factory(Box::new(LauncherStateFactory::new()));
 
-    // 3. Add state listener (mirrors Discord/OBS listener wiring)
-    let listener_called = Arc::new(AtomicBool::new(false));
-    mc.add_state_listener(Box::new(TestListener {
-        called: listener_called.clone(),
-    }));
+    // 3. Add event sender (mirrors Discord/OBS listener wiring)
+    let (tx, rx) = std::sync::mpsc::sync_channel::<AppEvent>(256);
+    mc.add_event_sender(tx);
 
     // 4. create() (called from event loop's resumed())
     mc.create();
     assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect),);
     assert!(mc.sprite_batch().is_some());
-    assert!(listener_called.load(Ordering::SeqCst));
+    // Verify at least one StateChanged event was received
+    let mut found_state_changed = false;
+    while let Ok(event) = rx.try_recv() {
+        if matches!(event, AppEvent::StateChanged(_)) {
+            found_state_changed = true;
+        }
+    }
+    assert!(
+        found_state_changed,
+        "should have received StateChanged event after create()"
+    );
 
     // 5. render() multiple frames
     for _ in 0..3 {

@@ -5,29 +5,32 @@ use log::warn;
 
 use rubato_core::config::Config;
 use rubato_core::main_state::MainStateType;
-use rubato_core::main_state_listener::MainStateListener;
-use rubato_types::main_state_access::MainStateAccess;
+use rubato_types::app_event::{AppEvent, StateChangedData};
 use rubato_types::screen_type::ScreenType;
 
 use super::lock_or_recover;
 use super::obs_ws_client::ObsWsClient;
 use super::{ACTION_NONE, SCENE_NONE};
 
-/// ObsListener - implements MainStateListener for scene/recording control via OBS WebSocket
+/// ObsListener - scene/recording control via OBS WebSocket.
+///
+/// Receives `AppEvent::StateChanged` events via a channel and triggers
+/// OBS scene changes and recording actions accordingly.
 pub struct ObsListener {
     config: Config,
     obs_client: Option<Arc<ObsWsClient>>,
-    last_state_type: Option<MainStateType>,
-    /// Scheduled stop task handle — holds a JoinHandle for cancellation
+    /// Scheduled stop task handle -- holds a JoinHandle for cancellation
     scheduled_stop_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    /// Bridge thread that reads AppEvent and calls OBS methods.
+    bridge_thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl ObsListener {
-    // Design note: ObsListener owns its own ObsWsClient instance.
-    // If MainController also needs OBS access (e.g. save_last_recording),
-    // it should share this client via Arc rather than creating a separate one,
-    // to avoid split save_requested state.
-    pub fn new(config: Config) -> Self {
+    /// Create a new ObsListener and return `(app_event_sender, listener)`.
+    ///
+    /// The caller should register `app_event_sender` with `MainController::add_event_sender()`.
+    /// The listener must be kept alive (not dropped) for the background thread to run.
+    pub fn new(config: Config) -> (std::sync::mpsc::SyncSender<AppEvent>, Self) {
         let client = match ObsWsClient::new(&config) {
             Ok(client) => {
                 let client = Arc::new(client);
@@ -40,20 +43,114 @@ impl ObsListener {
             }
         };
 
-        Self {
-            config,
-            obs_client: client,
-            last_state_type: None,
-            scheduled_stop_task: Arc::new(Mutex::new(None)),
+        // AppEvent channel: MainController -> bridge thread
+        let (app_tx, app_rx) = std::sync::mpsc::sync_channel::<AppEvent>(256);
+
+        // Clone state for the bridge thread
+        let config_clone = config.clone();
+        let client_clone = client.clone();
+        let scheduled_stop_task = Arc::new(Mutex::new(None));
+        let scheduled_stop_clone = Arc::clone(&scheduled_stop_task);
+
+        let bridge_handle = std::thread::Builder::new()
+            .name("obs-bridge".to_string())
+            .spawn(move || {
+                Self::bridge_loop(app_rx, config_clone, client_clone, scheduled_stop_clone);
+            })
+            .ok();
+
+        (
+            app_tx,
+            Self {
+                config,
+                obs_client: client,
+                scheduled_stop_task,
+                bridge_thread: bridge_handle,
+            },
+        )
+    }
+
+    /// Bridge thread: reads `AppEvent`s and handles OBS state changes.
+    fn bridge_loop(
+        rx: std::sync::mpsc::Receiver<AppEvent>,
+        config: Config,
+        obs_client: Option<Arc<ObsWsClient>>,
+        scheduled_stop_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    ) {
+        let mut last_state_type: Option<MainStateType> = None;
+
+        loop {
+            match rx.recv() {
+                Ok(AppEvent::StateChanged(data)) => {
+                    Self::handle_state_changed(
+                        &data,
+                        &config,
+                        &obs_client,
+                        &scheduled_stop_task,
+                        &mut last_state_type,
+                    );
+                }
+                Ok(AppEvent::Lifecycle(_)) => {
+                    // Lifecycle events are not relevant for OBS.
+                }
+                Err(_) => {
+                    // Channel disconnected; clean up and exit.
+                    Self::close_impl(&scheduled_stop_task, &obs_client);
+                    break;
+                }
+            }
         }
+    }
+
+    /// Handle a `StateChanged` event by triggering appropriate OBS actions.
+    fn handle_state_changed(
+        data: &StateChangedData,
+        config: &Config,
+        obs_client: &Option<Arc<ObsWsClient>>,
+        scheduled_stop_task: &Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+        last_state_type: &mut Option<MainStateType>,
+    ) {
+        if obs_client.is_none() {
+            return;
+        }
+
+        // Use state_type from the event directly (avoids ScreenType->MainStateType roundtrip)
+        let current_state_type = match data.state_type {
+            Some(st) => st,
+            None => return,
+        };
+
+        // SkinConfig maps to ScreenType::Other, which we skip
+        if data.screen_type == ScreenType::Other {
+            return;
+        }
+
+        if current_state_type == MainStateType::Play
+            && *last_state_type == Some(MainStateType::Play)
+        {
+            Self::trigger_replay_static(config, obs_client, scheduled_stop_task);
+        } else if Some(current_state_type) != *last_state_type {
+            Self::trigger_state_change_by_type_static(
+                current_state_type,
+                config,
+                obs_client,
+                scheduled_stop_task,
+            );
+        }
+
+        *last_state_type = Some(current_state_type);
     }
 
     pub fn obs_client(&self) -> Option<&Arc<ObsWsClient>> {
         self.obs_client.as_ref()
     }
 
-    fn trigger_replay(&self) {
-        let client = match &self.obs_client {
+    fn trigger_replay_static(
+        config: &Config,
+        obs_client: &Option<Arc<ObsWsClient>>,
+        scheduled_stop_task: &Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    ) {
+        let client = match obs_client {
             Some(c) => c,
             None => return,
         };
@@ -63,29 +160,29 @@ impl ObsListener {
         if client.is_recording() {
             client.restart_recording();
         }
-        self.trigger_state_change_by_type(MainStateType::MusicSelect);
+        Self::trigger_state_change_static(
+            MainStateType::MusicSelect.obs_key(),
+            config,
+            obs_client,
+            scheduled_stop_task,
+        );
         let Some(runtime_handle) = client.runtime_handle() else {
             return;
         };
         let runtime_handle = runtime_handle.clone();
         let client_clone = Arc::clone(client);
 
-        // Capture config values for PLAY state before entering async block,
-        // since self (ObsListener) is not Send.
-        let play_scene = self.config.obs_scene("PLAY").cloned();
-        let play_action = self.config.obs_action("PLAY").cloned();
-        let stop_wait = self.config.obs.obs_ws_rec_stop_wait;
-        let scheduled_stop_task = Arc::clone(&self.scheduled_stop_task);
+        let play_scene = config.obs_scene("PLAY").cloned();
+        let play_action = config.obs_action("PLAY").cloned();
+        let stop_wait = config.obs.obs_ws_rec_stop_wait;
+        let scheduled_stop_task = Arc::clone(scheduled_stop_task);
 
         runtime_handle.spawn(async move {
             tokio::time::sleep(Duration::from_millis(1000)).await;
-            // Trigger PLAY state change after 1 second.
-            // Inlined from trigger_state_change since self is not available in async context.
             if !client_clone.is_connected() {
                 return;
             }
 
-            // Cancel any scheduled stop and execute immediately if pending
             {
                 let mut guard = lock_or_recover(&scheduled_stop_task);
                 if let Some(task) = guard.take() {
@@ -96,14 +193,12 @@ impl ObsListener {
                 }
             }
 
-            // Set scene if configured
             if let Some(ref scene) = play_scene
                 && scene != SCENE_NONE
             {
                 client_clone.set_scene(scene);
             }
 
-            // Execute action if configured
             if let Some(ref action) = play_action
                 && action != ACTION_NONE
             {
@@ -125,8 +220,10 @@ impl ObsListener {
         });
     }
 
-    fn cancel_scheduled_stop(&self) -> bool {
-        let mut guard = lock_or_recover(&self.scheduled_stop_task);
+    fn cancel_scheduled_stop_impl(
+        scheduled_stop_task: &Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    ) -> bool {
+        let mut guard = lock_or_recover(scheduled_stop_task);
         if let Some(task) = guard.take() {
             if !task.is_finished() {
                 task.abort();
@@ -136,16 +233,54 @@ impl ObsListener {
         false
     }
 
+    #[cfg(test)]
+    fn cancel_scheduled_stop(&self) -> bool {
+        Self::cancel_scheduled_stop_impl(&self.scheduled_stop_task)
+    }
+
     pub fn trigger_play_ended(&self) {
         self.trigger_state_change("PLAY_ENDED");
     }
 
     pub fn trigger_state_change_by_type(&self, state_type: MainStateType) {
-        self.trigger_state_change(state_type.obs_key());
+        Self::trigger_state_change_by_type_static(
+            state_type,
+            &self.config,
+            &self.obs_client,
+            &self.scheduled_stop_task,
+        );
+    }
+
+    fn trigger_state_change_by_type_static(
+        state_type: MainStateType,
+        config: &Config,
+        obs_client: &Option<Arc<ObsWsClient>>,
+        scheduled_stop_task: &Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    ) {
+        Self::trigger_state_change_static(
+            state_type.obs_key(),
+            config,
+            obs_client,
+            scheduled_stop_task,
+        );
     }
 
     pub fn trigger_state_change(&self, state_name: &str) {
-        let client = match &self.obs_client {
+        Self::trigger_state_change_static(
+            state_name,
+            &self.config,
+            &self.obs_client,
+            &self.scheduled_stop_task,
+        );
+    }
+
+    fn trigger_state_change_static(
+        state_name: &str,
+        config: &Config,
+        obs_client: &Option<Arc<ObsWsClient>>,
+        scheduled_stop_task: &Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    ) {
+        let client = match obs_client {
             Some(c) => c,
             None => return,
         };
@@ -153,29 +288,25 @@ impl ObsListener {
             return;
         }
 
-        let scene = self.config.obs_scene(state_name).cloned();
-        let action = self.config.obs_action(state_name).cloned();
+        let scene = config.obs_scene(state_name).cloned();
+        let action = config.obs_action(state_name).cloned();
 
-        // If a StopRecord action was already scheduled, StopRecord immediately
-        let stop_record_now = self.cancel_scheduled_stop();
+        let stop_record_now = Self::cancel_scheduled_stop_impl(scheduled_stop_task);
         if stop_record_now {
             client.request_stop_record();
         }
 
-        // Set scene if configured
         if let Some(ref scene) = scene
             && scene != SCENE_NONE
         {
             client.set_scene(scene);
         }
 
-        // Execute action if configured
         if let Some(ref action) = action
             && action != ACTION_NONE
         {
             if action == "StopRecord" {
-                let delay = self.config.obs.obs_ws_rec_stop_wait;
-                // We already executed StopRecord above
+                let delay = config.obs.obs_ws_rec_stop_wait;
                 if stop_record_now {
                     return;
                 }
@@ -184,15 +315,14 @@ impl ObsListener {
                 };
                 let runtime_handle = runtime_handle.clone();
                 let client_clone = Arc::clone(client);
-                let scheduled_stop_task = Arc::clone(&self.scheduled_stop_task);
+                let stop_task_clone = Arc::clone(scheduled_stop_task);
                 let handle = runtime_handle.spawn(async move {
                     tokio::time::sleep(Duration::from_millis(delay.max(0) as u64)).await;
                     client_clone.request_stop_record();
-                    // Clear the task handle
-                    let mut guard = lock_or_recover(&scheduled_stop_task);
+                    let mut guard = lock_or_recover(&stop_task_clone);
                     *guard = None;
                 });
-                let mut guard = lock_or_recover(&self.scheduled_stop_task);
+                let mut guard = lock_or_recover(scheduled_stop_task);
                 *guard = Some(handle);
             } else {
                 client.send_request(action);
@@ -200,10 +330,12 @@ impl ObsListener {
         }
     }
 
-    pub fn close(&self) {
-        // Cancel scheduled stop task
+    fn close_impl(
+        scheduled_stop_task: &Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+        obs_client: &Option<Arc<ObsWsClient>>,
+    ) {
         {
-            let mut guard = lock_or_recover(&self.scheduled_stop_task);
+            let mut guard = lock_or_recover(scheduled_stop_task);
             if let Some(task) = guard.take()
                 && !task.is_finished()
             {
@@ -211,8 +343,17 @@ impl ObsListener {
             }
         }
 
-        if let Some(ref client) = self.obs_client {
+        if let Some(client) = obs_client {
             client.close();
+        }
+    }
+
+    pub fn close(&mut self) {
+        Self::close_impl(&self.scheduled_stop_task, &self.obs_client);
+        if let Some(handle) = self.bridge_thread.take()
+            && let Err(e) = handle.join()
+        {
+            log::warn!("OBS bridge thread panicked: {:?}", e);
         }
     }
 
@@ -222,8 +363,8 @@ impl ObsListener {
         Self {
             config,
             obs_client: None,
-            last_state_type: None,
             scheduled_stop_task: Arc::new(Mutex::new(None)),
+            bridge_thread: None,
         }
     }
 }
@@ -231,37 +372,6 @@ impl ObsListener {
 impl Drop for ObsListener {
     fn drop(&mut self) {
         self.close();
-    }
-}
-
-impl MainStateListener for ObsListener {
-    fn update(&mut self, current_state: &dyn MainStateAccess, _status: i32) {
-        if self.obs_client.is_none() {
-            return;
-        }
-
-        let screen_type = current_state.screen_type();
-
-        // Convert ScreenType back to MainStateType for internal tracking
-        let current_state_type = match screen_type {
-            ScreenType::MusicSelector => MainStateType::MusicSelect,
-            ScreenType::MusicDecide => MainStateType::Decide,
-            ScreenType::BMSPlayer => MainStateType::Play,
-            ScreenType::MusicResult => MainStateType::Result,
-            ScreenType::CourseResult => MainStateType::CourseResult,
-            ScreenType::KeyConfiguration => MainStateType::Config,
-            ScreenType::Other => return,
-        };
-
-        if current_state_type == MainStateType::Play
-            && self.last_state_type == Some(MainStateType::Play)
-        {
-            self.trigger_replay();
-        } else if Some(current_state_type) != self.last_state_type {
-            self.trigger_state_change_by_type(current_state_type);
-        }
-
-        self.last_state_type = Some(current_state_type);
     }
 }
 
@@ -320,7 +430,7 @@ mod tests {
 
     #[tokio::test]
     async fn close_cancels_scheduled_stop_task() {
-        let listener = ObsListener::new_without_client(Config::default());
+        let mut listener = ObsListener::new_without_client(Config::default());
 
         let handle = tokio::spawn(async {
             tokio::time::sleep(Duration::from_secs(3600)).await;
@@ -355,16 +465,12 @@ mod tests {
     fn new_without_client_has_no_obs_client() {
         let listener = ObsListener::new_without_client(Config::default());
         assert!(listener.obs_client().is_none());
-        assert!(listener.last_state_type.is_none());
     }
 
     // -- trigger_state_change_by_type name mapping (exhaustive) --
 
     #[test]
     fn trigger_state_change_by_type_maps_all_variants() {
-        // Verify the mapping is exhaustive by calling each variant.
-        // Since obs_client is None, trigger_state_change returns early,
-        // but the match in trigger_state_change_by_type still executes.
         let listener = ObsListener::new_without_client(Config::default());
         let variants = [
             MainStateType::MusicSelect,
@@ -376,7 +482,6 @@ mod tests {
             MainStateType::SkinConfig,
         ];
         for variant in variants {
-            // Should not panic for any variant
             listener.trigger_state_change_by_type(variant);
         }
     }
@@ -400,11 +505,8 @@ mod tests {
             *guard = Some(handle);
         }
 
-        // cancel_scheduled_stop returns true (slot was occupied) but does NOT
-        // call abort on the finished handle
         assert!(listener.cancel_scheduled_stop());
 
-        // Slot is cleared
         let guard = lock_or_recover(&listener.scheduled_stop_task);
         assert!(guard.is_none());
     }
@@ -412,7 +514,7 @@ mod tests {
     /// Regression: close() must not abort an already-finished task.
     #[tokio::test]
     async fn close_skips_abort_on_finished_task() {
-        let listener = ObsListener::new_without_client(Config::default());
+        let mut listener = ObsListener::new_without_client(Config::default());
 
         let handle = tokio::spawn(async {});
         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -423,7 +525,6 @@ mod tests {
             *guard = Some(handle);
         }
 
-        // Should not panic when encountering a finished task
         listener.close();
 
         let guard = lock_or_recover(&listener.scheduled_stop_task);
@@ -434,5 +535,47 @@ mod tests {
     fn scene_none_and_action_none_are_expected_values() {
         assert_eq!(SCENE_NONE, "(No Change)");
         assert_eq!(ACTION_NONE, "(Do Nothing)");
+    }
+
+    #[test]
+    fn handle_state_changed_skips_when_no_client() {
+        let scheduled = Arc::new(Mutex::new(None));
+        let mut last_state: Option<MainStateType> = None;
+        let data = StateChangedData {
+            screen_type: ScreenType::BMSPlayer,
+            state_type: Some(MainStateType::Play),
+            status: 0,
+            song_info: None,
+        };
+        // Should not panic with obs_client=None
+        ObsListener::handle_state_changed(
+            &data,
+            &Config::default(),
+            &None,
+            &scheduled,
+            &mut last_state,
+        );
+        // last_state not updated because obs_client is None
+        assert!(last_state.is_none());
+    }
+
+    #[test]
+    fn handle_state_changed_skips_screen_type_other() {
+        let scheduled = Arc::new(Mutex::new(None));
+        let mut last_state: Option<MainStateType> = None;
+        let data = StateChangedData {
+            screen_type: ScreenType::Other,
+            state_type: Some(MainStateType::SkinConfig),
+            status: 0,
+            song_info: None,
+        };
+        ObsListener::handle_state_changed(
+            &data,
+            &Config::default(),
+            &None,
+            &scheduled,
+            &mut last_state,
+        );
+        assert!(last_state.is_none());
     }
 }

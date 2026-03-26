@@ -110,7 +110,7 @@ fn recording_audio_driver_mutex_no_deadlock() {
 
 #[test]
 fn state_event_log_mutex_no_deadlock() {
-    let harness = E2eHarness::new();
+    let mut harness = E2eHarness::new();
 
     // Access state events multiple times
     let events1 = harness.state_events();

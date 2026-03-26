@@ -195,7 +195,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // resulting in a black screen.
     main_controller.set_state_factory(Box::new(LauncherStateFactory::new()));
 
-    subsystem_init::init_state_listeners(&mut main_controller);
+    let _listener_handles = subsystem_init::init_state_listeners(&mut main_controller);
     subsystem_init::init_ir_config(&mut main_controller);
     subsystem_init::init_download_processors(&mut main_controller);
     subsystem_init::init_stream_controller(&mut main_controller);
