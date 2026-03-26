@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -36,6 +36,59 @@ fn html_regexes() -> &'static HtmlRegexes {
 /// Prevents memory exhaustion from malicious or misconfigured servers.
 const MAX_RESPONSE_SIZE: u64 = 64 * 1024 * 1024;
 
+/// A `Write` adapter that caps buffered data at a fixed size.
+/// Returns `WriteZero` when the accumulated bytes would exceed the limit,
+/// causing `Response::copy_to()` to abort the transfer early.
+struct LimitedWriter {
+    buf: Vec<u8>,
+    limit: usize,
+}
+
+impl Write for LimitedWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        if self.buf.len() + data.len() > self.limit {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::WriteZero,
+                "response exceeded size limit",
+            ));
+        }
+        self.buf.extend_from_slice(data);
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Read response body with streaming size enforcement.
+///
+/// Unlike `response.bytes()`, this rejects oversized responses during streaming,
+/// preventing memory exhaustion from chunked responses that omit Content-Length.
+fn read_response_bytes_limited(
+    mut response: reqwest::blocking::Response,
+    max_bytes: u64,
+) -> Result<Vec<u8>> {
+    if let Some(content_length) = response.content_length()
+        && content_length > max_bytes
+    {
+        bail!("Response too large: {} bytes", content_length);
+    }
+
+    let mut writer = LimitedWriter {
+        buf: Vec::new(),
+        limit: max_bytes as usize,
+    };
+
+    match response.copy_to(&mut writer) {
+        Ok(_) => Ok(writer.buf),
+        Err(_) if writer.buf.len() >= writer.limit => {
+            bail!("Response too large (>{} bytes)", max_bytes)
+        }
+        Err(e) => bail!("Failed to read response: {}", e),
+    }
+}
+
 pub struct DifficultyTableParser {
     data: HashMap<String, Vec<String>>,
 }
@@ -65,38 +118,20 @@ impl DifficultyTableParser {
     // on a background thread, not the main/render thread, to avoid UI freezes.
     fn read_all_lines(&self, urlname: &str) -> Option<Vec<String>> {
         match Self::http_client().and_then(|c| Ok(c.get(urlname).send()?.error_for_status()?)) {
-            Ok(response) => {
-                if let Some(content_length) = response.content_length()
-                    && content_length > MAX_RESPONSE_SIZE
-                {
+            Ok(response) => match read_response_bytes_limited(response, MAX_RESPONSE_SIZE) {
+                Ok(bytes) => {
+                    let text = Self::decode_bytes_with_charset(&bytes);
+                    let lines: Vec<String> = text.lines().map(|s| s.to_string()).collect();
+                    Some(lines)
+                }
+                Err(e) => {
                     log::error!(
-                        "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:response too large ({} bytes)",
-                        content_length
+                        "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:{}",
+                        e
                     );
-                    return None;
+                    None
                 }
-                match response.bytes() {
-                    Ok(bytes) => {
-                        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
-                            log::error!(
-                                "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:response too large ({} bytes)",
-                                bytes.len()
-                            );
-                            return None;
-                        }
-                        let text = Self::decode_bytes_with_charset(&bytes);
-                        let lines: Vec<String> = text.lines().map(|s| s.to_string()).collect();
-                        Some(lines)
-                    }
-                    Err(e) => {
-                        log::error!(
-                            "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:{}",
-                            e
-                        );
-                        None
-                    }
-                }
-            }
+            },
             Err(e) => {
                 log::error!(
                     "\u{96e3}\u{6613}\u{5ea6}\u{8868}\u{30b5}\u{30a4}\u{30c8}\u{89e3}\u{6790}\u{4e2d}\u{306e}\u{4f8b}\u{5916}:{}",
@@ -356,18 +391,7 @@ impl DifficultyTableParser {
             .get(jsonheader_url)
             .send()?
             .error_for_status()?;
-        // Design limitation: Content-Length check runs before buffering, but
-        // response.bytes() below buffers the full body before the post-buffer size check.
-        // Chunked/streaming enforcement would require reqwest's async API.
-        if let Some(content_length) = response.content_length()
-            && content_length > MAX_RESPONSE_SIZE
-        {
-            bail!("Response too large: {} bytes", content_length);
-        }
-        let bytes = response.bytes()?;
-        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
-            bail!("Response too large: {} bytes", bytes.len());
-        }
+        let bytes = read_response_bytes_limited(response, MAX_RESPONSE_SIZE)?;
         let text = Self::decode_bytes_with_charset(&bytes);
         let result: HashMap<String, Value> = serde_json::from_str(&text)?;
         self.decode_json_table_header_internal(dt, &result)?;
@@ -518,15 +542,7 @@ impl DifficultyTableParser {
             .get(jsondata_url)
             .send()?
             .error_for_status()?;
-        if let Some(content_length) = response.content_length()
-            && content_length > MAX_RESPONSE_SIZE
-        {
-            bail!("Response too large: {} bytes", content_length);
-        }
-        let bytes = response.bytes()?;
-        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
-            bail!("Response too large: {} bytes", bytes.len());
-        }
+        let bytes = read_response_bytes_limited(response, MAX_RESPONSE_SIZE)?;
         let text = Self::decode_bytes_with_charset(&bytes);
         let result: Vec<HashMap<String, Value>> = serde_json::from_str(&text)?;
         self.decode_json_table_data_internal(dt, &result, false);
@@ -997,6 +1013,30 @@ mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
+
+    // --- LimitedWriter tests ---
+
+    #[test]
+    fn limited_writer_accepts_data_within_limit() {
+        let mut w = LimitedWriter {
+            buf: Vec::new(),
+            limit: 10,
+        };
+        assert!(w.write_all(b"hello").is_ok());
+        assert_eq!(w.buf, b"hello");
+    }
+
+    #[test]
+    fn limited_writer_rejects_data_exceeding_limit() {
+        let mut w = LimitedWriter {
+            buf: Vec::new(),
+            limit: 5,
+        };
+        assert!(w.write_all(b"123").is_ok());
+        let err = w.write(b"456").unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::WriteZero);
+        assert_eq!(w.buf, b"123");
+    }
 
     #[test]
     fn test_decode_header_from_file_basic() {

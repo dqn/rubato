@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::Write;
 use std::sync::{Mutex, MutexGuard, OnceLock};
 
 use log::error;
@@ -61,6 +62,59 @@ pub trait ScoreDatabaseAccess: Send + Sync {
     fn score_data(&self, sha256: &str, mode: i32) -> Option<ScoreData>;
 }
 
+/// A `Write` adapter that caps buffered data at a fixed size.
+/// Returns `WriteZero` when the accumulated bytes would exceed the limit,
+/// causing `Response::copy_to()` to abort the transfer early.
+struct LimitedWriter {
+    buf: Vec<u8>,
+    limit: usize,
+}
+
+impl Write for LimitedWriter {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        if self.buf.len() + data.len() > self.limit {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::WriteZero,
+                "response exceeded size limit",
+            ));
+        }
+        self.buf.extend_from_slice(data);
+        Ok(data.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Read response body with streaming size enforcement.
+///
+/// Unlike `response.bytes()`, this rejects oversized responses during streaming,
+/// preventing memory exhaustion from chunked responses that omit Content-Length.
+fn read_response_bytes_limited(
+    mut response: reqwest::blocking::Response,
+    max_bytes: u64,
+) -> Result<Vec<u8>, String> {
+    if let Some(content_length) = response.content_length()
+        && content_length > max_bytes
+    {
+        return Err(format!("response too large ({} bytes)", content_length));
+    }
+
+    let mut writer = LimitedWriter {
+        buf: Vec::new(),
+        limit: max_bytes as usize,
+    };
+
+    match response.copy_to(&mut writer) {
+        Ok(_) => Ok(writer.buf),
+        Err(_) if writer.buf.len() >= writer.limit => {
+            Err(format!("response too large (>{} bytes)", max_bytes))
+        }
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Acquire a mutex lock, recovering from poison if a thread panicked while holding it.
 fn lock_or_recover<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
@@ -113,28 +167,12 @@ impl LR2IRConnection {
                     ));
                     return None;
                 }
-                // Reject responses that exceed the size limit to prevent
-                // memory exhaustion from malicious or misconfigured servers.
-                if let Some(content_length) = response.content_length()
-                    && content_length > MAX_RESPONSE_SIZE
-                {
-                    ImGuiNotify::error(&format!(
-                        "Failed to send request to LR2IR: response too large ({} bytes)",
-                        content_length
-                    ));
-                    return None;
-                }
-                // In Java, response is read with Shift_JIS encoding.
-                // reqwest returns bytes; we decode with encoding_rs.
-                match response.bytes() {
+                // Enforce size limit during streaming to protect against
+                // chunked responses that omit Content-Length.
+                match read_response_bytes_limited(response, MAX_RESPONSE_SIZE) {
                     Ok(bytes) => {
-                        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
-                            ImGuiNotify::error(&format!(
-                                "Failed to send request to LR2IR: response too large ({} bytes)",
-                                bytes.len()
-                            ));
-                            return None;
-                        }
+                        // In Java, response is read with Shift_JIS encoding.
+                        // reqwest returns bytes; we decode with encoding_rs.
                         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
                         Some(decoded.to_string())
                     }
@@ -268,24 +306,12 @@ impl LR2IRConnection {
                     ImGuiNotify::error("Failed to load ghost data.");
                     return None;
                 }
-                // Reject responses that exceed the size limit.
-                if let Some(content_length) = response.content_length()
-                    && content_length > MAX_RESPONSE_SIZE
-                {
-                    error!("Response too large: {} bytes", content_length);
-                    ImGuiNotify::error("Failed to load ghost data.");
-                    return None;
-                }
-                // LR2IR sends Shift_JIS responses (ghost CSV can contain
-                // Japanese player names). Decode with encoding_rs, matching
-                // the pattern in make_post_request().
-                match response.bytes() {
+                // Enforce size limit during streaming to protect against
+                // chunked responses that omit Content-Length.
+                match read_response_bytes_limited(response, MAX_RESPONSE_SIZE) {
                     Ok(bytes) => {
-                        if bytes.len() as u64 > MAX_RESPONSE_SIZE {
-                            error!("Response too large: {} bytes", bytes.len());
-                            ImGuiNotify::error("Failed to load ghost data.");
-                            return None;
-                        }
+                        // LR2IR sends Shift_JIS responses (ghost CSV can contain
+                        // Japanese player names). Decode with encoding_rs.
                         let (decoded, _, _) = encoding_rs::SHIFT_JIS.decode(&bytes);
                         LR2GhostData::parse(&decoded)
                     }
@@ -407,6 +433,52 @@ impl Score {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // --- LimitedWriter tests ---
+
+    #[test]
+    fn limited_writer_accepts_data_within_limit() {
+        let mut w = LimitedWriter {
+            buf: Vec::new(),
+            limit: 10,
+        };
+        assert!(w.write_all(b"hello").is_ok());
+        assert_eq!(w.buf, b"hello");
+    }
+
+    #[test]
+    fn limited_writer_accepts_data_at_exact_limit() {
+        let mut w = LimitedWriter {
+            buf: Vec::new(),
+            limit: 5,
+        };
+        assert!(w.write_all(b"12345").is_ok());
+        assert_eq!(w.buf.len(), 5);
+    }
+
+    #[test]
+    fn limited_writer_rejects_data_exceeding_limit() {
+        let mut w = LimitedWriter {
+            buf: Vec::new(),
+            limit: 5,
+        };
+        assert!(w.write_all(b"123").is_ok());
+        let err = w.write(b"456").unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::WriteZero);
+        // Buffer should not have been extended past the rejection point.
+        assert_eq!(w.buf, b"123");
+    }
+
+    #[test]
+    fn limited_writer_rejects_single_write_exceeding_limit() {
+        let mut w = LimitedWriter {
+            buf: Vec::new(),
+            limit: 3,
+        };
+        let err = w.write(b"abcdef").unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::WriteZero);
+        assert!(w.buf.is_empty());
+    }
 
     // --- Score.get_rubato_clear tests ---
 
