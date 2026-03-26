@@ -1232,7 +1232,7 @@ impl MainState for MusicDecide {
         };
         let mut timer = std::mem::take(&mut self.data.timer);
 
-        let pending_events;
+        let mut pending_events;
         {
             let mut ctx = DecideRenderContext {
                 timer: &mut timer,
@@ -1249,8 +1249,11 @@ impl MainState for MusicDecide {
             pending_events = ctx.pending_events;
         }
 
-        // Replay queued events now that the skin is available again
-        if !pending_events.is_empty() {
+        // Replay queued events now that the skin is available again.
+        // Use a loop to handle nested events (custom events that trigger
+        // further custom events via DelegateEvent -> execute_event).
+        let mut depth = 0;
+        while !pending_events.is_empty() && depth < 8 {
             let mut ctx = DecideRenderContext {
                 timer: &mut timer,
                 resource: &mut *self.resource,
@@ -1262,6 +1265,11 @@ impl MainState for MusicDecide {
             for (id, arg1, arg2) in pending_events {
                 skin.execute_custom_event(&mut ctx, id, arg1, arg2);
             }
+            pending_events = ctx.pending_events;
+            depth += 1;
+        }
+        if depth >= 8 {
+            log::warn!("Decide render_skin event replay exceeded depth limit");
         }
 
         self.data.timer = timer;
@@ -1275,7 +1283,7 @@ impl MainState for MusicDecide {
         };
         let mut timer = std::mem::take(&mut self.data.timer);
 
-        let pending_events;
+        let mut pending_events;
         {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
@@ -1289,8 +1297,11 @@ impl MainState for MusicDecide {
             pending_events = ctx.pending_events;
         }
 
-        // Replay queued events now that the skin is available again
-        if !pending_events.is_empty() {
+        // Replay queued events now that the skin is available again.
+        // Use a loop to handle nested events (custom events that trigger
+        // further custom events via DelegateEvent -> execute_event).
+        let mut depth = 0;
+        while !pending_events.is_empty() && depth < 8 {
             let mut ctx = DecideRenderContext {
                 timer: &mut timer,
                 resource: &mut *self.resource,
@@ -1302,6 +1313,11 @@ impl MainState for MusicDecide {
             for (id, arg1, arg2) in pending_events {
                 skin.execute_custom_event(&mut ctx, id, arg1, arg2);
             }
+            pending_events = ctx.pending_events;
+            depth += 1;
+        }
+        if depth >= 8 {
+            log::warn!("Decide mouse_pressed event replay exceeded depth limit");
         }
 
         self.data.timer = timer;
@@ -1315,7 +1331,7 @@ impl MainState for MusicDecide {
         };
         let mut timer = std::mem::take(&mut self.data.timer);
 
-        let pending_events;
+        let mut pending_events;
         {
             let mut ctx = DecideMouseContext {
                 timer: &mut timer,
@@ -1329,8 +1345,11 @@ impl MainState for MusicDecide {
             pending_events = ctx.pending_events;
         }
 
-        // Replay queued events now that the skin is available again
-        if !pending_events.is_empty() {
+        // Replay queued events now that the skin is available again.
+        // Use a loop to handle nested events (custom events that trigger
+        // further custom events via DelegateEvent -> execute_event).
+        let mut depth = 0;
+        while !pending_events.is_empty() && depth < 8 {
             let mut ctx = DecideRenderContext {
                 timer: &mut timer,
                 resource: &mut *self.resource,
@@ -1342,6 +1361,11 @@ impl MainState for MusicDecide {
             for (id, arg1, arg2) in pending_events {
                 skin.execute_custom_event(&mut ctx, id, arg1, arg2);
             }
+            pending_events = ctx.pending_events;
+            depth += 1;
+        }
+        if depth >= 8 {
+            log::warn!("Decide mouse_dragged event replay exceeded depth limit");
         }
 
         self.data.timer = timer;
