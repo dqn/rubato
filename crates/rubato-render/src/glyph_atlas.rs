@@ -50,8 +50,10 @@ pub struct GlyphAtlas {
     cache: HashMap<GlyphKey, CachedGlyph>,
     /// Texture backing the atlas. Updated when new glyphs are rasterized.
     atlas_texture: Texture,
-    /// Version counter for texture path uniqueness.
-    version: u64,
+    /// Stable texture key with `__pixmap_` prefix. The `__pixmap_` prefix causes
+    /// `GpuTextureManager::ensure_uploaded()` to always re-upload the texture data,
+    /// while the stable key avoids allocating a new GPU texture each frame.
+    stable_key: Arc<str>,
     /// Whether pixel data has been modified since last texture upload.
     dirty: bool,
 }
@@ -70,7 +72,7 @@ impl GlyphAtlas {
             row_height: 0,
             cache: HashMap::new(),
             atlas_texture: Texture::default(),
-            version: 0,
+            stable_key: Arc::from("__pixmap_glyph_atlas"),
             dirty: false,
         }
     }
@@ -182,7 +184,6 @@ impl GlyphAtlas {
     /// avoiding per-glyph `pixels.clone()` overhead.
     pub fn flush_texture_if_dirty(&mut self) {
         if self.dirty {
-            self.version += 1;
             self.update_texture();
             self.dirty = false;
         }
@@ -209,13 +210,14 @@ impl GlyphAtlas {
     }
 
     /// Update the atlas texture with current pixel data.
+    /// Uses a stable `__pixmap_`-prefixed key so `GpuTextureManager::ensure_uploaded()`
+    /// always re-uploads the data without allocating a new GPU texture each frame.
     fn update_texture(&mut self) {
-        let path_str = format!("__glyph_atlas_v{}", self.version);
         self.atlas_texture = Texture {
             width: self.atlas_width as i32,
             height: self.atlas_height as i32,
             disposed: false,
-            path: Some(Arc::from(path_str.as_str())),
+            path: Some(Arc::clone(&self.stable_key)),
             rgba_data: Some(Arc::new(self.pixels.clone())),
             ..Default::default()
         };
@@ -264,21 +266,25 @@ mod tests {
     fn test_flush_texture_if_dirty_only_updates_when_dirty() {
         let mut atlas = GlyphAtlas::new();
         assert!(!atlas.dirty);
-        assert_eq!(atlas.version, 0);
 
-        // Flush when not dirty: no version bump
+        // Flush when not dirty: texture path stays None (default)
         atlas.flush_texture_if_dirty();
-        assert_eq!(atlas.version, 0);
+        assert!(atlas.atlas_texture.path.is_none());
 
         // Simulate dirty state
         atlas.dirty = true;
         atlas.flush_texture_if_dirty();
-        assert_eq!(atlas.version, 1);
         assert!(!atlas.dirty);
+        // After flush, texture uses the stable __pixmap_ key
+        assert_eq!(
+            atlas.atlas_texture.path.as_deref(),
+            Some("__pixmap_glyph_atlas")
+        );
 
-        // Flush again when not dirty: no version bump
+        // Flush again when not dirty: texture unchanged
+        let prev_path = atlas.atlas_texture.path.clone();
         atlas.flush_texture_if_dirty();
-        assert_eq!(atlas.version, 1);
+        assert_eq!(atlas.atlas_texture.path, prev_path);
     }
 
     /// Load the test font (NotoSansJP from assets/).
@@ -295,21 +301,23 @@ mod tests {
     fn test_multiple_rasterizations_single_flush() {
         let font = test_font();
         let mut atlas = GlyphAtlas::new();
-        assert_eq!(atlas.version, 0);
 
-        // Rasterize multiple glyphs — version should NOT change
+        // Rasterize multiple glyphs -- texture should NOT be updated yet
         for ch in ['A', 'B', 'C', 'D', 'E'] {
             use ab_glyph::Font;
             let glyph_id = font.glyph_id(ch);
             atlas.get_or_rasterize(&font, glyph_id, 24.0);
         }
         assert!(atlas.dirty);
-        assert_eq!(atlas.version, 0); // No version bump yet
+        assert!(atlas.atlas_texture.path.is_none()); // Not flushed yet
 
-        // Single flush produces exactly one version bump
+        // Single flush updates texture with stable key
         atlas.flush_texture_if_dirty();
-        assert_eq!(atlas.version, 1);
         assert!(!atlas.dirty);
+        assert_eq!(
+            atlas.atlas_texture.path.as_deref(),
+            Some("__pixmap_glyph_atlas")
+        );
 
         // Rasterize more glyphs
         for ch in ['F', 'G'] {
@@ -318,7 +326,11 @@ mod tests {
             atlas.get_or_rasterize(&font, glyph_id, 24.0);
         }
         atlas.flush_texture_if_dirty();
-        assert_eq!(atlas.version, 2); // Second flush
+        // Key remains stable (same key, new data via __pixmap_ re-upload contract)
+        assert_eq!(
+            atlas.atlas_texture.path.as_deref(),
+            Some("__pixmap_glyph_atlas")
+        );
 
         // Cached glyphs don't set dirty
         for ch in ['A', 'B', 'C'] {
@@ -327,8 +339,6 @@ mod tests {
             atlas.get_or_rasterize(&font, glyph_id, 24.0);
         }
         assert!(!atlas.dirty);
-        atlas.flush_texture_if_dirty();
-        assert_eq!(atlas.version, 2); // No change
     }
 
     #[test]
