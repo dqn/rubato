@@ -260,6 +260,8 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayRenderContext<
             // Hi-speed (LR2 format: hispeed * 100, e.g. 3.5 -> 350)
             // Uses live LaneRenderer value, not saved player_config.
             10 => (self.live_hispeed * 100.0) as i32,
+            // Hi-speed integer part (NUMBER_HISPEED: 310)
+            310 => self.live_hispeed as i32,
             // Hi-speed fractional part (e.g. 3.52 -> 52)
             311 => ((self.live_hispeed * 100.0) as i32) % 100,
             // Lanecover (0-1000 scale from live LaneRenderer)
@@ -912,6 +914,57 @@ impl rubato_types::skin_render_context::SkinRenderContext for PlayMouseContext<'
                     (progress * 100.0) as i32
                 }
             }
+            // Hi-speed integer part (NUMBER_HISPEED: 310)
+            310 => self
+                .player
+                .lanerender
+                .as_ref()
+                .map_or(i32::MIN, |lr| lr.hispeed() as i32),
+            // Player statistics (IDs 30-37, 333) -- parity with PlayRenderContext
+            30 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.playcount as i32),
+            31 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.clear as i32),
+            32 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| (pd.playcount - pd.clear) as i32),
+            33 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.judge_count(0) as i32),
+            34 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.judge_count(1) as i32),
+            35 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.judge_count(2) as i32),
+            36 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.judge_count(3) as i32),
+            37 => self
+                .player
+                .player_data
+                .as_ref()
+                .map_or(0, |pd| pd.judge_count(4) as i32),
+            333 => self.player.player_data.as_ref().map_or(0, |pd| {
+                let total: i64 = (0..=3).map(|judge| pd.judge_count(judge)).sum();
+                total.min(i32::MAX as i64) as i32
+            }),
             // IDs 20-29 (FPS, system date/time, boot time) handled by default_integer_value
             _ => self.default_integer_value(id),
         }

@@ -931,7 +931,7 @@ impl JudgeManager {
             });
         }
 
-        if judge != 4 {
+        if judge != 4 && lane_idx < self.lane_states.len() {
             let player = self.lane_states[lane_idx].player;
             let offset = self.lane_states[lane_idx].offset;
             if player < self.judge.len() && offset < self.judge[player].len() {
