@@ -84,6 +84,13 @@ impl FloatFormatter {
         }
         self.digits.fill(-1);
 
+        // Guard against non-finite or out-of-i32-range values. Saturating
+        // float-to-int cast turns NEG_INFINITY into i32::MIN, whose .abs()
+        // panics in debug mode. Return blank digits for all such inputs.
+        if !value.is_finite() || value > i32::MAX as f64 || value < i32::MIN as f64 {
+            return &self.digits;
+        }
+
         if self.iketa == 0 && self.fketa == 0 && self.sign == 1 {
             self.digits[1] = SIGNSYMBOL;
             return &self.digits;
@@ -226,5 +233,19 @@ mod prop_tests {
         assert_eq!(digits.len(), expected_len);
         // Should contain the sign symbol somewhere.
         assert!(digits.iter().any(|&d| d == SIGNSYMBOL));
+    }
+
+    #[test]
+    fn non_finite_values_return_blank_digits() {
+        // NEG_INFINITY saturates to i32::MIN; i32::MIN.abs() panics in debug.
+        // INFINITY and NaN are similarly invalid. All should return -1 digits.
+        for &value in &[f64::NEG_INFINITY, f64::INFINITY, f64::NAN] {
+            let mut fmt = FloatFormatter::new(4, 2, true, 1);
+            let digits = fmt.calculate_and_get_digits(value);
+            assert!(
+                digits.iter().all(|&d| d == -1),
+                "Expected all -1 digits for {value}, got {digits:?}",
+            );
+        }
     }
 }
