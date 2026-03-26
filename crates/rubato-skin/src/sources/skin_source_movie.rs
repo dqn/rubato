@@ -5,6 +5,8 @@ use crate::sources::skin_source::SkinSource;
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 #[cfg(feature = "ffmpeg")]
 use std::sync::{Arc, Mutex, mpsc};
+#[cfg(feature = "ffmpeg")]
+use std::thread::JoinHandle;
 
 // ============================================================
 // MovieDecoder -- ffmpeg-backed video frame decoder
@@ -239,9 +241,9 @@ pub struct SkinSourceMovie {
     #[cfg(feature = "ffmpeg")]
     shared_frame: Arc<Mutex<Option<DecodedFrame>>>,
     #[cfg(feature = "ffmpeg")]
-    cmd_tx: Option<mpsc::Sender<MovieCommand>>,
+    cmd_tx: Mutex<Option<mpsc::Sender<MovieCommand>>>,
     #[cfg(feature = "ffmpeg")]
-    thread_handle: Option<std::thread::JoinHandle<()>>,
+    thread_handle: Mutex<Option<JoinHandle<()>>>,
     #[cfg(feature = "ffmpeg")]
     has_decoder: bool,
 }
@@ -280,8 +282,8 @@ impl SkinSourceMovie {
                     stable_texture_key: std::sync::Arc::clone(&stable_texture_key),
                     requested_time,
                     shared_frame,
-                    cmd_tx: Some(cmd_tx),
-                    thread_handle,
+                    cmd_tx: Mutex::new(Some(cmd_tx)),
+                    thread_handle: Mutex::new(thread_handle),
                     has_decoder: true,
                 }
             } else {
@@ -292,8 +294,8 @@ impl SkinSourceMovie {
                     stable_texture_key,
                     requested_time,
                     shared_frame,
-                    cmd_tx: None,
-                    thread_handle: None,
+                    cmd_tx: Mutex::new(None),
+                    thread_handle: Mutex::new(None),
                     has_decoder: false,
                 }
             }
@@ -307,12 +309,6 @@ impl SkinSourceMovie {
         }
     }
 }
-
-// SAFETY: SkinSourceMovie fields are all Send+Sync:
-// - Arc<AtomicI64>, Arc<Mutex<...>>, mpsc::Sender are Send+Sync
-// - Option<JoinHandle<()>> is Send
-// - The thread_handle is only joined in dispose() which takes &mut self
-unsafe impl Sync for SkinSourceMovie {}
 
 impl SkinSource for SkinSourceMovie {
     fn get_image(&self, time: i64, _state: &dyn MainState) -> Option<TextureRegion> {
@@ -360,14 +356,18 @@ impl SkinSource for SkinSourceMovie {
             #[cfg(feature = "ffmpeg")]
             {
                 // Send halt command and drop the sender
-                if let Some(tx) = self.cmd_tx.take() {
-                    let _ = tx.send(MovieCommand::Halt);
+                if let Ok(mut guard) = self.cmd_tx.lock() {
+                    if let Some(tx) = guard.take() {
+                        let _ = tx.send(MovieCommand::Halt);
+                    }
                 }
                 // Join the decode thread for clean shutdown (matches FFmpegProcessor pattern).
                 // The decode loop checks for Halt every iteration (~8ms sleep + one frame decode),
                 // so join should complete quickly.
-                if let Some(handle) = self.thread_handle.take() {
-                    let _ = handle.join();
+                if let Ok(mut guard) = self.thread_handle.lock() {
+                    if let Some(handle) = guard.take() {
+                        let _ = handle.join();
+                    }
                 }
             }
             self.disposed = true;
