@@ -2,8 +2,9 @@
 //!
 //! Translated from: bms.player.beatoraja.input.MouseScratchInput
 
-use crate::gdx_compat::{GdxGraphics, GdxInput};
+use crate::gdx_compat;
 use crate::keyboard_input_processor::KeyboardCallback;
+use crate::winit_input_bridge::SharedKeyState;
 use rubato_types::play_mode_config::KeyboardConfig;
 use rubato_types::play_mode_config::{MOUSE_SCRATCH_VER_1, MOUSE_SCRATCH_VER_2};
 
@@ -54,12 +55,17 @@ impl MouseScratchInput {
         input
     }
 
-    pub fn poll(&mut self, microtime: i64, callback: &mut dyn KeyboardCallback) {
+    pub fn poll(
+        &mut self,
+        microtime: i64,
+        callback: &mut dyn KeyboardCallback,
+        key_state: &SharedKeyState,
+    ) {
         let presstime = microtime / 1000;
         // MOUSE update
         if self.mouse_scratch_enabled {
             if let Some(ref mut mta) = self.mouse_to_analog {
-                mta.update();
+                mta.update(key_state);
             }
             // Read current positions before mutably borrowing algorithms
             let positions: [i32; 2] = if let Some(ref mta) = self.mouse_to_analog {
@@ -233,18 +239,18 @@ impl MouseToAnalog {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, key_state: &SharedKeyState) {
         // Java computes delta from screen center and recenters the cursor
         // each poll via Gdx.input.setCursorPosition(w/2, h/2).
-        let center_x = GdxGraphics::get_width() / 2;
-        let center_y = GdxGraphics::get_height() / 2;
-        let cur_x = GdxInput::get_x();
-        let cur_y = GdxInput::get_y();
+        let center_x = gdx_compat::get_width(key_state) / 2;
+        let center_y = gdx_compat::get_height(key_state) / 2;
+        let cur_x = gdx_compat::get_x(key_state);
+        let cur_y = gdx_compat::get_y(key_state);
         let x_distance_moved = cur_x - center_x;
         let y_distance_moved = cur_y - center_y;
         // Recenter cursor (delegates to winit via SharedKeyState; may be
         // a no-op if the window handle is not wired, but matches Java intent).
-        GdxInput::set_cursor_position(center_x, center_y);
+        gdx_compat::set_cursor_position(key_state, center_x, center_y);
 
         self.total_x_distance_moved =
             ((self.total_x_distance_moved + x_distance_moved) % self.domain + self.domain)

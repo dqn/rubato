@@ -24,4 +24,4 @@ pub use rubato_types::player_config::PlayerConfig;
 pub use rubato_types::resolution::Resolution;
 
 // Re-exports from gdx_compat
-pub use gdx_compat::{GdxGraphics, GdxInput};
+pub use gdx_compat::{get_shared_key_state, set_shared_key_state};

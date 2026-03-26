@@ -5,7 +5,7 @@ use rubato_types::sync_utils::lock_or_recover;
 use std::sync::Mutex;
 
 /// Global shared key state. When set (via `set_shared_key_state()`),
-/// GdxInput and GdxGraphics read from this instead of returning stub defaults.
+/// deprecated GdxInput and GdxGraphics read from this.
 ///
 /// Uses Mutex<Option<>> instead of OnceLock to allow replacement (needed for tests).
 static SHARED_KEY_STATE: Mutex<Option<SharedKeyState>> = Mutex::new(None);
@@ -47,93 +47,53 @@ pub fn set_shared_key_state_guarded(state: SharedKeyState) -> SharedKeyStateGuar
     SharedKeyStateGuard
 }
 
-/// Replacement for Gdx.input — reads from SharedKeyState when available.
-pub struct GdxInput;
+// ============================================================
+// Direct SharedKeyState query functions
+// ============================================================
 
-impl GdxInput {
-    pub fn is_key_pressed(keycode: i32) -> bool {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.is_key_pressed(keycode)
-        } else {
-            false
-        }
-    }
-
-    pub fn get_x() -> i32 {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.mouse_x()
-        } else {
-            0
-        }
-    }
-
-    pub fn get_y() -> i32 {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.mouse_y()
-        } else {
-            0
-        }
-    }
-
-    pub fn set_cursor_position(x: i32, y: i32) {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.set_cursor_position(x, y);
-        }
-    }
-
-    pub fn is_button_pressed(button: i32) -> bool {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.is_mouse_button_pressed(button)
-        } else {
-            false
-        }
-    }
-
-    pub fn drain_scroll() -> (f32, f32) {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.drain_scroll()
-        } else {
-            (0.0, 0.0)
-        }
-    }
-
-    pub fn drain_mouse_dragged() -> bool {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.drain_mouse_dragged()
-        } else {
-            false
-        }
-    }
+/// Query whether a key is pressed via the given SharedKeyState.
+pub fn is_key_pressed(key_state: &SharedKeyState, keycode: i32) -> bool {
+    key_state.is_key_pressed(keycode)
 }
 
-/// Replacement for Gdx.graphics — reads window size from SharedKeyState when available.
-pub struct GdxGraphics;
+/// Get mouse X position from the given SharedKeyState.
+pub fn get_x(key_state: &SharedKeyState) -> i32 {
+    key_state.mouse_x()
+}
 
-impl GdxGraphics {
-    pub fn get_width() -> i32 {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.window_width()
-        } else {
-            1920
-        }
-    }
+/// Get mouse Y position from the given SharedKeyState.
+pub fn get_y(key_state: &SharedKeyState) -> i32 {
+    key_state.mouse_y()
+}
 
-    pub fn get_height() -> i32 {
-        let guard = lock_or_recover(&SHARED_KEY_STATE);
-        if let Some(ref state) = *guard {
-            state.window_height()
-        } else {
-            1080
-        }
-    }
+/// Set cursor position via the given SharedKeyState.
+pub fn set_cursor_position(key_state: &SharedKeyState, x: i32, y: i32) {
+    key_state.set_cursor_position(x, y);
+}
+
+/// Query whether a mouse button is pressed via the given SharedKeyState.
+pub fn is_button_pressed(key_state: &SharedKeyState, button: i32) -> bool {
+    key_state.is_mouse_button_pressed(button)
+}
+
+/// Drain accumulated scroll delta from the given SharedKeyState.
+pub fn drain_scroll(key_state: &SharedKeyState) -> (f32, f32) {
+    key_state.drain_scroll()
+}
+
+/// Drain mouse dragged flag from the given SharedKeyState.
+pub fn drain_mouse_dragged(key_state: &SharedKeyState) -> bool {
+    key_state.drain_mouse_dragged()
+}
+
+/// Get window width from the given SharedKeyState.
+pub fn get_width(key_state: &SharedKeyState) -> i32 {
+    key_state.window_width()
+}
+
+/// Get window height from the given SharedKeyState.
+pub fn get_height(key_state: &SharedKeyState) -> i32 {
+    key_state.window_height()
 }
 
 #[cfg(test)]
@@ -164,5 +124,56 @@ mod tests {
         assert!(get_shared_key_state().is_some());
         clear_shared_key_state();
         assert!(get_shared_key_state().is_none());
+    }
+
+    #[test]
+    fn test_direct_key_state_functions() {
+        let state = SharedKeyState::new();
+        assert!(!is_key_pressed(&state, 54)); // Keys::Z
+        state.set_key_pressed(54, true);
+        assert!(is_key_pressed(&state, 54));
+
+        assert_eq!(get_x(&state), 0);
+        assert_eq!(get_y(&state), 0);
+        state.set_mouse_position(100, 200);
+        assert_eq!(get_x(&state), 100);
+        assert_eq!(get_y(&state), 200);
+
+        assert_eq!(get_width(&state), 1920);
+        assert_eq!(get_height(&state), 1080);
+        state.set_window_size(800, 600);
+        assert_eq!(get_width(&state), 800);
+        assert_eq!(get_height(&state), 600);
+    }
+
+    #[test]
+    fn test_direct_mouse_button_functions() {
+        let state = SharedKeyState::new();
+        assert!(!is_button_pressed(&state, 0));
+        state.set_mouse_button(0, true);
+        assert!(is_button_pressed(&state, 0));
+    }
+
+    #[test]
+    fn test_direct_scroll_functions() {
+        let state = SharedKeyState::new();
+        state.add_scroll(1.0, 2.0);
+        let (dx, dy) = drain_scroll(&state);
+        assert_eq!(dx, 1.0);
+        assert_eq!(dy, 2.0);
+        // Second drain should return zeros
+        let (dx2, dy2) = drain_scroll(&state);
+        assert_eq!(dx2, 0.0);
+        assert_eq!(dy2, 0.0);
+    }
+
+    #[test]
+    fn test_direct_mouse_dragged_functions() {
+        let state = SharedKeyState::new();
+        assert!(!drain_mouse_dragged(&state));
+        state.set_mouse_dragged(true);
+        assert!(drain_mouse_dragged(&state));
+        // Second drain should return false
+        assert!(!drain_mouse_dragged(&state));
     }
 }

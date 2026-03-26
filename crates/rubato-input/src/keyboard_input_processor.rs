@@ -4,9 +4,10 @@
 //! Note: The typo "Processeor" is preserved from the Java source.
 
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
-use crate::gdx_compat::{GdxGraphics, GdxInput};
+use crate::gdx_compat;
 use crate::keys::Keys;
 use crate::mouse_scratch_input::MouseScratchInput;
+use crate::winit_input_bridge::SharedKeyState;
 use rubato_types::play_mode_config::KeyboardConfig;
 use rubato_types::resolution::Resolution;
 
@@ -210,6 +211,9 @@ pub struct KeyBoardInputProcesseor {
     /// Screen resolution. Used for mouse input event processing
     resolution: Resolution,
 
+    /// Owned key state for reading input without global static
+    key_state: SharedKeyState,
+
     /// Each key on/off state
     keystate: [bool; 256],
     /// Each key state change time
@@ -221,7 +225,7 @@ pub struct KeyBoardInputProcesseor {
 }
 
 impl KeyBoardInputProcesseor {
-    pub fn new(config: &KeyboardConfig, resolution: Resolution) -> Self {
+    pub fn new(config: &KeyboardConfig, resolution: Resolution, key_state: SharedKeyState) -> Self {
         let mut reserved = Vec::new();
         for key in ControlKeys::values() {
             reserved.push(key.keycode());
@@ -259,6 +263,7 @@ impl KeyBoardInputProcesseor {
             last_pressed_key: -1,
             textmode: false,
             resolution,
+            key_state,
             keystate: [false; 256],
             keytime,
             keymodifiers: [0; 256],
@@ -266,6 +271,11 @@ impl KeyBoardInputProcesseor {
         };
         proc.set_config(config);
         proc
+    }
+
+    /// Returns a reference to the owned SharedKeyState.
+    pub fn shared_key_state(&self) -> &SharedKeyState {
+        &self.key_state
     }
 
     pub fn set_config(&mut self, config: &KeyboardConfig) {
@@ -298,7 +308,7 @@ impl KeyBoardInputProcesseor {
                     continue;
                 }
                 let key_idx = key as usize;
-                let pressed = GdxInput::is_key_pressed(key);
+                let pressed = gdx_compat::is_key_pressed(&self.key_state, key);
                 if pressed != self.keystate[key_idx]
                     && microtime >= self.keytime[key_idx] + (self.duration as i64) * 1000
                 {
@@ -310,7 +320,7 @@ impl KeyBoardInputProcesseor {
             }
 
             if self.control[0] >= 0 && (self.control[0] as usize) < self.keystate.len() {
-                let startpressed = GdxInput::is_key_pressed(self.control[0]);
+                let startpressed = gdx_compat::is_key_pressed(&self.key_state, self.control[0]);
                 let ctrl0 = self.control[0] as usize;
                 if startpressed != self.keystate[ctrl0] {
                     self.keystate[ctrl0] = startpressed;
@@ -318,7 +328,7 @@ impl KeyBoardInputProcesseor {
                 }
             }
             if self.control[1] >= 0 && (self.control[1] as usize) < self.keystate.len() {
-                let selectpressed = GdxInput::is_key_pressed(self.control[1]);
+                let selectpressed = gdx_compat::is_key_pressed(&self.key_state, self.control[1]);
                 let ctrl1 = self.control[1] as usize;
                 if selectpressed != self.keystate[ctrl1] {
                     self.keystate[ctrl1] = selectpressed;
@@ -328,7 +338,7 @@ impl KeyBoardInputProcesseor {
         }
 
         for key in ControlKeys::values() {
-            let pressed = GdxInput::is_key_pressed(key.keycode());
+            let pressed = gdx_compat::is_key_pressed(&self.key_state, key.keycode());
             let kc = key.keycode() as usize;
             if !(self.textmode && key.text()) && pressed != self.keystate[kc] && accept_input {
                 self.keystate[kc] = pressed;
@@ -341,16 +351,17 @@ impl KeyBoardInputProcesseor {
             }
         }
 
-        self.mouse_scratch_input.poll(microtime, callback);
+        self.mouse_scratch_input
+            .poll(microtime, callback, &self.key_state);
     }
 
     fn currently_held_modifiers(&self) -> i32 {
-        let shift = GdxInput::is_key_pressed(Keys::SHIFT_LEFT)
-            || GdxInput::is_key_pressed(Keys::SHIFT_RIGHT);
-        let ctrl = GdxInput::is_key_pressed(Keys::CONTROL_LEFT)
-            || GdxInput::is_key_pressed(Keys::CONTROL_RIGHT);
-        let alt =
-            GdxInput::is_key_pressed(Keys::ALT_LEFT) || GdxInput::is_key_pressed(Keys::ALT_RIGHT);
+        let shift = gdx_compat::is_key_pressed(&self.key_state, Keys::SHIFT_LEFT)
+            || gdx_compat::is_key_pressed(&self.key_state, Keys::SHIFT_RIGHT);
+        let ctrl = gdx_compat::is_key_pressed(&self.key_state, Keys::CONTROL_LEFT)
+            || gdx_compat::is_key_pressed(&self.key_state, Keys::CONTROL_RIGHT);
+        let alt = gdx_compat::is_key_pressed(&self.key_state, Keys::ALT_LEFT)
+            || gdx_compat::is_key_pressed(&self.key_state, Keys::ALT_RIGHT);
         (if shift { MASK_SHIFT } else { 0 })
             | (if ctrl { MASK_CTRL } else { 0 })
             | (if alt { MASK_ALT } else { 0 })
@@ -410,8 +421,8 @@ impl KeyBoardInputProcesseor {
 
     pub fn mouse_moved(&self, x: i32, y: i32, callback: &mut dyn KeyboardCallback) -> bool {
         callback.set_mouse_moved(true);
-        let gw = GdxGraphics::get_width();
-        let gh = GdxGraphics::get_height();
+        let gw = gdx_compat::get_width(&self.key_state);
+        let gh = gdx_compat::get_height(&self.key_state);
         if gw > 0 && gh > 0 {
             callback.set_mouse_x(x * self.resolution.width() / gw);
             callback.set_mouse_y(self.resolution.height() - y * self.resolution.height() / gh);
@@ -444,8 +455,8 @@ impl KeyBoardInputProcesseor {
         callback: &mut dyn KeyboardCallback,
     ) -> bool {
         callback.set_mouse_button(button);
-        let gw = GdxGraphics::get_width();
-        let gh = GdxGraphics::get_height();
+        let gw = gdx_compat::get_width(&self.key_state);
+        let gh = gdx_compat::get_height(&self.key_state);
         if gw > 0 && gh > 0 {
             callback.set_mouse_x(x * self.resolution.width() / gw);
             callback.set_mouse_y(self.resolution.height() - y * self.resolution.height() / gh);
@@ -461,8 +472,8 @@ impl KeyBoardInputProcesseor {
         _point: i32,
         callback: &mut dyn KeyboardCallback,
     ) -> bool {
-        let gw = GdxGraphics::get_width();
-        let gh = GdxGraphics::get_height();
+        let gw = gdx_compat::get_width(&self.key_state);
+        let gh = gdx_compat::get_height(&self.key_state);
         if gw > 0 && gh > 0 {
             callback.set_mouse_x(x * self.resolution.width() / gw);
             callback.set_mouse_y(self.resolution.height() - y * self.resolution.height() / gh);
@@ -533,16 +544,19 @@ mod tests {
     fn make_processor() -> KeyBoardInputProcesseor {
         let config = KeyboardConfig::default();
         let resolution = Resolution::FULLHD;
-        KeyBoardInputProcesseor::new(&config, resolution)
+        KeyBoardInputProcesseor::new(&config, resolution, SharedKeyState::new())
+    }
+
+    fn make_processor_with_state(key_state: SharedKeyState) -> KeyBoardInputProcesseor {
+        let config = KeyboardConfig::default();
+        let resolution = Resolution::FULLHD;
+        KeyBoardInputProcesseor::new(&config, resolution, key_state)
     }
 
     // -- Finding 2: control key polling bounds check --
 
     #[test]
     fn test_poll_with_negative_control_key_does_not_panic() {
-        let shared_state = SharedKeyState::new();
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
-
         let mut proc = make_processor();
         // Set control keys to invalid negative values (corrupt config)
         proc.control = vec![-1, -1];
@@ -557,9 +571,6 @@ mod tests {
 
     #[test]
     fn test_poll_with_out_of_range_control_key_does_not_panic() {
-        let shared_state = SharedKeyState::new();
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
-
         let mut proc = make_processor();
         // Set control keys to out-of-bounds values (>= 256)
         proc.control = vec![300, 512];
@@ -641,9 +652,6 @@ mod tests {
 
     #[test]
     fn test_poll_with_out_of_range_play_key_does_not_panic() {
-        let shared_state = SharedKeyState::new();
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
-
         let mut proc = make_processor();
         // Set a play key to out-of-bounds value (>= 256)
         proc.keys = vec![256, 512, 1000];
@@ -660,9 +668,8 @@ mod tests {
     fn test_mouse_moved_zero_dimensions_does_not_panic() {
         let shared_state = SharedKeyState::new();
         shared_state.set_window_size(0, 0);
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
 
-        let proc = make_processor();
+        let proc = make_processor_with_state(shared_state);
         let mut events = TestCallback::default();
         // Should not panic or divide by zero
         proc.mouse_moved(100, 200, &mut events);
@@ -676,9 +683,8 @@ mod tests {
     fn test_touch_down_zero_dimensions_does_not_panic() {
         let shared_state = SharedKeyState::new();
         shared_state.set_window_size(0, 0);
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
 
-        let proc = make_processor();
+        let proc = make_processor_with_state(shared_state);
         let mut events = TestCallback::default();
         // Should not panic or divide by zero
         proc.touch_down(100, 200, 0, 0, &mut events);
@@ -692,9 +698,8 @@ mod tests {
     fn test_touch_dragged_zero_dimensions_does_not_panic() {
         let shared_state = SharedKeyState::new();
         shared_state.set_window_size(0, 0);
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
 
-        let proc = make_processor();
+        let proc = make_processor_with_state(shared_state);
         let mut events = TestCallback::default();
         // Should not panic or divide by zero
         proc.touch_dragged(100, 200, 0, &mut events);
@@ -708,9 +713,8 @@ mod tests {
     fn test_mouse_moved_nonzero_dimensions_updates_coordinates() {
         let shared_state = SharedKeyState::new();
         shared_state.set_window_size(1920, 1080);
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state);
 
-        let proc = make_processor();
+        let proc = make_processor_with_state(shared_state);
         let mut events = TestCallback::default();
         proc.mouse_moved(960, 540, &mut events);
         assert!(events.mouse_moved);

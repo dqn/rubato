@@ -11,12 +11,14 @@ use crate::bm_controller_input_processor::{
 };
 use crate::bms_player_input_device::{BMSPlayerInputDevice, DeviceType};
 use crate::controller::gdx_controller::GdxController;
+use crate::gdx_compat;
 use crate::key_command::KeyCommand;
 use crate::key_input_log::KeyInputLog;
 use crate::keyboard_input_processor::{
     ControlKeys, KeyBoardInputProcesseor, KeyboardCallback, MASK_CTRL, MASK_SHIFT,
 };
 use crate::midi_input_processor::MidiInputProcessor;
+use crate::winit_input_bridge::SharedKeyState;
 use rubato_types::config::Config;
 use rubato_types::play_mode_config::{
     ControllerConfig, KeyboardConfig, MidiConfig, PlayModeConfig,
@@ -60,6 +62,9 @@ impl KeyLogger {
 /// Manages keyboard, controller, and MIDI input
 pub struct BMSPlayerInputProcessor {
     enable: bool,
+
+    /// Owned shared key state for reading input without global static
+    key_state: SharedKeyState,
 
     kbinput: KeyBoardInputProcesseor,
 
@@ -120,9 +125,20 @@ impl BMSPlayerInputProcessor {
     }
 
     fn create(config: &Config, open_midi: bool) -> Self {
+        // Obtain SharedKeyState from global, or create a default if not set.
+        let key_state = gdx_compat::get_shared_key_state().unwrap_or_default();
+        Self::create_with_key_state(config, open_midi, key_state)
+    }
+
+    pub(crate) fn create_with_key_state(
+        config: &Config,
+        open_midi: bool,
+        key_state: SharedKeyState,
+    ) -> Self {
         let resolution = config.display.resolution;
         let default_kb_config = KeyboardConfig::default();
-        let kbinput = KeyBoardInputProcesseor::new(&default_kb_config, resolution);
+        let kbinput =
+            KeyBoardInputProcesseor::new(&default_kb_config, resolution, key_state.clone());
         // Gdx.input.setInputProcessor(kbinput);
 
         // Controllers.preferredManager = "bms.player.beatoraja.controller.Lwjgl3ControllerManager";
@@ -168,6 +184,7 @@ impl BMSPlayerInputProcessor {
 
         Self {
             enable: true,
+            key_state,
             kbinput,
             bminput,
             midiinput,
@@ -396,9 +413,9 @@ impl BMSPlayerInputProcessor {
     ///
     /// Translated from: input.getKeyState(Input.Keys.ALT_LEFT) || input.getKeyState(Input.Keys.ALT_RIGHT)
     pub fn is_alt_held(&self) -> bool {
-        use crate::gdx_compat::GdxInput;
         use crate::keys::Keys;
-        GdxInput::is_key_pressed(Keys::ALT_LEFT) || GdxInput::is_key_pressed(Keys::ALT_RIGHT)
+        gdx_compat::is_key_pressed(&self.key_state, Keys::ALT_LEFT)
+            || gdx_compat::is_key_pressed(&self.key_state, Keys::ALT_RIGHT)
     }
 
     pub fn is_control_key_pressed(&mut self, key: ControlKeys) -> bool {
@@ -541,6 +558,12 @@ impl BMSPlayerInputProcessor {
     pub fn is_select_pressed(&self) -> bool {
         self.select_pressed
     }
+
+    /// Returns a reference to the owned SharedKeyState.
+    pub fn shared_key_state(&self) -> &SharedKeyState {
+        &self.key_state
+    }
+
     pub fn keyboard_input_processor(&self) -> &KeyBoardInputProcesseor {
         &self.kbinput
     }
@@ -637,34 +660,35 @@ impl BMSPlayerInputProcessor {
         // touchDragged, scrolled). In Rust, winit events are written to
         // SharedKeyState and polled here.
         {
-            use crate::gdx_compat::{GdxGraphics, GdxInput};
             use crate::winit_input_bridge::MOUSE_BUTTON_LEFT;
-            let left_pressed = GdxInput::is_button_pressed(MOUSE_BUTTON_LEFT);
+            let left_pressed = gdx_compat::is_button_pressed(&self.key_state, MOUSE_BUTTON_LEFT);
             if left_pressed && !self.mousepressed {
                 self.mousepressed = true;
                 self.mousebutton = MOUSE_BUTTON_LEFT;
                 // Apply the same resolution transform as touch_down()
-                let gw = GdxGraphics::get_width();
-                let gh = GdxGraphics::get_height();
+                let gw = gdx_compat::get_width(&self.key_state);
+                let gh = gdx_compat::get_height(&self.key_state);
                 let res = self.kbinput.resolution();
                 if gw > 0 && gh > 0 {
-                    self.mousex = GdxInput::get_x() * res.width() / gw;
-                    self.mousey = res.height() - GdxInput::get_y() * res.height() / gh;
+                    self.mousex = gdx_compat::get_x(&self.key_state) * res.width() / gw;
+                    self.mousey =
+                        res.height() - gdx_compat::get_y(&self.key_state) * res.height() / gh;
                 }
             } else if !left_pressed && self.mousepressed {
                 self.mousepressed = false;
             }
-            if GdxInput::drain_mouse_dragged() {
+            if gdx_compat::drain_mouse_dragged(&self.key_state) {
                 self.mousedragged = true;
-                let gw = GdxGraphics::get_width();
-                let gh = GdxGraphics::get_height();
+                let gw = gdx_compat::get_width(&self.key_state);
+                let gh = gdx_compat::get_height(&self.key_state);
                 let res = self.kbinput.resolution();
                 if gw > 0 && gh > 0 {
-                    self.mousex = GdxInput::get_x() * res.width() / gw;
-                    self.mousey = res.height() - GdxInput::get_y() * res.height() / gh;
+                    self.mousex = gdx_compat::get_x(&self.key_state) * res.width() / gw;
+                    self.mousey =
+                        res.height() - gdx_compat::get_y(&self.key_state) * res.height() / gh;
                 }
             }
-            let (sdx, sdy) = GdxInput::drain_scroll();
+            let (sdx, sdy) = gdx_compat::drain_scroll(&self.key_state);
             self.scroll_x += sdx;
             self.scroll_y += sdy;
         }
@@ -1046,16 +1070,17 @@ mod tests {
         assert_eq!(proc.device_type(), DeviceType::Keyboard);
     }
 
+    fn make_input_processor_with_state(shared_state: SharedKeyState) -> BMSPlayerInputProcessor {
+        let config = Config::default();
+        BMSPlayerInputProcessor::create_with_key_state(&config, false, shared_state)
+    }
+
     #[test]
     fn test_poll_with_shared_key_state() {
-        // Set up the shared key state with RAII guard for cleanup
         let shared_state = SharedKeyState::new();
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state.clone());
 
         // Use a config with duration=0 to avoid timing issues in tests
-        let config = Config::default();
-        let player = PlayerConfig::default();
-        let mut proc = BMSPlayerInputProcessor::new(&config, &player);
+        let mut proc = make_input_processor_with_state(shared_state.clone());
         // Override keyboard config with zero duration and explicit start/select keys
         let mut kb_config = KeyboardConfig::default();
         kb_config.duration = 0;
@@ -1284,11 +1309,8 @@ mod tests {
     #[test]
     fn test_poll_clamps_now_to_non_negative_when_starttime_is_future() {
         let shared_state = SharedKeyState::new();
-        let _guard = crate::gdx_compat::set_shared_key_state_guarded(shared_state.clone());
 
-        let config = Config::default();
-        let player = PlayerConfig::default();
-        let mut proc = BMSPlayerInputProcessor::new(&config, &player);
+        let mut proc = make_input_processor_with_state(shared_state.clone());
         let mut kb_config = KeyboardConfig::default();
         kb_config.duration = 0;
         proc.set_keyboard_config(&kb_config);
