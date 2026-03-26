@@ -282,11 +282,20 @@ impl ObsWsClient {
             let inner_writer = Arc::clone(&inner);
             tokio::spawn(async move {
                 while let Some(msg) = rx.recv().await {
-                    if let Err(e) = sink.send(msg).await {
-                        warn!("OBS WebSocket writer error: {}", e);
-                        let mut guard = lock_or_recover(&inner_writer);
-                        guard.is_connected = false;
-                        break;
+                    match tokio::time::timeout(Duration::from_secs(5), sink.send(msg)).await {
+                        Ok(Ok(())) => {}
+                        Ok(Err(e)) => {
+                            warn!("OBS WebSocket writer error: {}", e);
+                            let mut guard = lock_or_recover(&inner_writer);
+                            guard.is_connected = false;
+                            break;
+                        }
+                        Err(_) => {
+                            warn!("OBS WebSocket write timed out, dropping connection");
+                            let mut guard = lock_or_recover(&inner_writer);
+                            guard.is_connected = false;
+                            break;
+                        }
                     }
                 }
             })

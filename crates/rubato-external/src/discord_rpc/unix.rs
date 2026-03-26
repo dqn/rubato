@@ -83,9 +83,11 @@ impl IPCConnection for UnixIPCConnection {
     /// }
     /// ```
     fn write(&mut self, buffer: &[u8]) -> Result<()> {
-        if let Some(ref mut socket) = self.socket {
-            socket.write_all(buffer)?;
-        }
+        let socket = self
+            .socket
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("not connected"))?;
+        socket.write_all(buffer)?;
         Ok(())
     }
 
@@ -101,10 +103,12 @@ impl IPCConnection for UnixIPCConnection {
     /// }
     /// ```
     fn read(&mut self, size: usize) -> Result<Vec<u8>> {
+        let socket = self
+            .socket
+            .as_mut()
+            .ok_or_else(|| anyhow::anyhow!("not connected"))?;
         let mut buffer = vec![0u8; size];
-        if let Some(ref mut socket) = self.socket {
-            socket.read_exact(&mut buffer)?;
-        }
+        socket.read_exact(&mut buffer)?;
         Ok(buffer)
     }
 
