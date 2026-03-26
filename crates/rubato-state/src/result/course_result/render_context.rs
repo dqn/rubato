@@ -5,6 +5,46 @@ use crate::result::abstract_result::AbstractResultData;
 use crate::result::shared_render_context;
 use crate::result::{MainController, PlayerResource};
 
+/// Resolve the play config for a course by finding the consistent mode across all course songs.
+/// Returns `None` if songs have mixed modes.
+/// Shared between `CourseResultRenderContext` and `CourseResultMouseContext`.
+fn course_current_play_config_ref(
+    resource: &PlayerResource,
+) -> Option<&rubato_types::play_config::PlayConfig> {
+    let course = resource.course_data()?;
+    let mut current_mode: Option<bms_model::mode::Mode> = None;
+    for song in &course.hash {
+        let song_mode = match song.chart.mode {
+            5 => Some(bms_model::mode::Mode::BEAT_5K),
+            7 => Some(bms_model::mode::Mode::BEAT_7K),
+            9 => Some(bms_model::mode::Mode::POPN_9K),
+            10 => Some(bms_model::mode::Mode::BEAT_10K),
+            14 => Some(bms_model::mode::Mode::BEAT_14K),
+            25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+            50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+            _ => None,
+        };
+        let song_mode = match song_mode {
+            Some(m) => m,
+            None => continue,
+        };
+        if let Some(mode) = current_mode.as_ref() {
+            if *mode != song_mode {
+                return None;
+            }
+        } else {
+            current_mode = Some(song_mode);
+        }
+    }
+    let resolved_mode = current_mode.unwrap_or(bms_model::mode::Mode::BEAT_7K);
+    Some(
+        &resource
+            .player_config()
+            .play_config_ref(resolved_mode)
+            .playconfig,
+    )
+}
+
 pub(super) struct CourseResultRenderContext<'a> {
     pub(super) timer: &'a mut rubato_core::timer_manager::TimerManager,
     pub(super) data: &'a AbstractResultData,
@@ -76,39 +116,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
-        let course = self.resource.course_data()?;
-        let mut current_mode: Option<bms_model::mode::Mode> = None;
-        for song in &course.hash {
-            let song_mode = match song.chart.mode {
-                5 => Some(bms_model::mode::Mode::BEAT_5K),
-                7 => Some(bms_model::mode::Mode::BEAT_7K),
-                9 => Some(bms_model::mode::Mode::POPN_9K),
-                10 => Some(bms_model::mode::Mode::BEAT_10K),
-                14 => Some(bms_model::mode::Mode::BEAT_14K),
-                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
-                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
-                _ => None,
-            };
-            let song_mode = match song_mode {
-                Some(m) => m,
-                None => continue,
-            };
-            if let Some(mode) = current_mode.as_ref() {
-                if *mode != song_mode {
-                    return None;
-                }
-            } else {
-                current_mode = Some(song_mode);
-            }
-        }
-        let resolved_mode = current_mode.unwrap_or(bms_model::mode::Mode::BEAT_7K);
-        Some(
-            &self
-                .resource
-                .player_config()
-                .play_config_ref(resolved_mode)
-                .playconfig,
-        )
+        course_current_play_config_ref(self.resource)
     }
 
     fn song_data_ref(&self) -> Option<&rubato_types::song_data::SongData> {
@@ -448,40 +456,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultMouseC
     }
 
     fn current_play_config_ref(&self) -> Option<&rubato_types::play_config::PlayConfig> {
-        let course = self.result.resource.course_data()?;
-        let mut current_mode: Option<bms_model::mode::Mode> = None;
-        for song in &course.hash {
-            let song_mode = match song.chart.mode {
-                5 => Some(bms_model::mode::Mode::BEAT_5K),
-                7 => Some(bms_model::mode::Mode::BEAT_7K),
-                9 => Some(bms_model::mode::Mode::POPN_9K),
-                10 => Some(bms_model::mode::Mode::BEAT_10K),
-                14 => Some(bms_model::mode::Mode::BEAT_14K),
-                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
-                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
-                _ => None,
-            };
-            let song_mode = match song_mode {
-                Some(m) => m,
-                None => continue,
-            };
-            if let Some(mode) = current_mode.as_ref() {
-                if *mode != song_mode {
-                    return None;
-                }
-            } else {
-                current_mode = Some(song_mode);
-            }
-        }
-        let resolved_mode = current_mode.unwrap_or(bms_model::mode::Mode::BEAT_7K);
-        Some(
-            &self
-                .result
-                .resource
-                .player_config()
-                .play_config_ref(resolved_mode)
-                .playconfig,
-        )
+        course_current_play_config_ref(&self.result.resource)
     }
 
     fn gauge_value(&self) -> f32 {
