@@ -160,10 +160,14 @@ fn test_sync_audio_ticks_preview_processor() {
     preview.start(None);
     selector.preview_state.preview = Some(preview);
 
-    let mut audio = RecordingAudioDriver::new();
+    let mut audio = rubato_audio::audio_system::AudioSystem::Recording(RecordingAudioDriver::new());
     selector.sync_audio(&mut audio);
 
-    assert_eq!(audio.play_path_count(), 1);
+    if let rubato_audio::audio_system::AudioSystem::Recording(ref inner) = audio {
+        assert_eq!(inner.play_path_count(), 1);
+    } else {
+        panic!("expected Recording variant");
+    }
 }
 
 #[test]

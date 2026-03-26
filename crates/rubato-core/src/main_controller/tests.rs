@@ -134,7 +134,7 @@ impl MainState for AudioSyncTestState {
 
     fn render(&mut self) {}
 
-    fn sync_audio(&mut self, _audio: &mut dyn AudioDriver) {
+    fn sync_audio(&mut self, _audio: &mut AudioSystem) {
         let counter = if self.was_shutdown {
             &self.shutdown_sync_calls
         } else {
@@ -1063,6 +1063,8 @@ fn test_update_state_references_does_not_panic() {
 
 use bms_model::bms_model::BMSModel;
 use bms_model::note::Note;
+use rubato_audio::audio_driver::AudioDriver;
+use rubato_audio::audio_system::AudioSystem;
 use rubato_audio::recording_audio_driver::RecordingAudioDriver;
 
 #[test]
@@ -1074,14 +1076,14 @@ fn test_audio_driver_initially_none() {
 #[test]
 fn test_set_audio_driver() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
     assert!(mc.audio_processor().is_some());
 }
 
 #[test]
 fn test_get_audio_processor_returns_trait_ref() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     let audio = mc.audio_processor().unwrap();
     assert_eq!(audio.get_global_pitch(), 1.0);
@@ -1091,7 +1093,7 @@ fn test_get_audio_processor_returns_trait_ref() {
 #[test]
 fn test_get_audio_processor_mut() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     let audio = mc.audio_processor_mut().unwrap();
     audio.set_global_pitch(1.5);
@@ -1101,7 +1103,7 @@ fn test_get_audio_processor_mut() {
 #[test]
 fn test_audio_driver_play_path() {
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     let audio = mc.audio_processor_mut().unwrap();
     audio.play_path("/test/sound.wav", 0.8, false);
@@ -1119,7 +1121,7 @@ fn render_invokes_state_sync_audio_when_audio_driver_exists() {
         Arc::clone(&render_sync_calls),
         Arc::clone(&shutdown_sync_calls),
     )));
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     mc.change_state(MainStateType::MusicSelect);
     mc.render();
@@ -1143,7 +1145,7 @@ fn state_transition_flushes_audio_before_and_after_shutdown() {
         Arc::clone(&render_sync_calls),
         Arc::clone(&shutdown_sync_calls),
     )));
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     mc.change_state(MainStateType::MusicSelect);
     mc.change_state(MainStateType::Config);
@@ -1208,7 +1210,7 @@ impl MainState for TickBasedPreviewState {
         self.should_stop = true;
     }
 
-    fn sync_audio(&mut self, audio: &mut dyn AudioDriver) {
+    fn sync_audio(&mut self, audio: &mut AudioSystem) {
         if self.should_stop {
             // Post-shutdown tick: stop the audio.
             if self.preview_started {
@@ -1262,7 +1264,7 @@ fn state_transition_stops_tick_based_preview_audio() {
     mc.set_state_factory(Box::new(TickBasedPreviewStateFactory {
         preview_path: preview_path.to_string(),
     }));
-    mc.set_audio_driver(Box::new(RecordingAudioDriver::new()));
+    mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     // Enter MusicSelect: the pre-shutdown sync_audio tick starts preview.
     mc.change_state(MainStateType::MusicSelect);
@@ -1386,10 +1388,10 @@ fn state_transition_emits_stop_and_dispose_events_for_preview() {
     mc.set_state_factory(Box::new(TickBasedPreviewStateFactory {
         preview_path: preview_path.to_string(),
     }));
-    mc.set_audio_driver(Box::new(EventTrackingAudioDriver::new(
+    mc.set_audio_driver(AudioSystem::Boxed(Box::new(EventTrackingAudioDriver::new(
         Arc::clone(&stopped),
         Arc::clone(&disposed),
-    )));
+    ))));
 
     mc.change_state(MainStateType::MusicSelect);
     mc.render();
@@ -1422,6 +1424,7 @@ impl MockStateListener {
     }
 }
 
+#[allow(deprecated)]
 impl MainStateListener for MockStateListener {
     fn update(&mut self, state: &dyn MainStateAccess, status: i32) {
         self.calls
@@ -1432,6 +1435,7 @@ impl MainStateListener for MockStateListener {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_update_main_state_listener_dispatches_to_listeners() {
     let mut mc = make_test_controller();
     let calls = Arc::new(Mutex::new(Vec::new()));
@@ -1447,6 +1451,7 @@ fn test_update_main_state_listener_dispatches_to_listeners() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_update_main_state_listener_multiple_listeners() {
     let mut mc = make_test_controller();
     let calls1 = Arc::new(Mutex::new(Vec::new()));
@@ -1470,6 +1475,7 @@ fn test_update_main_state_listener_multiple_listeners() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_update_main_state_listener_no_state_no_dispatch() {
     let mut mc = make_test_controller();
     let calls = Arc::new(Mutex::new(Vec::new()));
@@ -1481,6 +1487,7 @@ fn test_update_main_state_listener_no_state_no_dispatch() {
 }
 
 #[test]
+#[allow(deprecated)]
 fn test_update_main_state_listener_preserves_status() {
     let mut mc = make_test_controller();
     let calls = Arc::new(Mutex::new(Vec::new()));
@@ -1559,6 +1566,7 @@ fn test_periodic_config_save_does_not_trigger_within_interval() {
 // --- Phase 24f: add_state_listener tests ---
 
 #[test]
+#[allow(deprecated)]
 fn test_add_state_listener() {
     let mut mc = make_test_controller();
     assert!(mc.state_listener.is_empty());
@@ -1566,6 +1574,122 @@ fn test_add_state_listener() {
     let calls = Arc::new(Mutex::new(Vec::new()));
     mc.add_state_listener(Box::new(MockStateListener::new(calls)));
     assert_eq!(mc.state_listener.len(), 1);
+}
+
+// --- Channel-based event sender tests ---
+
+#[test]
+fn test_add_event_sender() {
+    let mut mc = make_test_controller();
+    assert!(mc.event_senders.is_empty());
+
+    let (tx, _rx) = std::sync::mpsc::sync_channel(256);
+    mc.add_event_sender(tx);
+    assert_eq!(mc.event_senders.len(), 1);
+}
+
+#[test]
+fn test_event_sender_receives_lifecycle_events_on_state_change() {
+    let mut mc = make_test_controller();
+    let (tx, rx) = std::sync::mpsc::sync_channel(256);
+    mc.add_event_sender(tx);
+
+    mc.change_state(MainStateType::MusicSelect);
+
+    // Collect lifecycle events
+    let mut lifecycle_events = Vec::new();
+    while let Ok(event) = rx.try_recv() {
+        if let rubato_types::app_event::AppEvent::Lifecycle(se) = event {
+            lifecycle_events.push(se);
+        }
+    }
+
+    // Should have TransitionStart, StateCreated, TransitionComplete
+    assert!(
+        lifecycle_events.iter().any(|e| matches!(
+            e,
+            rubato_types::state_event::StateEvent::TransitionStart { .. }
+        )),
+        "should have TransitionStart event"
+    );
+    assert!(
+        lifecycle_events.iter().any(|e| matches!(
+            e,
+            rubato_types::state_event::StateEvent::StateCreated { .. }
+        )),
+        "should have StateCreated event"
+    );
+    assert!(
+        lifecycle_events.iter().any(|e| matches!(
+            e,
+            rubato_types::state_event::StateEvent::TransitionComplete { .. }
+        )),
+        "should have TransitionComplete event"
+    );
+}
+
+#[test]
+fn test_event_sender_receives_state_changed_on_transition() {
+    let mut mc = make_test_controller();
+    let (tx, rx) = std::sync::mpsc::sync_channel(256);
+    mc.add_event_sender(tx);
+
+    mc.change_state(MainStateType::Config);
+
+    // Collect StateChanged events
+    let mut state_changed = Vec::new();
+    while let Ok(event) = rx.try_recv() {
+        if let rubato_types::app_event::AppEvent::StateChanged(data) = event {
+            state_changed.push(data);
+        }
+    }
+
+    assert!(
+        !state_changed.is_empty(),
+        "should have received at least one StateChanged event"
+    );
+    assert_eq!(
+        state_changed.last().unwrap().screen_type,
+        ScreenType::KeyConfiguration
+    );
+}
+
+#[test]
+fn test_event_sender_no_state_changed_without_current_state() {
+    let mut mc = make_test_controller();
+    let (tx, rx) = std::sync::mpsc::sync_channel(256);
+    mc.add_event_sender(tx);
+
+    // No current state -> no StateChanged event
+    mc.update_main_state_listener(0);
+
+    let mut state_changed_count = 0;
+    while let Ok(event) = rx.try_recv() {
+        if matches!(event, rubato_types::app_event::AppEvent::StateChanged(_)) {
+            state_changed_count += 1;
+        }
+    }
+    assert_eq!(state_changed_count, 0);
+}
+
+#[test]
+fn test_multiple_event_senders_all_receive_events() {
+    let mut mc = make_test_controller();
+    let (tx1, rx1) = std::sync::mpsc::sync_channel(256);
+    let (tx2, rx2) = std::sync::mpsc::sync_channel(256);
+    mc.add_event_sender(tx1);
+    mc.add_event_sender(tx2);
+
+    mc.change_state(MainStateType::MusicSelect);
+
+    let count1 = std::iter::from_fn(|| rx1.try_recv().ok()).count();
+    let count2 = std::iter::from_fn(|| rx2.try_recv().ok()).count();
+
+    assert!(count1 > 0, "first receiver should have events");
+    assert_eq!(
+        count1, count2,
+        "both receivers should get the same number of events"
+    );
 }
 
 // --- Phase 24f: create() calls update_state_references ---
@@ -1800,9 +1924,9 @@ impl StateFactory for ModelTestStateFactory {
 fn test_transition_to_play_calls_audio_set_model() {
     let set_model_count = Arc::new(AtomicI32::new(0));
     let mut mc = make_test_controller();
-    mc.set_audio_driver(Box::new(SetModelTrackingAudioDriver {
+    mc.set_audio_driver(AudioSystem::Boxed(Box::new(SetModelTrackingAudioDriver {
         set_model_count: Arc::clone(&set_model_count),
-    }));
+    })));
     mc.set_state_factory(Box::new(ModelTestStateFactory));
 
     mc.change_state(MainStateType::Play);

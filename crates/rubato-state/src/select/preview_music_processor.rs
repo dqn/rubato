@@ -3,7 +3,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use rubato_audio::audio_driver::AudioDriver;
+use rubato_audio::audio_system::AudioSystem;
 use rubato_types::audio_config::DEFAULT_AUDIO_VOLUME;
 use rubato_types::main_controller_access::MainControllerAccess;
 use rubato_types::sync_utils::lock_or_recover;
@@ -47,7 +47,7 @@ trait PreviewAudioTarget {
 }
 
 struct AudioDriverTarget<'a> {
-    inner: &'a mut dyn AudioDriver,
+    inner: &'a mut AudioSystem,
 }
 
 impl PreviewAudioTarget for AudioDriverTarget<'_> {
@@ -145,7 +145,7 @@ impl PreviewMusicProcessor {
         self.preview_running.store(false, Ordering::SeqCst);
     }
 
-    pub fn tick_preview(&mut self, audio: &mut dyn AudioDriver, config: &Config) {
+    pub fn tick_preview(&mut self, audio: &mut AudioSystem, config: &Config) {
         let mut target = AudioDriverTarget { inner: audio };
         self.tick_with_target(&mut target, config);
     }
@@ -273,7 +273,7 @@ impl PreviewMusicProcessor {
     /// 2. Polls commands queue for preview path changes
     /// 3. Stops preview and switches back to default when preview ends
     /// 4. Updates volume when system volume changes
-    pub fn run_preview_loop(&self, audio: &mut dyn AudioDriver, config: &Config) {
+    pub fn run_preview_loop(&self, audio: &mut AudioSystem, config: &Config) {
         let sys_vol = config
             .audio
             .as_ref()
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_run_preview_loop_immediate_stop() {
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/bgm/default.ogg");
@@ -471,14 +471,18 @@ mod tests {
         // after playing default music and then calling stop_preview_internal
         processor.run_preview_loop(&mut audio, &config);
         // Should have played the default music
-        assert!(audio.play_path_count() >= 1);
-        // Should have stopped the default music on exit
-        assert!(audio.stop_path_count() >= 1);
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert!(inner.play_path_count() >= 1);
+            // Should have stopped the default music on exit
+            assert!(inner.stop_path_count() >= 1);
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]
     fn test_tick_preview_starts_default_music_when_running() {
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         let config = Config::default();
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/bgm/default.ogg");
@@ -486,7 +490,11 @@ mod tests {
 
         processor.tick_preview(&mut audio, &config);
 
-        assert_eq!(audio.play_path_count(), 1);
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.play_path_count(), 1);
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]
@@ -518,19 +526,23 @@ mod tests {
         let mut config = Config::default();
         config.audio = None;
 
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         let mut processor = PreviewMusicProcessor::new(&config);
         processor.set_default("/bgm/default.ogg");
         processor.preview_running.store(true, Ordering::SeqCst);
 
         processor.tick_preview(&mut audio, &config);
 
-        assert!(matches!(
-            audio.events().first(),
-            Some(rubato_audio::recording_audio_driver::AudioEvent::PlayPath {
-                volume,
-                ..
-            }) if (*volume - 0.1).abs() < f32::EPSILON
-        ));
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert!(matches!(
+                inner.events().first(),
+                Some(rubato_audio::recording_audio_driver::AudioEvent::PlayPath {
+                    volume,
+                    ..
+                }) if (*volume - 0.1).abs() < f32::EPSILON
+            ));
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 }

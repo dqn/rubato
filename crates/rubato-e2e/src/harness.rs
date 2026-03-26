@@ -10,6 +10,7 @@ use rubato_core::main_controller::{MainController, StateFactory};
 use rubato_core::player_config::PlayerConfig;
 use rubato_core::player_resource::PlayerResource;
 use rubato_render::sprite_batch::CapturedDrawQuad;
+use rubato_types::app_event::AppEvent;
 use rubato_types::main_state_type::MainStateType;
 use rubato_types::state_event::StateEvent;
 
@@ -24,7 +25,10 @@ pub const FRAME_DURATION_US: i64 = 16_667;
 pub struct E2eHarness {
     controller: MainController,
     audio_handle: Arc<Mutex<RecordingAudioDriver>>,
-    state_event_log: Arc<Mutex<Vec<StateEvent>>>,
+    /// Channel receiver for AppEvent (replaces Arc<Mutex<Vec<StateEvent>>>).
+    event_receiver: std::sync::mpsc::Receiver<AppEvent>,
+    /// Accumulated state events drained from the channel receiver.
+    collected_state_events: Vec<StateEvent>,
     /// Monotonically increasing input gate time (milliseconds) used to override
     /// the wall-clock check in `MainController::render()`. Incremented on each
     /// `render_frame()` call so that the `time > prevtime` gate always passes,
@@ -46,21 +50,24 @@ impl E2eHarness {
         // Inject shared recording audio driver
         let shared_driver = SharedRecordingAudioDriver::new();
         let audio_handle = shared_driver.inner();
-        controller.set_audio_driver(Box::new(shared_driver));
+        controller.set_audio_driver(rubato_audio::audio_system::AudioSystem::SharedRecording(
+            shared_driver,
+        ));
 
         // Freeze timer so wall-clock time does not advance
         controller.timer_mut().frozen = true;
         controller.timer_mut().set_now_micro_time(0);
 
-        // Wire up state event log for observability
-        let state_event_log = Arc::new(Mutex::new(Vec::new()));
-        controller.set_state_event_log(Arc::clone(&state_event_log));
+        // Wire up channel-based event receiver for observability
+        let (event_sender, event_receiver) = std::sync::mpsc::sync_channel(256);
+        controller.add_event_sender(event_sender);
 
         let input_gate_time_ms = controller.input_gate_prevtime();
         let mut harness = Self {
             controller,
             audio_handle,
-            state_event_log,
+            event_receiver,
+            collected_state_events: Vec::new(),
             input_gate_time_ms,
         };
         harness.sync_current_state_timer_to_controller();
@@ -319,19 +326,30 @@ impl E2eHarness {
     // State event observability (Phase 3)
     // ============================================================
 
+    /// Drain any pending events from the channel into the collected buffer.
+    fn drain_events(&mut self) {
+        while let Ok(event) = self.event_receiver.try_recv() {
+            if let AppEvent::Lifecycle(state_event) = event {
+                self.collected_state_events.push(state_event);
+            }
+        }
+    }
+
     /// Return a snapshot of all recorded state events.
-    pub fn state_events(&self) -> Vec<StateEvent> {
-        self.state_event_log.lock().unwrap().clone()
+    pub fn state_events(&mut self) -> Vec<StateEvent> {
+        self.drain_events();
+        self.collected_state_events.clone()
     }
 
     /// Clear the recorded state events.
-    pub fn clear_state_events(&self) {
-        self.state_event_log.lock().unwrap().clear();
+    pub fn clear_state_events(&mut self) {
+        self.drain_events();
+        self.collected_state_events.clear();
     }
 
     /// Assert that the recorded state events contain the given subsequence
     /// in order. Panics with a diff if the expected sequence is not found.
-    pub fn assert_event_sequence(&self, expected: &[StateEvent]) {
+    pub fn assert_event_sequence(&mut self, expected: &[StateEvent]) {
         let events = self.state_events();
         if expected.is_empty() {
             return;
@@ -435,7 +453,7 @@ impl E2eHarness {
     // ============================================================
 
     /// Capture a snapshot of the current harness state for debugging.
-    pub fn dump_frame_state(&self) -> FrameState {
+    pub fn dump_frame_state(&mut self) -> FrameState {
         FrameState {
             state_type: self.current_state_type(),
             time_us: self.current_time_us(),

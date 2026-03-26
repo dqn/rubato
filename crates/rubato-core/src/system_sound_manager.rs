@@ -178,7 +178,7 @@ impl SystemSoundManager {
         &self,
         sound: &SoundType,
         loop_sound: bool,
-        audio: Option<&mut dyn rubato_audio::audio_driver::AudioDriver>,
+        audio: Option<&mut rubato_audio::audio_system::AudioSystem>,
         system_volume: f32,
     ) {
         if let Some(path) = self.soundmap.get(sound)
@@ -194,7 +194,7 @@ impl SystemSoundManager {
     pub fn stop(
         &self,
         sound: &SoundType,
-        audio: Option<&mut dyn rubato_audio::audio_driver::AudioDriver>,
+        audio: Option<&mut rubato_audio::audio_system::AudioSystem>,
     ) {
         if let Some(path) = self.soundmap.get(sound)
             && let Some(audio) = audio
@@ -209,7 +209,7 @@ impl SystemSoundManager {
     pub fn dispose_sound(
         &self,
         path: &str,
-        audio: Option<&mut dyn rubato_audio::audio_driver::AudioDriver>,
+        audio: Option<&mut rubato_audio::audio_system::AudioSystem>,
     ) {
         if let Some(audio) = audio {
             audio.dispose_path(path);
@@ -230,6 +230,7 @@ fn rand_f64() -> f64 {
 mod tests {
     use super::*;
 
+    use rubato_audio::audio_system::AudioSystem;
     use rubato_audio::recording_audio_driver::{AudioEvent, RecordingAudioDriver};
 
     #[test]
@@ -239,17 +240,21 @@ mod tests {
         sm.soundmap
             .insert(SoundType::PlayReady, "test/ready.wav".to_string());
 
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         sm.play(&SoundType::PlayReady, false, Some(&mut audio), 0.8);
-        assert_eq!(audio.play_path_count(), 1);
-        assert_eq!(
-            audio.events()[0],
-            AudioEvent::PlayPath {
-                path: "test/ready.wav".to_string(),
-                volume: 0.8,
-                loop_play: false,
-            }
-        );
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.play_path_count(), 1);
+            assert_eq!(
+                inner.events()[0],
+                AudioEvent::PlayPath {
+                    path: "test/ready.wav".to_string(),
+                    volume: 0.8,
+                    loop_play: false,
+                }
+            );
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]
@@ -258,17 +263,21 @@ mod tests {
         sm.soundmap
             .insert(SoundType::Select, "test/select.wav".to_string());
 
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         sm.play(&SoundType::Select, true, Some(&mut audio), 1.0);
-        assert_eq!(audio.play_path_count(), 1);
-        assert_eq!(
-            audio.events()[0],
-            AudioEvent::PlayPath {
-                path: "test/select.wav".to_string(),
-                volume: 1.0,
-                loop_play: true,
-            }
-        );
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.play_path_count(), 1);
+            assert_eq!(
+                inner.events()[0],
+                AudioEvent::PlayPath {
+                    path: "test/select.wav".to_string(),
+                    volume: 1.0,
+                    loop_play: true,
+                }
+            );
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]
@@ -277,10 +286,14 @@ mod tests {
         sm.soundmap
             .insert(SoundType::PlayStop, "test/stop.wav".to_string());
 
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         sm.stop(&SoundType::PlayStop, Some(&mut audio));
-        assert_eq!(audio.stop_path_count(), 1);
-        assert_eq!(audio.stopped_paths(), vec!["test/stop.wav".to_string()]);
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.stop_path_count(), 1);
+            assert_eq!(inner.stopped_paths(), vec!["test/stop.wav".to_string()]);
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]
@@ -304,19 +317,25 @@ mod tests {
     #[test]
     fn play_missing_sound_is_noop() {
         let sm = SystemSoundManager::new(None, None);
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         // No sound in the map
         sm.play(&SoundType::PlayReady, false, Some(&mut audio), 0.5);
-        assert_eq!(audio.play_path_count(), 0);
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.play_path_count(), 0);
+        }
     }
 
     #[test]
     fn dispose_sound_calls_audio_driver() {
         let sm = SystemSoundManager::new(None, None);
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
         sm.dispose_sound("old/path.wav", Some(&mut audio));
-        assert_eq!(audio.disposed_paths().len(), 1);
-        assert_eq!(audio.disposed_paths(), vec!["old/path.wav".to_string()]);
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.disposed_paths().len(), 1);
+            assert_eq!(inner.disposed_paths(), vec!["old/path.wav".to_string()]);
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]

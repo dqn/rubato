@@ -134,13 +134,20 @@ pub(crate) fn init_audio_driver(controller: &mut MainController) -> Result<()> {
     // Always uses GdxSoundDriver regardless of config.audio.driver setting.
     let song_resource_gen = controller.config().render.song_resource_gen;
     let audio_driver = rubato_audio::gdx_sound_driver::GdxSoundDriver::new(song_resource_gen)?;
-    controller.set_audio_driver(Box::new(audio_driver));
+    controller.set_audio_driver(rubato_audio::audio_system::AudioSystem::GdxSound(
+        audio_driver,
+    ));
     Ok(())
 }
 
 /// Wire Discord RPC and OBS WebSocket state listeners.
-pub(crate) fn init_state_listeners(controller: &mut MainController) {
-    // Java: if(config.isUseDiscordRPC()) { stateListener.add(new DiscordListener()); }
+///
+/// Returns a Vec of listener handles that must be kept alive for the
+/// background threads to continue running. Dropping the returned vec
+/// will shut down the listeners gracefully.
+pub(crate) fn init_state_listeners(controller: &mut MainController) -> Vec<Box<dyn std::any::Any>> {
+    let mut handles: Vec<Box<dyn std::any::Any>> = Vec::new();
+
     let (use_discord_rpc, use_obs_ws, cfg_clone) = {
         let cfg = controller.config();
         (
@@ -150,17 +157,20 @@ pub(crate) fn init_state_listeners(controller: &mut MainController) {
         )
     };
     if use_discord_rpc {
-        let listener = rubato_external::discord_listener::DiscordListener::new();
-        controller.add_state_listener(Box::new(listener));
+        let (sender, listener) = rubato_external::discord_listener::DiscordListener::new();
+        controller.add_event_sender(sender);
+        handles.push(Box::new(listener));
     }
     if use_obs_ws {
         let obs_client = rubato_external::obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
-        let listener = rubato_external::obs::obs_listener::ObsListener::new(cfg_clone);
-        controller.add_state_listener(Box::new(listener));
+        let (sender, listener) = rubato_external::obs::obs_listener::ObsListener::new(cfg_clone);
+        controller.add_event_sender(sender);
+        handles.push(Box::new(listener));
         if let Ok(client) = obs_client {
             controller.set_obs_client(Box::new(client));
         }
     }
+    handles
 }
 
 /// Wire IR (Internet Ranking) initialization at startup.

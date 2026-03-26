@@ -3280,19 +3280,27 @@ fn set_course_mode_persists() {
 
 // --- sync_audio tests ---
 
-struct NoteTrackingAudioDriver {
-    global_pitch: f32,
+struct NoteTrackingState {
     played_notes: Vec<(i32, f32)>, // (wav, volume)
     stop_all_count: usize,
 }
 
+struct NoteTrackingAudioDriver {
+    global_pitch: f32,
+    state: std::sync::Arc<std::sync::Mutex<NoteTrackingState>>,
+}
+
 impl NoteTrackingAudioDriver {
-    fn new() -> Self {
-        Self {
-            global_pitch: 1.0,
+    fn new() -> (Self, std::sync::Arc<std::sync::Mutex<NoteTrackingState>>) {
+        let state = std::sync::Arc::new(std::sync::Mutex::new(NoteTrackingState {
             played_notes: Vec::new(),
             stop_all_count: 0,
-        }
+        }));
+        let driver = Self {
+            global_pitch: 1.0,
+            state: std::sync::Arc::clone(&state),
+        };
+        (driver, state)
     }
 }
 
@@ -3311,12 +3319,16 @@ impl rubato_audio::audio_driver::AudioDriver for NoteTrackingAudioDriver {
         1.0
     }
     fn play_note(&mut self, n: &bms_model::note::Note, volume: f32, _pitch: i32) {
-        self.played_notes.push((n.wav(), volume));
+        self.state
+            .lock()
+            .unwrap()
+            .played_notes
+            .push((n.wav(), volume));
     }
     fn play_judge(&mut self, _judge: i32, _fast: bool) {}
     fn stop_note(&mut self, n: Option<&bms_model::note::Note>) {
         if n.is_none() {
-            self.stop_all_count += 1;
+            self.state.lock().unwrap().stop_all_count += 1;
         }
     }
     fn set_volume_note(&mut self, _n: &bms_model::note::Note, _volume: f32) {}
@@ -3334,6 +3346,7 @@ impl rubato_audio::audio_driver::AudioDriver for NoteTrackingAudioDriver {
 fn sync_audio_drains_pending_bg_notes() {
     use bms_model::note::Note;
     use bms_model::time_line::TimeLine;
+    use rubato_audio::audio_system::AudioSystem;
 
     // Build a model with a BG note at time 0
     let mut model = make_model();
@@ -3356,35 +3369,42 @@ fn sync_audio_drains_pending_bg_notes() {
     std::thread::sleep(std::time::Duration::from_millis(50));
 
     // Before sync_audio, notes should be queued but not played
-    let mut audio = NoteTrackingAudioDriver::new();
-    assert!(audio.played_notes.is_empty());
+    let (driver, state) = NoteTrackingAudioDriver::new();
+    assert!(state.lock().unwrap().played_notes.is_empty());
 
     // sync_audio should drain and play
+    let mut audio = AudioSystem::Boxed(Box::new(driver));
     player.sync_audio(&mut audio);
+    let s = state.lock().unwrap();
     assert!(
-        !audio.played_notes.is_empty(),
+        !s.played_notes.is_empty(),
         "sync_audio should forward BG notes to AudioDriver"
     );
-    assert_eq!(audio.played_notes[0].0, 1); // wav id
+    assert_eq!(s.played_notes[0].0, 1); // wav id
+    drop(s);
 
     player.keysound.stop_bg_play();
 }
 
 #[test]
 fn sync_audio_stops_all_notes_when_pending_flag_set() {
+    use rubato_audio::audio_system::AudioSystem;
+
     let model = make_model();
     let mut player = BMSPlayer::new(model);
 
     // Set the pending flag
     player.pending.pending_stop_all_notes = true;
 
-    let mut audio = NoteTrackingAudioDriver::new();
-    assert_eq!(audio.stop_all_count, 0);
+    let (driver, state) = NoteTrackingAudioDriver::new();
+    assert_eq!(state.lock().unwrap().stop_all_count, 0);
 
+    let mut audio = AudioSystem::Boxed(Box::new(driver));
     player.sync_audio(&mut audio);
 
     assert_eq!(
-        audio.stop_all_count, 1,
+        state.lock().unwrap().stop_all_count,
+        1,
         "sync_audio should call stop_note(None) when pending_stop_all_notes is set"
     );
     // Flag should be consumed
@@ -3396,14 +3416,18 @@ fn sync_audio_stops_all_notes_when_pending_flag_set() {
 
 #[test]
 fn sync_audio_does_not_stop_notes_when_flag_not_set() {
+    use rubato_audio::audio_system::AudioSystem;
+
     let model = make_model();
     let mut player = BMSPlayer::new(model);
 
-    let mut audio = NoteTrackingAudioDriver::new();
+    let (driver, state) = NoteTrackingAudioDriver::new();
+    let mut audio = AudioSystem::Boxed(Box::new(driver));
     player.sync_audio(&mut audio);
 
     assert_eq!(
-        audio.stop_all_count, 0,
+        state.lock().unwrap().stop_all_count,
+        0,
         "sync_audio should not call stop_note(None) when flag is not set"
     );
 }
@@ -3413,6 +3437,7 @@ fn sync_audio_does_not_stop_notes_when_flag_not_set() {
 #[test]
 fn sync_audio_drains_pending_keysound_plays() {
     use bms_model::note::Note;
+    use rubato_audio::audio_system::AudioSystem;
 
     let model = make_model();
     let mut player = BMSPlayer::new(model);
@@ -3422,24 +3447,27 @@ fn sync_audio_drains_pending_keysound_plays() {
     let note = Note::new_normal(42);
     player.pending.pending_keysound_plays.push((note, 0.8));
 
-    let mut audio = NoteTrackingAudioDriver::new();
+    let (driver, state) = NoteTrackingAudioDriver::new();
+    let mut audio = AudioSystem::Boxed(Box::new(driver));
     player.sync_audio(&mut audio);
 
+    let s = state.lock().unwrap();
     assert_eq!(
-        audio.played_notes.len(),
+        s.played_notes.len(),
         1,
         "sync_audio should play keysound notes from pending_keysound_plays"
     );
-    assert_eq!(audio.played_notes[0].0, 42, "wav id should match");
+    assert_eq!(s.played_notes[0].0, 42, "wav id should match");
     assert!(
-        (audio.played_notes[0].1 - 0.8).abs() < f32::EPSILON,
+        (s.played_notes[0].1 - 0.8).abs() < f32::EPSILON,
         "volume should match"
     );
+    drop(s);
 
     // Second sync should be empty (drained)
     player.sync_audio(&mut audio);
     assert_eq!(
-        audio.played_notes.len(),
+        state.lock().unwrap().played_notes.len(),
         1,
         "pending_keysound_plays should be drained after sync_audio"
     );

@@ -4,7 +4,7 @@ pub(crate) use std::time::Instant;
 
 pub(crate) use log::info;
 
-pub(crate) use rubato_audio::audio_driver::AudioDriver;
+pub(crate) use rubato_audio::audio_system::AudioSystem;
 pub(crate) use rubato_types::imgui_notify::ImGuiNotify;
 pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
 pub(crate) use rubato_types::main_state_access::MainStateAccess;
@@ -20,6 +20,7 @@ pub(crate) use crate::bms_player_mode::BMSPlayerMode;
 pub(crate) use crate::config::Config;
 pub(crate) use crate::ir_config::IRConfig;
 pub(crate) use crate::main_state::{MainState, MainStateType};
+#[allow(deprecated)]
 pub(crate) use crate::main_state_listener::MainStateListener;
 pub(crate) use crate::performance_metrics::PerformanceMetrics;
 pub(crate) use crate::play_data_accessor::PlayDataAccessor;
@@ -211,7 +212,7 @@ pub struct MainController {
 
     /// Audio driver
     /// Translated from: MainController.audio (AudioDriver)
-    audio: Option<Box<dyn AudioDriver>>,
+    audio: Option<AudioSystem>,
 
     /// Player resource
     resource: Option<PlayerResource>,
@@ -252,8 +253,12 @@ pub struct MainController {
     /// Offset array for skin
     offset: Vec<SkinOffset>,
 
-    /// State listeners
+    /// State listeners (legacy trait-based, kept for backward compatibility during migration)
+    #[allow(deprecated)]
     state_listener: Vec<Box<dyn MainStateListener>>,
+
+    /// Channel-based event senders for external listeners and test harnesses.
+    event_senders: Vec<std::sync::mpsc::SyncSender<rubato_types::app_event::AppEvent>>,
 
     /// Deferred controller commands from state-facing access proxies.
     command_queue: rubato_types::main_controller_access::MainControllerCommandQueue,

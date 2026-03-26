@@ -82,7 +82,7 @@ impl MainState for SharedMusicSelectorState {
         self.with_selector(|selector| selector.input());
     }
 
-    fn sync_audio(&mut self, audio: &mut dyn rubato_audio::audio_driver::AudioDriver) {
+    fn sync_audio(&mut self, audio: &mut rubato_audio::audio_system::AudioSystem) {
         self.with_selector(|selector| selector.sync_audio(audio));
     }
 

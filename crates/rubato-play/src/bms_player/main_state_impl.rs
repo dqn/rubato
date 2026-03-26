@@ -1276,7 +1276,7 @@ impl MainState for BMSPlayer {
         self.sync_input_back_to_impl(input);
     }
 
-    fn sync_audio(&mut self, audio: &mut dyn rubato_audio::audio_driver::AudioDriver) {
+    fn sync_audio(&mut self, audio: &mut rubato_audio::audio_system::AudioSystem) {
         self.sync_audio_impl(audio);
     }
 

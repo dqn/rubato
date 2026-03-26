@@ -222,10 +222,7 @@ impl BMSPlayer {
         }
     }
 
-    pub(super) fn sync_audio_impl(
-        &mut self,
-        audio: &mut dyn rubato_audio::audio_driver::AudioDriver,
-    ) {
+    pub(super) fn sync_audio_impl(&mut self, audio: &mut rubato_audio::audio_system::AudioSystem) {
         if self.pending.pending_stop_all_notes {
             self.pending.pending_stop_all_notes = false;
             audio.stop_note(None);

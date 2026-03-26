@@ -178,7 +178,7 @@ impl MainState for MusicSelector {
         }
     }
 
-    fn sync_audio(&mut self, audio: &mut dyn AudioDriver) {
+    fn sync_audio(&mut self, audio: &mut AudioSystem) {
         if let Some(preview) = &mut self.preview_state.preview {
             preview.tick_preview(audio, &self.app_config);
         }

@@ -9,6 +9,7 @@ mod shared_selector;
 
 use std::sync::{Arc, Mutex};
 
+use rubato_audio::audio_system::AudioSystem;
 use rubato_core::config_pkg::key_configuration::KeyConfiguration;
 use rubato_core::config_pkg::skin_configuration::SkinConfiguration;
 use rubato_core::main_controller::{MainController, StateCreateResult, StateFactory};
@@ -185,7 +186,7 @@ impl StateFactory for LauncherStateFactory {
                         let decide = MusicDecide::new(
                             DecideMainControllerRef::with_audio(
                                 Box::new(mc_access),
-                                Box::new(QueuedAudioDriver::new(command_queue)),
+                                AudioSystem::Boxed(Box::new(QueuedAudioDriver::new(command_queue))),
                             ),
                             Box::new(resource),
                             TimerManager::new(),
@@ -446,7 +447,7 @@ impl StateFactory for LauncherStateFactory {
                 let result = MusicResult::new(
                     ResultMainController::with_audio_and_ir(
                         Box::new(mc_access),
-                        Box::new(QueuedAudioDriver::new(command_queue)),
+                        AudioSystem::Boxed(Box::new(QueuedAudioDriver::new(command_queue))),
                         ir_statuses,
                     ),
                     rr,
@@ -489,7 +490,7 @@ impl StateFactory for LauncherStateFactory {
                 let course_result = CourseResult::new(
                     ResultMainController::with_audio_and_ir(
                         Box::new(mc_access),
-                        Box::new(QueuedAudioDriver::new(command_queue)),
+                        AudioSystem::Boxed(Box::new(QueuedAudioDriver::new(command_queue))),
                         ir_statuses,
                     ),
                     rr,
@@ -1106,11 +1107,15 @@ mod tests {
         selector.preview_state.preview = Some(preview);
 
         let mut shared = SharedMusicSelectorState::new(Arc::new(Mutex::new(selector)));
-        let mut audio = RecordingAudioDriver::new();
+        let mut audio = AudioSystem::Recording(RecordingAudioDriver::new());
 
         shared.sync_audio(&mut audio);
 
-        assert_eq!(audio.play_path_count(), 1);
+        if let AudioSystem::Recording(ref inner) = audio {
+            assert_eq!(inner.play_path_count(), 1);
+        } else {
+            panic!("expected Recording variant");
+        }
     }
 
     #[test]

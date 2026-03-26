@@ -153,7 +153,7 @@ impl MainController {
         if let Some(ref mut current) = self.current
             && let Some(ref mut audio) = self.audio
         {
-            current.sync_audio(audio.as_mut());
+            current.sync_audio(audio);
         }
 
         // Take sprite batch to avoid borrow conflict with self.current.

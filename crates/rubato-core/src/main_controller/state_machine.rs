@@ -181,16 +181,23 @@ impl MainController {
             // Flush pending audio commands before shutdown so they operate on
             // live state rather than potentially disposed resources.
             if let Some(ref mut audio) = self.audio {
-                old_state.sync_audio(audio.as_mut());
+                old_state.sync_audio(audio);
             }
             // Emit state shutdown event before shutdown.
-            // Access state_event_log directly to avoid borrowing all of `self`
-            // while `self.current` is mutably borrowed as `old_state`.
-            if let Some(st) = old_state.state_type()
-                && let Some(ref log) = self.state_event_log
-                && let Ok(mut guard) = log.lock()
-            {
-                guard.push(rubato_types::state_event::StateEvent::StateShutdown { state: st });
+            // Access state_event_log and event_senders directly to avoid
+            // borrowing all of `self` while `self.current` is mutably
+            // borrowed as `old_state`.
+            if let Some(st) = old_state.state_type() {
+                let event = rubato_types::state_event::StateEvent::StateShutdown { state: st };
+                if let Some(ref log) = self.state_event_log
+                    && let Ok(mut guard) = log.lock()
+                {
+                    guard.push(event.clone());
+                }
+                let app_event = rubato_types::app_event::AppEvent::Lifecycle(event);
+                for sender in &self.event_senders {
+                    let _ = sender.try_send(app_event.clone());
+                }
             }
             old_state.shutdown();
             // Flush audio again after shutdown so tick-based processors (e.g.
@@ -198,7 +205,7 @@ impl MainController {
             // In Java the preview thread exits its loop autonomously, but in Rust
             // preview runs via sync_audio ticks on the main thread.
             if let Some(ref mut audio) = self.audio {
-                old_state.sync_audio(audio.as_mut());
+                old_state.sync_audio(audio);
             }
             // setSkin(null) equivalent -- Java's setSkin(null) calls skin.dispose() first
             if let Some(ref mut skin) = old_state.main_state_data_mut().skin {

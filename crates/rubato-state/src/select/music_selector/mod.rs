@@ -1,6 +1,6 @@
 pub(crate) use std::path::PathBuf;
 
-pub(crate) use rubato_audio::audio_driver::AudioDriver;
+pub(crate) use rubato_audio::audio_system::AudioSystem;
 pub(crate) use rubato_core::main_state::{MainState, MainStateData};
 pub(crate) use rubato_core::pixmap_resource_pool::PixmapResourcePool;
 pub(crate) use rubato_core::timer_manager::TimerManager;

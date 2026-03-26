@@ -1,4 +1,4 @@
-use rubato_audio::audio_driver::AudioDriver;
+use rubato_audio::audio_system::AudioSystem;
 use rubato_core::play_data_accessor::PlayDataAccessor;
 use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 use rubato_types::config::Config;
@@ -18,7 +18,7 @@ use rubato_types::sync_utils::lock_or_recover;
 /// RankingDataCache.
 pub struct MainController {
     inner: Box<dyn MainControllerAccess>,
-    audio: Option<Box<dyn AudioDriver>>,
+    audio: Option<AudioSystem>,
     ir_statuses: Vec<IRStatus>,
     ir_send_statuses: std::sync::Arc<std::sync::Mutex<Vec<IRSendStatusMain>>>,
     pub input_processor: BMSPlayerInputProcessor,
@@ -46,7 +46,7 @@ impl MainController {
         }
     }
 
-    pub fn with_audio(inner: Box<dyn MainControllerAccess>, audio: Box<dyn AudioDriver>) -> Self {
+    pub fn with_audio(inner: Box<dyn MainControllerAccess>, audio: AudioSystem) -> Self {
         let config = inner.config();
         let input_processor = BMSPlayerInputProcessor::new_without_midi(config);
         let play_data_accessor = PlayDataAccessor::new(config);
@@ -89,7 +89,7 @@ impl MainController {
 
     pub fn with_audio_and_ir(
         inner: Box<dyn MainControllerAccess>,
-        audio: Box<dyn AudioDriver>,
+        audio: AudioSystem,
         ir_statuses: Vec<IRStatus>,
     ) -> Self {
         let config = inner.config();
@@ -186,10 +186,8 @@ impl MainController {
         &self.play_data_accessor
     }
 
-    pub fn audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
-        self.audio
-            .as_mut()
-            .map(|b| &mut **b as &mut dyn AudioDriver)
+    pub fn audio_processor_mut(&mut self) -> Option<&mut AudioSystem> {
+        self.audio.as_mut()
     }
 
     pub fn ranking_data_cache(
@@ -224,7 +222,7 @@ mod tests {
     fn test_main_controller_with_audio_has_audio() {
         let mut mc = MainController::with_audio(
             Box::new(NullMainController),
-            Box::new(RecordingAudioDriver::new()),
+            AudioSystem::Recording(RecordingAudioDriver::new()),
         );
         assert!(mc.audio_processor_mut().is_some());
     }
@@ -233,7 +231,7 @@ mod tests {
     fn test_main_controller_audio_stop_note() {
         let mut mc = MainController::with_audio(
             Box::new(NullMainController),
-            Box::new(RecordingAudioDriver::new()),
+            AudioSystem::Recording(RecordingAudioDriver::new()),
         );
         if let Some(audio) = mc.audio_processor_mut() {
             audio.stop_note(None);
@@ -245,7 +243,7 @@ mod tests {
     fn test_main_controller_audio_set_global_pitch() {
         let mut mc = MainController::with_audio(
             Box::new(NullMainController),
-            Box::new(RecordingAudioDriver::new()),
+            AudioSystem::Recording(RecordingAudioDriver::new()),
         );
         if let Some(audio) = mc.audio_processor_mut() {
             audio.set_global_pitch(1.5);
@@ -415,7 +413,7 @@ mod tests {
 
         let mut mc = MainController::with_audio_and_ir(
             Box::new(NullMainController),
-            Box::new(RecordingAudioDriver::new()),
+            AudioSystem::Recording(RecordingAudioDriver::new()),
             ir_statuses,
         );
 
@@ -435,7 +433,7 @@ mod tests {
     fn test_with_audio_and_ir_empty_ir_still_has_audio() {
         let mut mc = MainController::with_audio_and_ir(
             Box::new(NullMainController),
-            Box::new(RecordingAudioDriver::new()),
+            AudioSystem::Recording(RecordingAudioDriver::new()),
             Vec::new(),
         );
 

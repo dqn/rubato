@@ -2,7 +2,7 @@
 //!
 //! Stores the real `RecordingAudioDriver` inside an `Arc<Mutex<>>` so that
 //! the E2E harness can retain a handle to inspect recorded events even
-//! though `MainController` owns the driver as `Box<dyn AudioDriver>`.
+//! though `MainController` owns the driver as `AudioSystem`.
 
 use std::sync::{Arc, Mutex};
 
@@ -182,12 +182,14 @@ mod tests {
 
     #[test]
     fn inner_handle_survives_driver_moves() {
+        use crate::audio_system::AudioSystem;
+
         let shared = SharedRecordingAudioDriver::new();
         let handle = shared.inner();
 
-        // Simulate what E2eHarness does: keep handle, move driver into Box
-        let mut boxed: Box<dyn AudioDriver> = Box::new(shared);
-        boxed.play_path("moved.ogg", 0.5, false);
+        // Simulate what E2eHarness does: keep handle, move driver into AudioSystem
+        let mut sys = AudioSystem::SharedRecording(shared);
+        sys.play_path("moved.ogg", 0.5, false);
 
         // Handle still works
         let inner = handle

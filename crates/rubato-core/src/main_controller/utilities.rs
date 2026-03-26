@@ -13,6 +13,7 @@ impl MainController {
     ///     }
     /// }
     /// ```
+    #[allow(deprecated)]
     pub fn update_main_state_listener(&mut self, status: i32) {
         if let Some(ref current) = self.current {
             // Create adapter that bridges MainState → MainStateAccess
@@ -37,6 +38,9 @@ impl MainController {
             }
             self.state_listener = listeners;
         }
+
+        // Also broadcast to channel-based event receivers.
+        self.broadcast_state_changed(status);
     }
 
     pub fn play_time(&self) -> i64 {
@@ -228,15 +232,13 @@ impl MainController {
     /// Returns the audio processor.
     ///
     /// Translated from: MainController.getAudioProcessor()
-    pub fn audio_processor(&self) -> Option<&dyn AudioDriver> {
-        self.audio.as_deref()
+    pub fn audio_processor(&self) -> Option<&AudioSystem> {
+        self.audio.as_ref()
     }
 
     /// Returns a mutable reference to the audio processor.
-    pub fn audio_processor_mut(&mut self) -> Option<&mut dyn AudioDriver> {
-        self.audio
-            .as_mut()
-            .map(|b| &mut **b as &mut dyn AudioDriver)
+    pub fn audio_processor_mut(&mut self) -> Option<&mut AudioSystem> {
+        self.audio.as_mut()
     }
 
     /// Set the audio driver.
@@ -245,7 +247,7 @@ impl MainController {
     ///
     /// In Java, the audio driver is created in create() based on AudioConfig.DriverType.
     /// In Rust, we inject it to avoid pulling in the concrete driver crate.
-    pub fn set_audio_driver(&mut self, audio: Box<dyn AudioDriver>) {
+    pub fn set_audio_driver(&mut self, audio: AudioSystem) {
         self.audio = Some(audio);
     }
 
