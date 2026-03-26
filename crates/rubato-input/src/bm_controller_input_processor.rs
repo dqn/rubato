@@ -552,7 +552,7 @@ impl BMSPlayerInputDevice for BMControllerInputProcessor {
 
     fn clear(&mut self) {
         self.buttonchanged.fill(false);
-        self.buttontime.fill(i64::MIN);
+        self.buttontime.fill(i64::MIN / 2);
         self.last_pressed_button = -1;
     }
 }
