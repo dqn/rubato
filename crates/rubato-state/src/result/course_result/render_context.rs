@@ -379,6 +379,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for CourseResultRender
 
 impl rubato_skin::main_state::MainState for CourseResultRenderContext<'_> {}
 
+#[allow(dead_code)]
 pub(super) struct CourseResultMouseContext<'a> {
     pub(super) timer: &'a mut rubato_core::timer_manager::TimerManager,
     pub(super) result: &'a mut CourseResult,

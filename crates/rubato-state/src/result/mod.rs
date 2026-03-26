@@ -72,6 +72,7 @@ pub mod course_result_skin {
 /// - `$state_variant`: the MainStateType variant (e.g. `Result` or `CourseResult`)
 /// - `$render_ctx`: the render context struct (e.g. `ResultRenderContext`)
 /// - `$mouse_ctx`: the mouse context struct (e.g. `ResultMouseContext`)
+#[allow(unused_macros)]
 macro_rules! impl_result_main_state {
     (
         $result_type:ty,
@@ -114,18 +115,32 @@ macro_rules! impl_result_main_state {
             };
             let mut timer = std::mem::take(&mut self.main_data.timer);
 
-            {
-                let mut ctx = $render_ctx {
-                    timer: &mut timer,
-                    data: &self.data,
-                    resource: &self.resource,
-                    main: &mut self.main,
-                    offsets: &self.main_data.offsets,
-                };
-                skin.update_custom_objects_timed(&mut ctx);
-                skin.swap_sprite_batch(sprite);
-                skin.draw_all_objects_timed(&mut ctx);
-                skin.swap_sprite_batch(sprite);
+            let mut snapshot = self.build_snapshot(&timer);
+            skin.update_custom_objects_timed(&mut snapshot);
+            skin.swap_sprite_batch(sprite);
+            skin.draw_all_objects_timed(&mut snapshot);
+            skin.swap_sprite_batch(sprite);
+
+            // Drain non-event actions (timers, audio, state changes)
+            self.drain_actions(&mut snapshot.actions, &mut timer);
+
+            // Replay queued custom events now that the skin is available again.
+            let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
+            let mut depth = 0;
+            while !pending_events.is_empty() && depth < 8 {
+                let mut replay_snapshot = self.build_snapshot(&timer);
+                for (id, arg1, arg2) in pending_events {
+                    skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
+                }
+                self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+                pending_events = replay_snapshot.actions.custom_events;
+                depth += 1;
+            }
+            if depth >= 8 {
+                log::warn!(
+                    "{} render_skin event replay exceeded depth limit",
+                    stringify!($state_variant)
+                );
             }
 
             self.main_data.timer = timer;
@@ -140,26 +155,21 @@ macro_rules! impl_result_main_state {
             let mut timer = std::mem::take(&mut self.main_data.timer);
 
             {
-                let mut ctx = $mouse_ctx {
-                    timer: &mut timer,
-                    result: self,
-                };
-                skin.mouse_pressed_at(&mut ctx, button, x, y);
-            }
+                let mut snapshot = self.build_snapshot(&timer);
+                skin.mouse_pressed_at(&mut snapshot, button, x, y);
+                self.drain_actions(&mut snapshot.actions, &mut timer);
 
-            // Replay custom events that were queued during mouse handling
-            // (the skin was taken, so execute_custom_event could not be called).
-            let pending = std::mem::take(&mut self.pending_custom_events);
-            if !pending.is_empty() {
-                let mut ctx = $render_ctx {
-                    timer: &mut timer,
-                    data: &self.data,
-                    resource: &self.resource,
-                    main: &mut self.main,
-                    offsets: &self.main_data.offsets,
-                };
-                for (id, arg1, arg2) in pending {
-                    skin.execute_custom_event(&mut ctx, id, arg1, arg2);
+                // Replay queued custom events with depth limit
+                let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
+                let mut depth = 0;
+                while !pending_events.is_empty() && depth < 8 {
+                    let mut replay_snapshot = self.build_snapshot(&timer);
+                    for (id, arg1, arg2) in pending_events {
+                        skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
+                    }
+                    self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+                    pending_events = replay_snapshot.actions.custom_events;
+                    depth += 1;
                 }
             }
 
@@ -175,25 +185,21 @@ macro_rules! impl_result_main_state {
             let mut timer = std::mem::take(&mut self.main_data.timer);
 
             {
-                let mut ctx = $mouse_ctx {
-                    timer: &mut timer,
-                    result: self,
-                };
-                skin.mouse_dragged_at(&mut ctx, button, x, y);
-            }
+                let mut snapshot = self.build_snapshot(&timer);
+                skin.mouse_dragged_at(&mut snapshot, button, x, y);
+                self.drain_actions(&mut snapshot.actions, &mut timer);
 
-            // Replay custom events that were queued during mouse handling
-            let pending = std::mem::take(&mut self.pending_custom_events);
-            if !pending.is_empty() {
-                let mut ctx = $render_ctx {
-                    timer: &mut timer,
-                    data: &self.data,
-                    resource: &self.resource,
-                    main: &mut self.main,
-                    offsets: &self.main_data.offsets,
-                };
-                for (id, arg1, arg2) in pending {
-                    skin.execute_custom_event(&mut ctx, id, arg1, arg2);
+                // Replay queued custom events with depth limit
+                let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
+                let mut depth = 0;
+                while !pending_events.is_empty() && depth < 8 {
+                    let mut replay_snapshot = self.build_snapshot(&timer);
+                    for (id, arg1, arg2) in pending_events {
+                        skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
+                    }
+                    self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+                    pending_events = replay_snapshot.actions.custom_events;
+                    depth += 1;
                 }
             }
 
@@ -261,4 +267,5 @@ macro_rules! impl_result_main_state {
     };
 }
 
+#[allow(unused_imports)]
 pub(crate) use impl_result_main_state;

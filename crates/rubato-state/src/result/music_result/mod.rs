@@ -23,6 +23,9 @@ use super::{
     RankingData,
 };
 use rubato_core::ir_config::{IR_SEND_ALWAYS, IR_SEND_COMPLETE_SONG, IR_SEND_UPDATE_SCORE};
+use rubato_types::property_snapshot::PropertySnapshot;
+use rubato_types::skin_action_queue::SkinActionQueue;
+use rubato_types::timer_id::TimerId;
 
 mod render_context;
 mod score_handler;
@@ -51,6 +54,8 @@ pub struct MusicResult {
     /// Custom events queued during mouse handling (skin is taken, so
     /// execute_custom_event cannot be called). Replayed after the skin
     /// is restored.
+    /// Only used by legacy ResultMouseContext in tests after PropertySnapshot migration.
+    #[allow(dead_code)]
     pub(crate) pending_custom_events: Vec<(i32, i32, i32)>,
 }
 
@@ -693,6 +698,300 @@ impl MusicResult {
     fn stop_sound_inner(&mut self, sound: SoundType) {
         super::result_common::stop_sound(&mut self.main, &sound);
     }
+
+    /// Build a PropertySnapshot capturing all raw data needed for skin rendering.
+    fn build_snapshot(&self, timer: &TimerManager) -> PropertySnapshot {
+        use super::shared_render_context;
+
+        let mut s = PropertySnapshot::new();
+
+        // ---- Timing ----
+        s.now_time = timer.now_time();
+        s.now_micro_time = timer.now_micro_time();
+        s.boot_time_millis = timer.boot_time_millis();
+        for (i, &val) in timer.timer_values().iter().enumerate() {
+            if val != i64::MIN {
+                s.timers.insert(TimerId::new(i as i32), val);
+            }
+        }
+        s.recent_judges = timer.recent_judges().to_vec();
+        s.recent_judges_index = timer.recent_judges_index();
+
+        // ---- State identity ----
+        s.state_type = Some(rubato_types::main_state_type::MainStateType::Result);
+
+        // ---- Config ----
+        s.config = Some(Box::new(self.main.config().clone()));
+        s.player_config = Some(Box::new(self.resource.player_config().clone()));
+
+        // ---- Play config (resolve mode from song data) ----
+        s.play_config = self
+            .resource
+            .songdata()
+            .and_then(|song| match song.chart.mode {
+                5 => Some(bms_model::mode::Mode::BEAT_5K),
+                7 => Some(bms_model::mode::Mode::BEAT_7K),
+                9 => Some(bms_model::mode::Mode::POPN_9K),
+                10 => Some(bms_model::mode::Mode::BEAT_10K),
+                14 => Some(bms_model::mode::Mode::BEAT_14K),
+                25 => Some(bms_model::mode::Mode::KEYBOARD_24K),
+                50 => Some(bms_model::mode::Mode::KEYBOARD_24K_DOUBLE),
+                _ => None,
+            })
+            .map(|mode| {
+                Box::new(
+                    self.resource
+                        .player_config()
+                        .play_config_ref(mode)
+                        .playconfig
+                        .clone(),
+                )
+            });
+
+        // ---- Song / score data ----
+        s.song_data = self.resource.songdata().map(|d| Box::new(d.clone()));
+        s.score_data = self.data.score.score.as_ref().map(|d| Box::new(d.clone()));
+        s.rival_score_data = Some(Box::new(self.data.oldscore.clone()));
+        s.target_score_data = self
+            .resource
+            .target_score_data()
+            .map(|d| Box::new(d.clone()));
+        s.replay_option_data = self.resource.replay_data().map(|d| Box::new(d.clone()));
+        s.score_data_property = self.data.score.clone();
+
+        // ---- Player / course data ----
+        s.player_data = Some(*self.resource.player_data());
+        s.is_course_mode = self.resource.course_bms_models().is_some();
+        s.course_index = self
+            .resource
+            .course_bms_models()
+            .map_or(0, |_| self.resource.course_gauge().len());
+        s.course_song_count = self
+            .resource
+            .course_bms_models()
+            .map_or(0, |models| models.len());
+        s.is_update_score = self.resource.is_update_score();
+
+        // ---- Offsets ----
+        s.offsets = self.main_data.offsets.clone();
+
+        // ---- Gauge data ----
+        s.gauge_value = shared_render_context::gauge_value(&self.resource);
+        s.gauge_type = self.data.gauge_type;
+        s.is_gauge_max = shared_render_context::is_gauge_max(&self.resource);
+        s.gauge_element_borders = shared_render_context::gauge_element_borders(&self.resource);
+        s.gauge_history = self.resource.gauge().cloned();
+        s.course_gauge_history = self.resource.course_gauge().to_vec();
+        s.gauge_border_max =
+            shared_render_context::gauge_border_max(&self.resource, self.data.gauge_type);
+        s.gauge_min = shared_render_context::gauge_min(&self.resource, self.data.gauge_type);
+        s.result_gauge_type = self.data.gauge_type;
+
+        // gauge_transition_last_values: populate for all gauge types
+        if let Some(gauge_history) = self.resource.gauge() {
+            for (i, type_history) in gauge_history.iter().enumerate() {
+                if let Some(&last) = type_history.last() {
+                    s.gauge_transition_last_values.insert(i as i32, last);
+                }
+            }
+        }
+
+        // ---- Timing distribution / judge area ----
+        s.timing_distribution = shared_render_context::get_timing_distribution(&self.data).cloned();
+        s.judge_area = shared_render_context::judge_area(&self.resource);
+
+        // ---- Judge counts ----
+        for judge in 0..=5 {
+            s.judge_counts.insert(
+                (judge, true),
+                shared_render_context::judge_count(&self.data, judge, true),
+            );
+            s.judge_counts.insert(
+                (judge, false),
+                shared_render_context::judge_count(&self.data, judge, false),
+            );
+        }
+
+        // ---- Ranking data ----
+        s.ranking_offset = self.data.ranking_offset;
+        if let Some(ref ranking) = self.data.ranking {
+            for slot in 0..10 {
+                let index = self.data.ranking_offset + slot;
+                let clear_type = ranking
+                    .score(index)
+                    .map(|score| score.clear.id())
+                    .unwrap_or(-1);
+                s.ranking_clear_types.push(clear_type);
+            }
+        }
+
+        // ---- Lane shuffle patterns ----
+        s.lane_shuffle_patterns = self
+            .resource
+            .replay_data()
+            .and_then(|rd| rd.lane_shuffle_pattern.clone());
+
+        // ---- Result-specific booleans ----
+        // Autoplay indicators (32/33)
+        let play_mode = self.resource.play_mode().mode;
+        s.booleans.insert(
+            32,
+            play_mode != BMSPlayerModeType::Autoplay && play_mode != BMSPlayerModeType::Replay,
+        );
+        s.booleans.insert(
+            33,
+            play_mode == BMSPlayerModeType::Autoplay || play_mode == BMSPlayerModeType::Replay,
+        );
+        // Gauge groove/hard, clear/fail, gauge ex (42/43/90/91/1046)
+        let course_score = self.resource.course_score_data();
+        s.booleans.insert(
+            42,
+            shared_render_context::boolean_value(&self.data, course_score, 42),
+        );
+        s.booleans.insert(
+            43,
+            shared_render_context::boolean_value(&self.data, course_score, 43),
+        );
+        s.booleans.insert(
+            90,
+            shared_render_context::boolean_value(&self.data, course_score, 90),
+        );
+        s.booleans.insert(
+            91,
+            shared_render_context::boolean_value(&self.data, course_score, 91),
+        );
+        s.booleans.insert(
+            1046,
+            shared_render_context::boolean_value(&self.data, course_score, 1046),
+        );
+
+        // ---- Result-specific integers ----
+        let playtime = self.resource.player_data().playtime;
+        let songdata = self.resource.songdata();
+        let player_data = Some(self.resource.player_data());
+
+        // Populate all result-specific integers from shared_render_context
+        let result_int_ids: &[i32] = &[
+            71, 72, 74, 75, 76, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 100, 101, 102, 103, 105,
+            106, 108, 110, 111, 112, 113, 114, 115, 116, 121, 122, 123, 128, 150, 151, 152, 153,
+            154, 155, 156, 157, 158, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 182,
+            183, 184, 200, 271, 280, 281, 282, 283, 284, 285, 286, 287, 288, 289, 350, 370, 371,
+            372, 373, 374, 375, 376, 377, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390,
+            391, 392, 393, 394, 395, 396, 397, 398, 399, 410, 411, 412, 413, 414, 415, 416, 417,
+            418, 419, 423, 424, 425,
+        ];
+        for &id in result_int_ids {
+            let val = shared_render_context::integer_value(
+                &self.data,
+                timer.boot_time_millis(),
+                playtime,
+                songdata,
+                player_data,
+                id,
+            );
+            // Only insert if meaningful (not the fallback i32::MIN from the shared function).
+            // Actually, we always insert so the snapshot has the correct value for all IDs.
+            s.integers.insert(id, val);
+        }
+
+        // ---- Result-specific floats ----
+        s.floats
+            .insert(1107, shared_render_context::gauge_value(&self.resource));
+        // Populate all result-specific float values from shared_render_context
+        let result_float_ids: &[i32] = &[
+            85, 86, 87, 88, 89, 110, 111, 112, 113, 114, 115, 122, 135, 155, 157, 183, 285, 286,
+            287, 288, 289, 1102, 1115,
+        ];
+        for &id in result_float_ids {
+            if let Some(val) = shared_render_context::float_value(&self.data, id) {
+                s.floats.insert(id, val);
+            }
+        }
+
+        // ---- Result-specific strings ----
+        // Ranking names (120-129)
+        for slot in 0..10 {
+            let name = shared_render_context::ranking_name(&self.data, slot);
+            if !name.is_empty() {
+                s.strings.insert(120 + slot, name);
+            }
+        }
+        // Song hashes (1030/1031)
+        if let Some(song) = self.resource.songdata() {
+            if !song.file.md5.is_empty() {
+                s.strings.insert(1030, song.file.md5.clone());
+            }
+            if !song.file.sha256.is_empty() {
+                s.strings.insert(1031, song.file.sha256.clone());
+            }
+        }
+
+        s
+    }
+
+    /// Apply queued actions from the snapshot back to live game state.
+    fn drain_actions(&mut self, actions: &mut SkinActionQueue, timer: &mut TimerManager) {
+        // Timer sets
+        for (timer_id, micro_time) in actions.timer_sets.drain(..) {
+            timer.set_micro_timer(timer_id, micro_time);
+        }
+
+        // State changes
+        for state in actions.state_changes.drain(..) {
+            self.main.change_state(state);
+        }
+
+        // Audio
+        for (path, volume, is_loop) in actions.audio_plays.drain(..) {
+            self.main.play_audio_path(&path, volume, is_loop);
+        }
+        for path in actions.audio_stops.drain(..) {
+            self.main.stop_audio_path(&path);
+        }
+
+        // Config propagation
+        if actions.audio_config_changed {
+            if let Some(audio) = self.main.config().audio.clone() {
+                self.main.update_audio_config(audio);
+            }
+            actions.audio_config_changed = false;
+        }
+
+        // Float writes (volume sliders IDs 17-19)
+        for (id, value) in actions.float_writes.drain(..) {
+            if (17..=19).contains(&id)
+                && let Some(mut audio) = self.main.config().audio.clone()
+            {
+                let clamped = value.clamp(0.0, 1.0);
+                match id {
+                    17 => audio.systemvolume = clamped,
+                    18 => audio.keyvolume = clamped,
+                    19 => audio.bgvolume = clamped,
+                    _ => {}
+                }
+                self.main.update_audio_config(audio);
+            }
+        }
+
+        // Replay save events from custom events
+        // (replay_index_from_event_id maps event IDs 19, 316, 317, 318 to replay slots)
+        // These are handled during the custom_events replay loop, not here.
+
+        // Option change sound
+        if actions.option_change_sound {
+            self.main.play_sound(&SoundType::OptionChange, false);
+            actions.option_change_sound = false;
+        }
+    }
+
+    /// Copy player_config back from the snapshot to the resource if it was modified.
+    fn propagate_player_config(&mut self, snapshot: &PropertySnapshot) {
+        if let Some(ref pc) = snapshot.player_config
+            && let Some(target) = self.resource.player_config_mut()
+        {
+            *target = (**pc).clone();
+        }
+    }
 }
 
 // ============================================================
@@ -700,7 +999,200 @@ impl MusicResult {
 // ============================================================
 
 impl MainState for MusicResult {
-    super::impl_result_main_state!(MusicResult, Result, ResultRenderContext, ResultMouseContext);
+    fn state_type(&self) -> Option<MainStateType> {
+        Some(MainStateType::Result)
+    }
+
+    fn main_state_data(&self) -> &MainStateData {
+        &self.main_data
+    }
+
+    fn main_state_data_mut(&mut self) -> &mut MainStateData {
+        &mut self.main_data
+    }
+
+    fn groove_gauge_value(&self) -> Option<f32> {
+        self.resource.groove_gauge().map(|g| g.value())
+    }
+
+    fn create(&mut self) {
+        self.do_create();
+    }
+
+    fn prepare(&mut self) {
+        self.do_prepare();
+    }
+
+    fn render(&mut self) {
+        self.do_render();
+    }
+
+    fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
+        let mut skin = match self.main_data.skin.take() {
+            Some(s) => s,
+            None => return,
+        };
+        let mut timer = std::mem::take(&mut self.main_data.timer);
+
+        let mut snapshot = self.build_snapshot(&timer);
+        skin.update_custom_objects_timed(&mut snapshot);
+        skin.swap_sprite_batch(sprite);
+        skin.draw_all_objects_timed(&mut snapshot);
+        skin.swap_sprite_batch(sprite);
+
+        // Drain non-event actions (timers, audio, state changes)
+        self.drain_actions(&mut snapshot.actions, &mut timer);
+
+        // Replay queued custom events now that the skin is available again.
+        let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
+        let mut depth = 0;
+        while !pending_events.is_empty() && depth < 8 {
+            let mut replay_snapshot = self.build_snapshot(&timer);
+            for (id, arg1, arg2) in pending_events {
+                // Check for replay save events before passing to skin
+                if let Some(index) = super::shared_render_context::replay_index_from_event_id(id) {
+                    self.save_replay_data(index);
+                } else {
+                    skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
+                }
+            }
+            self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+            pending_events = replay_snapshot.actions.custom_events;
+            depth += 1;
+        }
+        if depth >= 8 {
+            log::warn!("Result render_skin event replay exceeded depth limit");
+        }
+
+        self.main_data.timer = timer;
+        self.main_data.skin = Some(skin);
+    }
+
+    fn handle_skin_mouse_pressed(&mut self, button: i32, x: i32, y: i32) {
+        let mut skin = match self.main_data.skin.take() {
+            Some(s) => s,
+            None => return,
+        };
+        let mut timer = std::mem::take(&mut self.main_data.timer);
+
+        let mut snapshot = self.build_snapshot(&timer);
+        skin.mouse_pressed_at(&mut snapshot, button, x, y);
+        self.drain_actions(&mut snapshot.actions, &mut timer);
+        self.propagate_player_config(&snapshot);
+
+        // Replay queued custom events.
+        let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
+        let mut depth = 0;
+        while !pending_events.is_empty() && depth < 8 {
+            let mut replay_snapshot = self.build_snapshot(&timer);
+            for (id, arg1, arg2) in pending_events {
+                if let Some(index) = super::shared_render_context::replay_index_from_event_id(id) {
+                    self.save_replay_data(index);
+                } else {
+                    skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
+                }
+            }
+            self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+            self.propagate_player_config(&replay_snapshot);
+            pending_events = replay_snapshot.actions.custom_events;
+            depth += 1;
+        }
+        if depth >= 8 {
+            log::warn!("Result mouse_pressed event replay exceeded depth limit");
+        }
+
+        self.main_data.timer = timer;
+        self.main_data.skin = Some(skin);
+    }
+
+    fn handle_skin_mouse_dragged(&mut self, button: i32, x: i32, y: i32) {
+        let mut skin = match self.main_data.skin.take() {
+            Some(s) => s,
+            None => return,
+        };
+        let mut timer = std::mem::take(&mut self.main_data.timer);
+
+        let mut snapshot = self.build_snapshot(&timer);
+        skin.mouse_dragged_at(&mut snapshot, button, x, y);
+        self.drain_actions(&mut snapshot.actions, &mut timer);
+        self.propagate_player_config(&snapshot);
+
+        // Replay queued custom events.
+        let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
+        let mut depth = 0;
+        while !pending_events.is_empty() && depth < 8 {
+            let mut replay_snapshot = self.build_snapshot(&timer);
+            for (id, arg1, arg2) in pending_events {
+                if let Some(index) = super::shared_render_context::replay_index_from_event_id(id) {
+                    self.save_replay_data(index);
+                } else {
+                    skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
+                }
+            }
+            self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+            self.propagate_player_config(&replay_snapshot);
+            pending_events = replay_snapshot.actions.custom_events;
+            depth += 1;
+        }
+        if depth >= 8 {
+            log::warn!("Result mouse_dragged event replay exceeded depth limit");
+        }
+
+        self.main_data.timer = timer;
+        self.main_data.skin = Some(skin);
+    }
+
+    fn input(&mut self) {
+        self.do_input();
+    }
+
+    fn sync_input_from(
+        &mut self,
+        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_from(input);
+    }
+
+    fn sync_input_back_to(
+        &mut self,
+        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
+    ) {
+        self.main.sync_input_back_to(input);
+    }
+
+    fn load_skin(&mut self, skin_type: i32) {
+        let skin_path = self
+            .resource
+            .player_config()
+            .skin
+            .get(skin_type as usize)
+            .and_then(|skin| skin.as_ref())
+            .and_then(|skin| skin.path.clone())
+            .or_else(|| rubato_types::skin_config::SkinConfig::default_for_id(skin_type).path);
+        // Take timer out to avoid borrowing self.main_data and its fields simultaneously
+        let mut timer = std::mem::take(&mut self.main_data.timer);
+        let loaded = {
+            let mut ctx = ResultRenderContext {
+                timer: &mut timer,
+                data: &self.data,
+                resource: &self.resource,
+                main: &mut self.main,
+                offsets: &self.main_data.offsets,
+            };
+            skin_path.as_deref().and_then(|path| {
+                rubato_skin::skin_loader::load_skin_from_path_with_state(&mut ctx, skin_type, path)
+            })
+        };
+        self.main_data.timer = timer;
+        if let Some(skin) = loaded {
+            self.skin =
+                Some(crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin));
+            self.main_data.skin = Some(Box::new(skin));
+        } else {
+            self.skin = None;
+            self.main_data.skin = None;
+        }
+    }
 
     fn shutdown(&mut self) {
         self.do_shutdown();
@@ -711,6 +1203,10 @@ impl MainState for MusicResult {
             skin.dispose_skin();
         }
         self.main_data.skin = None;
+    }
+
+    fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
+        self.resource.take_inner().map(|b| b.into_any_send())
     }
 }
 

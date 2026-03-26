@@ -364,6 +364,7 @@ impl rubato_types::skin_render_context::SkinRenderContext for ResultRenderContex
 
 impl rubato_skin::main_state::MainState for ResultRenderContext<'_> {}
 
+#[allow(dead_code)] // Only used in tests after PropertySnapshot migration
 pub(super) struct ResultMouseContext<'a> {
     pub(super) timer: &'a mut TimerManager,
     pub(super) result: &'a mut MusicResult,
