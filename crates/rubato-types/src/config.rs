@@ -490,7 +490,7 @@ impl Config {
     }
 
     pub fn set_analog_ticks_per_scroll(&mut self, value: i32) {
-        self.select.analog_ticks_per_scroll = value.max(1);
+        self.select.analog_ticks_per_scroll = value.clamp(1, 100);
     }
 
     pub fn obs_ws_pass(&self) -> Option<&str> {
