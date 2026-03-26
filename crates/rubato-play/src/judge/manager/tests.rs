@@ -2911,3 +2911,598 @@ fn bss_end_no_match_counts_as_ems_miss() {
         score.judge_counts.lpr
     );
 }
+
+// =========================================================================
+// Gap 1: Multi-lane (chord) tests
+// =========================================================================
+
+/// Helper: create a BMSModel with notes on multiple lanes at specified times.
+///
+/// Each entry is (lane, time_us). All notes are normal notes with wav=1.
+fn make_model_with_multi_lane_notes(notes_spec: &[(usize, i64)]) -> BMSModel {
+    let mut model = BMSModel::new();
+    model.set_mode(Mode::BEAT_7K);
+    model.judgerank = 100;
+
+    // Group notes by time to create timelines (multiple notes can share a timeline).
+    // Use a BTreeMap to keep timelines sorted by time.
+    let mut time_map: std::collections::BTreeMap<i64, Vec<(usize, Note)>> =
+        std::collections::BTreeMap::new();
+    for &(lane, time_us) in notes_spec {
+        let mut note = Note::new_normal(1);
+        note.set_micro_time(time_us);
+        time_map.entry(time_us).or_default().push((lane, note));
+    }
+
+    let mut timelines = Vec::new();
+    for (time_us, lane_notes) in &time_map {
+        let mut tl = TimeLine::new(0.0, *time_us, 8);
+        for (lane, note) in lane_notes {
+            tl.set_note(*lane as i32, Some(note.clone()));
+        }
+        timelines.push(tl);
+    }
+
+    model.timelines = timelines;
+    model
+}
+
+/// Helper: find the key index assigned to a given lane in BEAT_7K mode.
+fn key_for_lane(lane: usize) -> usize {
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_lane_assign = lp.key_lane_assign();
+    for (key_idx, &assigned_lane) in key_lane_assign.iter().enumerate() {
+        if assigned_lane == lane as i32 {
+            return key_idx;
+        }
+    }
+    panic!("No key found for lane {lane}");
+}
+
+#[test]
+fn chord_both_lanes_pressed_simultaneously_get_pgreat() {
+    // Two notes on lanes 0 and 1 at the same time (1s).
+    // Press both keys simultaneously at exactly the note time.
+    // Both should be judged as PGREAT.
+    let model = make_model_with_multi_lane_notes(&[(0, 1_000_000), (1, 1_000_000)]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let mut jm = JudgeManager::from_config(&config);
+
+    let gp = crate::gauge_property::GaugeProperty::Lr2;
+    let mut gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    let key0 = key_for_lane(0);
+    let key1 = key_for_lane(1);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before the note time
+    let mut time = 0i64;
+    while time < 999_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press both keys simultaneously at exactly 1_000_000
+    let press_time = 1_000_000i64;
+    let mut keys = vec![false; key_count];
+    keys[key0] = true;
+    keys[key1] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[key0] = press_time;
+    key_times[key1] = press_time;
+    jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+
+    // Both notes should be judged as PGREAT
+    let pg_count = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    assert_eq!(
+        pg_count, 2,
+        "Both chord notes should be PGREAT, got PG count = {pg_count}"
+    );
+    assert_eq!(jm.combo(), 2, "Combo should be 2 after hitting both notes");
+    assert_eq!(jm.max_combo(), 2, "Max combo should be 2");
+    assert_eq!(jm.past_notes(), 2, "Both notes should be counted as past");
+
+    // Both ghost entries should be PGREAT
+    for (i, &g) in jm.ghost().iter().enumerate() {
+        assert_eq!(g, JUDGE_PG, "ghost[{i}] should be PGREAT");
+    }
+}
+
+#[test]
+fn chord_only_one_lane_pressed_other_gets_miss() {
+    // Two notes on lanes 0 and 1 at the same time (1s).
+    // Press only lane 0's key. Lane 1's note should eventually be judged as miss.
+    let model = make_model_with_multi_lane_notes(&[(0, 1_000_000), (1, 1_000_000)]);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type: LnType::LongNote,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let mut jm = JudgeManager::from_config(&config);
+
+    let gp = crate::gauge_property::GaugeProperty::Lr2;
+    let mut gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
+
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+
+    let key0 = key_for_lane(0);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before the note time
+    let mut time = 0i64;
+    while time < 999_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press only lane 0's key at exactly 1_000_000
+    let press_time = 1_000_000i64;
+    let mut keys = vec![false; key_count];
+    keys[key0] = true;
+    let mut key_times = vec![i64::MIN; key_count];
+    key_times[key0] = press_time;
+    jm.update(press_time, &notes, &keys, &key_times, &mut gauge);
+
+    // Lane 0 note should be judged (PGREAT), lane 1 not yet
+    let pg_count = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    assert_eq!(
+        pg_count, 1,
+        "Only lane 0's note should be PGREAT after pressing lane 0"
+    );
+
+    // Release and advance time well past the miss window (LR2 BAD window is +-200ms)
+    // The miss POOR triggers when notes pass beyond the judge window.
+    time = press_time + 1_000;
+    while time <= 2_500_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+
+    // Now both notes should have been judged
+    assert_eq!(
+        jm.past_notes(),
+        2,
+        "Both notes should be counted as past (one hit, one miss)"
+    );
+
+    // Lane 0 was PGREAT, lane 1 was miss-POOR.
+    // Total PGREAT count should still be 1.
+    let pg_count_final = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    assert_eq!(pg_count_final, 1, "Still only 1 PGREAT (lane 0)");
+
+    // Combo should have been broken by the miss on lane 1.
+    // After the miss, combo resets to 0.
+    assert_eq!(
+        jm.combo(),
+        0,
+        "Combo should be 0 after lane 1's miss broke the streak"
+    );
+
+    // Max combo should be 1 (from the single PGREAT on lane 0)
+    assert_eq!(
+        jm.max_combo(),
+        1,
+        "Max combo should be 1 (the PGREAT before the miss)"
+    );
+}
+
+// =========================================================================
+// Gap 2: Manual CN/LN release timing tests
+// =========================================================================
+
+/// Helper: create a JudgeManager for manual LN testing with a single LN pair.
+///
+/// Returns (JudgeManager, notes, gauge, key_count, key_for_lane_0).
+fn make_manual_ln_jm(
+    start_us: i64,
+    end_us: i64,
+    ln_type: LnType,
+) -> (JudgeManager, Vec<JudgeNote>, GrooveGauge, usize, usize) {
+    let model = make_model_with_ln_pair(start_us, end_us);
+    let notes = build_judge_notes(&model);
+    let jp = crate::judge_property::lr2();
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property: &jp,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let jm = JudgeManager::from_config(&config);
+    let gp = crate::gauge_property::GaugeProperty::Lr2;
+    let gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+    let lane0_key = key_for_lane(0);
+    (jm, notes, gauge, key_count, lane0_key)
+}
+
+#[test]
+fn ln_press_on_time_release_at_exact_end_gets_pgreat() {
+    // LN pair: start at 1s, end at 2s. LnType::LongNote.
+    // Press key at exactly 1s (PGREAT start), release at exactly 2s (PGREAT end).
+    //
+    // LN release path (update.rs line 612-654):
+    //   judge = max(release_judge, lnstart_judge)
+    //   dmtime uses larger absolute value of release vs start
+    //   At exact end time: dmtime = notes[proc_idx].time_us - pmtime = 2_000_000 - 2_000_000 = 0
+    //   release_judge scans cnendmjudge: dmtime=0 is in PG window [-120000, 120000] -> judge=0
+    //   Combined: max(0, 0) = 0 (PG), dmtime=0 (not >= 3 && > 0), so immediate update_micro
+    //   -> judge.min(3) = 0 (PG)
+    let (mut jm, notes, mut gauge, key_count, lane0_key) =
+        make_manual_ln_jm(1_000_000, 2_000_000, LnType::LongNote);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before the LN start
+    let mut time = 0i64;
+    while time < 1_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press key at exactly 1s (LN start time)
+    let press_time = 1_000_000i64;
+    let mut keys_pressed = vec![false; key_count];
+    keys_pressed[lane0_key] = true;
+    let mut key_times_pressed = vec![i64::MIN; key_count];
+    key_times_pressed[lane0_key] = press_time;
+    jm.update(
+        press_time,
+        &notes,
+        &keys_pressed,
+        &key_times_pressed,
+        &mut gauge,
+    );
+
+    // Hold the key (advance time with key held, no key_changed_times)
+    time = press_time + 10_000;
+    while time < 2_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &keys_pressed,
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Release key at exactly 2s (LN end time)
+    let release_time = 2_000_000i64;
+    let mut key_times_released = vec![i64::MIN; key_count];
+    key_times_released[lane0_key] = release_time;
+    jm.update(
+        release_time,
+        &notes,
+        &vec![false; key_count],
+        &key_times_released,
+        &mut gauge,
+    );
+
+    // Advance a bit more to let deferred processing resolve
+    time = release_time + 1_000;
+    while time <= release_time + 100_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+
+    // The LN start should be judged as PGREAT.
+    // For LnType::LongNote, total_notes = 1 (end note not counted).
+    assert_eq!(jm.score().notes, 1, "LN mode: total notes should be 1");
+    assert_eq!(jm.past_notes(), 1, "LN should be judged");
+    let pg_count = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    assert_eq!(
+        pg_count, 1,
+        "Press on time + release at exact end should produce PGREAT"
+    );
+    assert_eq!(jm.max_combo(), 1, "Combo should be 1");
+    assert_eq!(jm.ghost()[0], JUDGE_PG, "Ghost should record PGREAT");
+}
+
+#[test]
+fn ln_press_on_time_release_slightly_early_within_great_window() {
+    // LN pair: start at 1s, end at 2s. LnType::LongNote.
+    // Press at exactly 1s (PG start). Release 50ms before end (within GR window).
+    //
+    // Release at 1_950_000. proc_idx points to LN end note at 2_000_000.
+    // dmtime = 2_000_000 - 1_950_000 = 50_000 (early release, positive dmtime).
+    // cnendmjudge PG window: [-120000, 120000]. 50_000 is within PG -> release_judge = 0.
+    // Combined: max(0, 0) = 0, dmtime = max_abs(50_000, 0) = 50_000.
+    // judge=0 < 3, so immediate update_micro with judge.min(3) = 0 (PG).
+    //
+    // Actually, the PG/GR/GD windows for LR2 cnendmjudge are all [-120000, 120000].
+    // So 50ms early is still PG for the release.
+    let (mut jm, notes, mut gauge, key_count, lane0_key) =
+        make_manual_ln_jm(1_000_000, 2_000_000, LnType::LongNote);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before the LN start
+    let mut time = 0i64;
+    while time < 1_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press key at exactly 1s
+    let press_time = 1_000_000i64;
+    let mut keys_pressed = vec![false; key_count];
+    keys_pressed[lane0_key] = true;
+    let mut key_times_pressed = vec![i64::MIN; key_count];
+    key_times_pressed[lane0_key] = press_time;
+    jm.update(
+        press_time,
+        &notes,
+        &keys_pressed,
+        &key_times_pressed,
+        &mut gauge,
+    );
+
+    // Hold the key
+    time = press_time + 10_000;
+    while time < 1_950_000 {
+        jm.update(
+            time,
+            &notes,
+            &keys_pressed,
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Release key 50ms before end (at 1_950_000)
+    let release_time = 1_950_000i64;
+    let mut key_times_released = vec![i64::MIN; key_count];
+    key_times_released[lane0_key] = release_time;
+    jm.update(
+        release_time,
+        &notes,
+        &vec![false; key_count],
+        &key_times_released,
+        &mut gauge,
+    );
+
+    // Advance to let deferred processing resolve
+    time = release_time + 1_000;
+    while time <= release_time + 200_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+
+    // Release 50ms early is within PG window ([-120000, 120000]) for cnendmjudge.
+    // Combined judge = max(PG_start=0, PG_release=0) = 0 (PG).
+    assert_eq!(jm.past_notes(), 1, "LN should be judged");
+    let pg_count = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    assert_eq!(
+        pg_count, 1,
+        "Release 50ms early (within PG cnendmjudge window) should still be PGREAT"
+    );
+    assert_eq!(jm.ghost()[0], JUDGE_PG, "Ghost should record PGREAT");
+}
+
+#[test]
+fn ln_press_on_time_release_way_too_early_triggers_deferred_path() {
+    // LN pair: start at 1s, end at 2s. LnType::LongNote.
+    // Press at exactly 1s. Release way too early at 1.3s (700ms before end).
+    //
+    // Release at 1_300_000. proc_idx points to LN end note at 2_000_000.
+    // dmtime = 2_000_000 - 1_300_000 = 700_000 (very early, positive dmtime).
+    // cnendmjudge BD window: [-200000, 200000]. 700_000 > 200_000 -> no window matches.
+    // release_judge = 4 (past all windows, judge = cnendmjudge.len() = 4).
+    // Combined: max(4, 0) = 4, dmtime = max_abs(700_000, 0) = 700_000.
+    // judge=4 >= 3 && dmtime=700_000 > 0 -> deferred release path.
+    // lnend_judge = 3 (forced to 3 in deferred path, line 630).
+    //
+    // The deferred path resolves in "LN end processing" (line 682-727):
+    // Since releasemargin = 0 for LR2, resolves same frame.
+    // Uses lnend_judge=3 (GOOD) for the final judgment.
+    let (mut jm, notes, mut gauge, key_count, lane0_key) =
+        make_manual_ln_jm(1_000_000, 2_000_000, LnType::LongNote);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before the LN start
+    let mut time = 0i64;
+    while time < 1_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press key at exactly 1s
+    let press_time = 1_000_000i64;
+    let mut keys_pressed = vec![false; key_count];
+    keys_pressed[lane0_key] = true;
+    let mut key_times_pressed = vec![i64::MIN; key_count];
+    key_times_pressed[lane0_key] = press_time;
+    jm.update(
+        press_time,
+        &notes,
+        &keys_pressed,
+        &key_times_pressed,
+        &mut gauge,
+    );
+
+    // Hold briefly then release at 1.3s (700ms before end)
+    time = press_time + 10_000;
+    while time < 1_300_000 {
+        jm.update(
+            time,
+            &notes,
+            &keys_pressed,
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Release key at 1_300_000
+    let release_time = 1_300_000i64;
+    let mut key_times_released = vec![i64::MIN; key_count];
+    key_times_released[lane0_key] = release_time;
+    jm.update(
+        release_time,
+        &notes,
+        &vec![false; key_count],
+        &key_times_released,
+        &mut gauge,
+    );
+
+    // Advance past the LN end to let the deferred path fully resolve
+    time = release_time + 1_000;
+    while time <= 2_500_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+
+    // The deferred release path should have judged the LN.
+    assert_eq!(jm.past_notes(), 1, "LN should be judged via deferred path");
+
+    // The judgment should NOT be PGREAT -- releasing 700ms early is too far.
+    // The deferred path sets lnend_judge=3 (GOOD/BAD level).
+    // For LR2 combo: [true, true, true, false, false, true]
+    // judge=3 has combo=false, so combo breaks.
+    let pg_count = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    let gr_count = jm.score().judge_counts.egr + jm.score().judge_counts.lgr;
+    assert_eq!(pg_count, 0, "Releasing 700ms early should not be PGREAT");
+    assert_eq!(gr_count, 0, "Releasing 700ms early should not be GREAT");
+
+    // The note should have been judged with a non-combo judgment (BAD or worse).
+    // Combo should be 0.
+    assert_eq!(jm.combo(), 0, "Releasing 700ms early should break combo");
+}
