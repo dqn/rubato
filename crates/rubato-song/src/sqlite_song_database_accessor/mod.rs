@@ -919,8 +919,12 @@ impl<'a> SongDatabaseUpdater<'a> {
         }
 
         if self.update_all {
-            let _ = tx.execute("DELETE FROM folder", []);
-            let _ = tx.execute("DELETE FROM song", []);
+            if let Err(e) = tx.execute("DELETE FROM folder", []) {
+                log::warn!("Failed to delete all folder entries: {}", e);
+            }
+            if let Err(e) = tx.execute("DELETE FROM song", []) {
+                log::warn!("Failed to delete all song entries: {}", e);
+            }
         } else {
             // Filter out empty bmsroot entries: an empty string produces
             // LIKE '%' which matches ALL rows and would delete everything.
@@ -957,12 +961,16 @@ impl<'a> SongDatabaseUpdater<'a> {
                     .iter()
                     .map(|p| p as &dyn rusqlite::types::ToSql)
                     .collect();
-                let _ = tx.execute(&delete_folder_sql, param_refs.as_slice());
+                if let Err(e) = tx.execute(&delete_folder_sql, param_refs.as_slice()) {
+                    log::warn!("Failed to delete stale folder entries: {}", e);
+                }
                 let param_refs: Vec<&dyn rusqlite::types::ToSql> = params
                     .iter()
                     .map(|p| p as &dyn rusqlite::types::ToSql)
                     .collect();
-                let _ = tx.execute(&delete_song_sql, param_refs.as_slice());
+                if let Err(e) = tx.execute(&delete_song_sql, param_refs.as_slice()) {
+                    log::warn!("Failed to delete stale song entries: {}", e);
+                }
             }
         }
 
