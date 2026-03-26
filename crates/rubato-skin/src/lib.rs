@@ -14,6 +14,7 @@ pub mod main_state;
 pub mod skin_config_offset;
 pub mod skin_resolution;
 pub mod skin_timer;
+pub mod snapshot_main_state;
 
 // Skin property enums (standalone, no subdir)
 pub mod skin_property;
