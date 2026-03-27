@@ -1,6 +1,9 @@
 //! Shared type definitions, configuration structures, and trait interfaces
 //! for the rubato BMS player.
 
+// BMS player mode (moved from rubato-core for dependency decoupling)
+pub mod bms_player_mode;
+
 // Shared types
 pub mod bar_sorter;
 pub mod bms_player_input_device;

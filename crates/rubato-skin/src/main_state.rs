@@ -14,7 +14,7 @@ pub trait MainState: rubato_types::skin_render_context::SkinRenderContext {
 
     /// Select a song with the given play mode.
     /// Only meaningful for MusicSelector.
-    fn select_song(&mut self, _mode: rubato_core::bms_player_mode::BMSPlayerMode) {
+    fn select_song(&mut self, _mode: rubato_types::bms_player_mode::BMSPlayerMode) {
         // default no-op
     }
 }

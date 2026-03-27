@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use rubato_core::bms_player_mode::BMSPlayerMode;
+use rubato_types::bms_player_mode::BMSPlayerMode;
 use rubato_types::property_snapshot::PropertySnapshot;
 use rubato_types::skin_render_context::SkinRenderContext;
 use rubato_types::timer_access::TimerAccess;

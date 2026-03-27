@@ -921,7 +921,7 @@ mod tests {
     struct LuaTestState {
         timer: Timer,
         offsets: HashMap<i32, SkinOffset>,
-        score_data_property: rubato_core::score_data_property::ScoreDataProperty,
+        score_data_property: rubato_types::score_data_property::ScoreDataProperty,
         judge_counts: HashMap<(i32, bool), i32>,
         gauge_value: f32,
         gauge_type: i32,
@@ -942,7 +942,8 @@ mod tests {
             Self {
                 timer: Timer::default(),
                 offsets: HashMap::new(),
-                score_data_property: rubato_core::score_data_property::ScoreDataProperty::default(),
+                score_data_property: rubato_types::score_data_property::ScoreDataProperty::default(
+                ),
                 judge_counts: HashMap::new(),
                 gauge_value: 0.0,
                 gauge_type: 0,

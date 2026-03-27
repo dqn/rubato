@@ -1,7 +1,7 @@
 use super::super::event::Event;
 use crate::reexports::MainState;
 
-use rubato_core::bms_player_mode::BMSPlayerMode;
+use rubato_types::bms_player_mode::BMSPlayerMode;
 use rubato_types::event_id::EventId;
 use rubato_types::judge_algorithm::DEFAULT_ALGORITHM;
 use rubato_types::main_state_type::MainStateType;

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+rubato-types.workspace = true
 wgpu = { workspace = true }
 ab_glyph = { workspace = true }
 image = { workspace = true }
@@ -17,3 +18,5 @@ egui-wgpu = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
+tempfile = { workspace = true }
+image = { workspace = true }

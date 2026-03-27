@@ -273,7 +273,7 @@ SCENETIME,9999\n\
         use crate::objects::skin_image::SkinImage;
         use crate::skin::SkinObject;
         use crate::skin_object::DestinationParams;
-        use rubato_core::main_state::SkinDrawable;
+        use rubato_render::skin_drawable::SkinDrawable;
 
         let mut state = make_state();
         state.base.op.insert(30, 1);

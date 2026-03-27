@@ -87,7 +87,7 @@ impl JSONSkinLoader {
     }
 
     /// Constructor for skin body loading
-    pub fn with_config(config: &rubato_core::config::Config) -> Self {
+    pub fn with_config(config: &rubato_types::config::Config) -> Self {
         Self {
             dstr: Resolution {
                 width: config.display.window_width as f32,

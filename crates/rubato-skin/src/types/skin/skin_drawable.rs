@@ -442,15 +442,15 @@ impl crate::reexports::MainState for TimerOnlyMainState<'_> {
         self.image_registry.get(&id).cloned()
     }
 
-    fn select_song(&mut self, mode: rubato_core::bms_player_mode::BMSPlayerMode) {
+    fn select_song(&mut self, mode: rubato_types::bms_player_mode::BMSPlayerMode) {
         let Some(ctx) = self.ctx.as_deref_mut() else {
             return;
         };
         let event_id = match mode.mode {
-            rubato_core::bms_player_mode::Mode::Play => 15,
-            rubato_core::bms_player_mode::Mode::Autoplay => 16,
-            rubato_core::bms_player_mode::Mode::Practice => 315,
-            rubato_core::bms_player_mode::Mode::Replay => return,
+            rubato_types::bms_player_mode::Mode::Play => 15,
+            rubato_types::bms_player_mode::Mode::Autoplay => 16,
+            rubato_types::bms_player_mode::Mode::Practice => 315,
+            rubato_types::bms_player_mode::Mode::Replay => return,
         };
         ctx.select_song_mode(event_id);
     }
@@ -518,7 +518,7 @@ impl Drop for ImageRegistryGuard {
     }
 }
 
-impl rubato_core::main_state::SkinDrawable for Skin {
+impl rubato_render::skin_drawable::SkinDrawable for Skin {
     fn prepare_skin(&mut self, state_type: Option<rubato_types::main_state_type::MainStateType>) {
         let null_timer = rubato_types::timer_access::NullTimer;
         let adapter = TimerOnlyMainState::from_timer(&null_timer, state_type);
@@ -684,8 +684,8 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         );
     }
 
-    fn play_skin_properties(&self) -> rubato_core::main_state::PlaySkinProperties {
-        rubato_core::main_state::PlaySkinProperties {
+    fn play_skin_properties(&self) -> rubato_render::skin_drawable::PlaySkinProperties {
+        rubato_render::skin_drawable::PlaySkinProperties {
             loadstart: self.play_loadstart,
             loadend: self.play_loadend,
             playstart: self.play_playstart,
@@ -1083,7 +1083,7 @@ mod skin_drawable_delegation_tests {
     fn test_register_image_via_skin_drawable_populates_registry() {
         use crate::skin_property::{IMAGE_BACKBMP, IMAGE_BANNER, IMAGE_STAGEFILE};
         use crate::types::skin_header::SkinHeader;
-        use rubato_core::main_state::SkinDrawable;
+        use rubato_render::skin_drawable::SkinDrawable;
         use rubato_render::pixmap::{Pixmap, PixmapFormat};
         use rubato_render::texture::{Texture, TextureRegion};
 

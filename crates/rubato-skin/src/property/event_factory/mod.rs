@@ -1,7 +1,7 @@
 use super::event::Event;
 use crate::skin_property;
 
-use rubato_core::bms_player_mode::BMSPlayerMode;
+use rubato_types::bms_player_mode::BMSPlayerMode;
 use rubato_types::event_id::EventId;
 use rubato_types::main_state_type::MainStateType;
 

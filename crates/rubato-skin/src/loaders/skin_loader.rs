@@ -4,9 +4,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use rubato_core::config::Config;
-use rubato_core::pixmap_resource_pool::PixmapResourcePool;
-use rubato_core::player_config::PlayerConfig;
+use rubato_render::pixmap_resource_pool::PixmapResourcePool;
+use rubato_types::config::Config;
+use rubato_types::player_config::PlayerConfig;
 
 use crate::reexports::{MainState, Texture};
 use crate::types::skin::Skin;
@@ -533,7 +533,7 @@ pub fn texture_with_mipmaps(path: &str, usecim: bool, use_mip_maps: bool) -> Opt
 mod tests {
     use super::*;
 
-    use rubato_core::player_config::PlayerConfig;
+    use rubato_types::player_config::PlayerConfig;
     use rubato_types::test_support::CurrentDirGuard;
 
     static CWD_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());

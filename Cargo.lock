@@ -4355,6 +4355,8 @@ dependencies = [
  "encoding_rs",
  "image",
  "log",
+ "rubato-types",
+ "tempfile",
  "tokio",
  "wgpu",
  "winit",
