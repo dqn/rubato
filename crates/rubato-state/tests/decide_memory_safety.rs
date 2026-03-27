@@ -1,18 +1,15 @@
-// Phase 60c: Verify MainControllerRef stores input processor directly (no more Box::leak).
+// Phase 60c: Verify MainControllerRef no longer leaks memory.
 //
 // Previously input_processor() used Box::leak to return references.
-// Now it returns a reference to an owned field, so repeated calls return the same address.
+// InputSnapshot migration removed the input processor entirely,
+// so there is nothing to leak. This test validates construction is safe.
 
 use rubato_state::decide::NullMainController;
 use rubato_state::decide::main_controller_ref::MainControllerRef;
 
-/// input_processor() returns the same stored instance on repeated calls.
+/// MainControllerRef can be constructed and dropped without leak.
 #[test]
-fn get_input_processor_returns_same_instance() {
-    let mut mc = MainControllerRef::new(Box::new(NullMainController));
-
-    let ptr1 = mc.input_processor() as *const _ as usize;
-    let ptr2 = mc.input_processor() as *const _ as usize;
-
-    assert_eq!(ptr1, ptr2, "should return same stored instance");
+fn construction_and_drop_is_safe() {
+    let mc = MainControllerRef::new(Box::new(NullMainController));
+    drop(mc);
 }

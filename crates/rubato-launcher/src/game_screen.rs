@@ -192,6 +192,10 @@ impl MainState for GameScreen {
         delegate!(mut self, sync_input_back_to(input))
     }
 
+    fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
+        delegate!(mut self, sync_input_snapshot(snapshot))
+    }
+
     fn sync_audio(&mut self, audio: &mut rubato_audio::audio_system::AudioSystem) {
         delegate!(mut self, sync_audio(audio))
     }

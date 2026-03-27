@@ -1177,6 +1177,8 @@ pub struct MusicDecide {
     cancel: bool,
     /// Cached ScoreDataProperty for skin property delegation.
     cached_score_data_property: rubato_types::score_data_property::ScoreDataProperty,
+    /// Read-only input snapshot for the current frame.
+    input_snapshot: Option<rubato_input::input_snapshot::InputSnapshot>,
     /// Outbox: pending system sound plays.
     pending_sounds: Vec<(SoundType, bool)>,
     /// Outbox: pending audio path plays.
@@ -1203,6 +1205,7 @@ impl MusicDecide {
             resource,
             cancel: false,
             cached_score_data_property,
+            input_snapshot: None,
             pending_sounds: Vec::new(),
             pending_audio_path_plays: Vec::new(),
             pending_audio_path_stops: Vec::new(),
@@ -1489,21 +1492,30 @@ impl MainState for MusicDecide {
         }
     }
 
+    fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
+        self.input_snapshot = Some(snapshot.clone());
+    }
+
     fn input_with_ctx(&mut self, ctx: &mut rubato_core::app_context::AppContext) {
-        if !self.data.timer.is_timer_on(TIMER_FADEOUT)
+        if let Some(ref snapshot) = self.input_snapshot
+            && !self.data.timer.is_timer_on(TIMER_FADEOUT)
             && self.data.timer.is_timer_on(TIMER_STARTINPUT)
         {
-            let (decide, cancel) = {
-                let input = self.main.input_processor();
-                let decide = input.key_state(0)
-                    || input.key_state(2)
-                    || input.key_state(4)
-                    || input.key_state(6)
-                    || input.is_control_key_pressed(ControlKeys::Enter);
-                let cancel = input.is_control_key_pressed(ControlKeys::Escape)
-                    || (input.start_pressed() && input.is_select_pressed());
-                (decide, cancel)
-            };
+            let decide = snapshot.key_state[0]
+                || snapshot.key_state[2]
+                || snapshot.key_state[4]
+                || snapshot.key_state[6]
+                || snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Enter)
+                    .copied()
+                    .unwrap_or(false);
+            let cancel = snapshot
+                .control_key_states
+                .get(&ControlKeys::Escape)
+                .copied()
+                .unwrap_or(false)
+                || (snapshot.start_pressed && snapshot.select_pressed);
             if decide {
                 self.data.timer.set_timer_on(TIMER_FADEOUT);
             }
@@ -1513,20 +1525,6 @@ impl MainState for MusicDecide {
                 self.data.timer.set_timer_on(TIMER_FADEOUT);
             }
         }
-    }
-
-    fn sync_input_from(
-        &mut self,
-        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_from(input);
-    }
-
-    fn sync_input_back_to(
-        &mut self,
-        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_back_to(input);
     }
 
     fn load_skin(&mut self, skin_type: i32) {

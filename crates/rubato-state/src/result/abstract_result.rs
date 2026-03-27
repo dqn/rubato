@@ -5,7 +5,7 @@ use rubato_core::clear_type::ClearType;
 use rubato_core::score_data::ScoreData;
 use rubato_core::score_data_property::ScoreDataProperty;
 
-use super::{MainController, RankingData};
+use super::RankingData;
 
 /// Replay data status
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -286,10 +286,8 @@ impl AbstractResultData {
         &self.timing_distribution
     }
 
-    pub fn input(&mut self, main: &mut MainController) {
-        let input = main.input_processor();
-        let mov = -(input.scroll());
-        input.reset_scroll();
+    pub fn input(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
+        let mov = snapshot.scroll_y as i32;
         if mov != 0
             && let Some(ref ranking) = self.ranking
         {

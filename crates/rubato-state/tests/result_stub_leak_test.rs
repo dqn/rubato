@@ -2,19 +2,9 @@
 //
 // Previously these methods used Box::leak to return references.
 // Now they return references to owned fields, so repeated calls return the same address.
+// input_processor was removed during InputSnapshot migration.
 
 use rubato_state::result::{MainController, NullMainController};
-
-/// input_processor() returns the same stored instance on repeated calls.
-#[test]
-fn get_input_processor_returns_same_instance() {
-    let mut mc = MainController::new(Box::new(NullMainController));
-
-    let ptr1 = mc.input_processor() as *const _ as usize;
-    let ptr2 = mc.input_processor() as *const _ as usize;
-
-    assert_eq!(ptr1, ptr2, "should return same stored instance");
-}
 
 /// ir_send_status() returns the same shared Vec (backed by Arc<Mutex<...>>).
 #[test]

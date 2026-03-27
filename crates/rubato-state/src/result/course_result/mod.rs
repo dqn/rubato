@@ -78,6 +78,8 @@ pub struct CourseResult {
     pending_audio_config: Option<rubato_types::audio_config::AudioConfig>,
     /// Outbox: pending stop-all-notes request (fadeout).
     pending_stop_all_notes: bool,
+    /// Read-only input snapshot for the current frame.
+    input_snapshot: Option<rubato_input::input_snapshot::InputSnapshot>,
 }
 
 impl CourseResult {
@@ -103,6 +105,7 @@ impl CourseResult {
             pending_audio_path_stops: Vec::new(),
             pending_audio_config: None,
             pending_stop_all_notes: false,
+            input_snapshot: None,
         }
     }
 
@@ -429,15 +432,35 @@ impl CourseResult {
     }
 
     /// Check if a replay save key (Num1-4) was pressed and return the replay slot index.
-    fn get_replay_index_from_input(&mut self) -> Option<usize> {
-        let input_processor = self.main.input_processor();
-        if input_processor.is_control_key_pressed(ControlKeys::Num1) {
+    fn get_replay_index_from_input(&self) -> Option<usize> {
+        let snapshot = self.input_snapshot.as_ref()?;
+        if snapshot
+            .control_key_states
+            .get(&ControlKeys::Num1)
+            .copied()
+            .unwrap_or(false)
+        {
             Some(0)
-        } else if input_processor.is_control_key_pressed(ControlKeys::Num2) {
+        } else if snapshot
+            .control_key_states
+            .get(&ControlKeys::Num2)
+            .copied()
+            .unwrap_or(false)
+        {
             Some(1)
-        } else if input_processor.is_control_key_pressed(ControlKeys::Num3) {
+        } else if snapshot
+            .control_key_states
+            .get(&ControlKeys::Num3)
+            .copied()
+            .unwrap_or(false)
+        {
             Some(2)
-        } else if input_processor.is_control_key_pressed(ControlKeys::Num4) {
+        } else if snapshot
+            .control_key_states
+            .get(&ControlKeys::Num4)
+            .copied()
+            .unwrap_or(false)
+        {
             Some(3)
         } else {
             None
@@ -445,9 +468,12 @@ impl CourseResult {
     }
 
     /// Open the IR URL for the current course if the OpenIr command was activated.
-    fn try_open_ir_url(&mut self) {
-        let input_processor = self.main.input_processor();
-        if !input_processor.is_activated(KeyCommand::OpenIr) {
+    fn try_open_ir_url(&self) {
+        let snapshot = match self.input_snapshot {
+            Some(ref s) => s,
+            None => return,
+        };
+        if !snapshot.activated_commands.contains(&KeyCommand::OpenIr) {
             return;
         }
         if let Some(ir_status) = self.main.ir_status().first()
@@ -545,10 +571,6 @@ impl CourseResult {
             let skin_fadeout = self.skin.as_ref().map(|s| s.fadeout() as i64).unwrap_or(0);
             if fadeout_time > skin_fadeout {
                 self.pending_stop_all_notes = true;
-                {
-                    let input = self.main.input_processor();
-                    input.reset_all_key_changed_time();
-                }
 
                 self.main
                     .change_state(rubato_core::main_state::MainStateType::MusicSelect);
@@ -563,34 +585,43 @@ impl CourseResult {
     }
 
     fn do_input(&mut self) {
-        self.data.input(&mut self.main);
+        let snapshot = match self.input_snapshot {
+            Some(ref s) => s,
+            None => return,
+        };
+        self.data.input(snapshot);
 
         if !self.main_data.timer.is_timer_on(TIMER_FADEOUT)
             && self.main_data.timer.is_timer_on(TIMER_STARTINPUT)
         {
             let mut ok = false;
             for i in 0..self.property.assign_length() {
-                let input_processor = self.main.input_processor();
+                let idx = i as usize;
                 if self.property.assign(i) == Some(ResultKey::ChangeGraph)
-                    && input_processor.key_state(i)
-                    && input_processor.reset_key_changed_time(i)
+                    && snapshot.key_state[idx]
+                    && snapshot.key_changed_time[idx] != i64::MIN
                 {
                     self.data.gauge_type = (self.data.gauge_type.max(5) - 5) % 3 + 6;
                 } else if self.property.assign(i).is_some()
-                    && input_processor.key_state(i)
-                    && input_processor.reset_key_changed_time(i)
+                    && snapshot.key_state[idx]
+                    && snapshot.key_changed_time[idx] != i64::MIN
                 {
                     ok = true;
                 }
             }
 
+            if snapshot
+                .control_key_states
+                .get(&ControlKeys::Escape)
+                .copied()
+                .unwrap_or(false)
+                || snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Enter)
+                    .copied()
+                    .unwrap_or(false)
             {
-                let input_processor = self.main.input_processor();
-                if input_processor.is_control_key_pressed(ControlKeys::Escape)
-                    || input_processor.is_control_key_pressed(ControlKeys::Enter)
-                {
-                    ok = true;
-                }
+                ok = true;
             }
 
             if (self.resource.score_data().is_none() || ok)
@@ -1267,18 +1298,8 @@ impl rubato_core::main_state::MainState for CourseResult {
         self.do_input();
     }
 
-    fn sync_input_from(
-        &mut self,
-        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_from(input);
-    }
-
-    fn sync_input_back_to(
-        &mut self,
-        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_back_to(input);
+    fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
+        self.input_snapshot = Some(snapshot.clone());
     }
 
     fn load_skin(&mut self, skin_type: i32) {
@@ -2929,8 +2950,10 @@ mod tests {
         cr.main_data.timer.update();
         // Activate TIMER_STARTINPUT so the input block is entered
         cr.main_data.timer.switch_timer(TIMER_STARTINPUT, true);
+        // Provide an empty input snapshot (no keys pressed).
         // score_data() is None by default, state is STATE_OFFLINE by default,
         // so the TIMER_FADEOUT branch will trigger without needing key press simulation.
+        cr.input_snapshot = Some(rubato_input::input_snapshot::InputSnapshot::default());
 
         cr.do_input();
 
@@ -2959,6 +2982,7 @@ mod tests {
 
         cr.main_data.timer.update();
         cr.main_data.timer.switch_timer(TIMER_STARTINPUT, true);
+        cr.input_snapshot = Some(rubato_input::input_snapshot::InputSnapshot::default());
 
         cr.do_input();
 

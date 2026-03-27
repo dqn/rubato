@@ -2,7 +2,6 @@
 pub mod main_controller_ref;
 
 // Re-exports
-pub use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 pub use rubato_input::keyboard_input_processor::ControlKeys;
 pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 pub use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};

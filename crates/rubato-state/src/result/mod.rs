@@ -7,7 +7,6 @@ pub use rubato_core::bms_player_mode::BMSPlayerMode;
 pub use rubato_core::bms_player_mode::Mode as BMSPlayerModeType;
 pub use rubato_core::play_data_accessor::PlayDataAccessor;
 pub use rubato_core::timer_manager::TimerManager;
-pub use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 pub use rubato_input::key_command::KeyCommand;
 pub use rubato_input::keyboard_input_processor::ControlKeys;
 pub use rubato_ir::ir_connection::IRConnection;
@@ -207,18 +206,8 @@ macro_rules! impl_result_main_state {
             self.do_input();
         }
 
-        fn sync_input_from(
-            &mut self,
-            input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-        ) {
-            self.main.sync_input_from(input);
-        }
-
-        fn sync_input_back_to(
-            &mut self,
-            input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-        ) {
-            self.main.sync_input_back_to(input);
+        fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
+            self.input_snapshot = Some(snapshot.clone());
         }
 
         fn load_skin(&mut self, skin_type: i32) {

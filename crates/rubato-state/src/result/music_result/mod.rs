@@ -68,6 +68,8 @@ pub struct MusicResult {
     pending_audio_config: Option<rubato_types::audio_config::AudioConfig>,
     /// Outbox: pending stop-all-notes request (fadeout).
     pending_stop_all_notes: bool,
+    /// Read-only input snapshot for the current frame.
+    input_snapshot: Option<rubato_input::input_snapshot::InputSnapshot>,
 }
 
 impl MusicResult {
@@ -88,6 +90,7 @@ impl MusicResult {
             pending_audio_path_stops: Vec::new(),
             pending_audio_config: None,
             pending_stop_all_notes: false,
+            input_snapshot: None,
         }
     }
 
@@ -371,10 +374,6 @@ impl MusicResult {
             let skin_fadeout = self.skin.as_ref().map(|s| s.fadeout() as i64).unwrap_or(0);
             if fadeout_time > skin_fadeout {
                 self.pending_stop_all_notes = true;
-                {
-                    let input = self.main.input_processor();
-                    input.reset_all_key_changed_time();
-                }
 
                 if self.resource.course_bms_models().is_some() {
                     let last_gauge = self
@@ -448,17 +447,17 @@ impl MusicResult {
                     self.resource.set_player_config_gauge(org_gauge);
 
                     let mut key: Option<ResultKey> = None;
-                    {
-                        let input = self.main.input_processor();
+                    if let Some(ref snapshot) = self.input_snapshot {
                         for i in 0..self.property.assign_length() {
+                            let idx = i as usize;
                             if self.property.assign(i) == Some(ResultKey::ReplayDifferent)
-                                && input.key_state(i)
+                                && snapshot.key_state[idx]
                             {
                                 key = Some(ResultKey::ReplayDifferent);
                                 break;
                             }
                             if self.property.assign(i) == Some(ResultKey::ReplaySame)
-                                && input.key_state(i)
+                                && snapshot.key_state[idx]
                             {
                                 key = Some(ResultKey::ReplaySame);
                                 break;
@@ -509,7 +508,11 @@ impl MusicResult {
     }
 
     fn do_input(&mut self) {
-        self.data.input(&mut self.main);
+        let snapshot = match self.input_snapshot {
+            Some(ref s) => s,
+            None => return,
+        };
+        self.data.input(snapshot);
         let time = self.main_data.timer.now_time();
 
         if !self.main_data.timer.is_timer_on(TIMER_FADEOUT)
@@ -520,47 +523,74 @@ impl MusicResult {
                 let mut ok = false;
                 let mut replay_index: Option<usize> = None;
                 let mut open_ir = false;
-                {
-                    let input_processor = self.main.input_processor();
-                    for i in 0..self.property.assign_length() {
-                        if self.property.assign(i) == Some(ResultKey::ChangeGraph)
-                            && input_processor.key_state(i)
-                            && input_processor.reset_key_changed_time(i)
-                        {
-                            if self.data.gauge_type >= groove_gauge::ASSISTEASY
-                                && self.data.gauge_type <= groove_gauge::HAZARD
-                            {
-                                self.data.gauge_type = (self.data.gauge_type + 1) % 6;
-                            } else {
-                                self.data.gauge_type = (self.data.gauge_type.max(5) - 5) % 3 + 6;
-                            }
-                        } else if self.property.assign(i).is_some()
-                            && input_processor.key_state(i)
-                            && input_processor.reset_key_changed_time(i)
-                        {
-                            ok = true;
-                        }
-                    }
 
-                    if input_processor.is_control_key_pressed(ControlKeys::Escape)
-                        || input_processor.is_control_key_pressed(ControlKeys::Enter)
+                for i in 0..self.property.assign_length() {
+                    let idx = i as usize;
+                    if self.property.assign(i) == Some(ResultKey::ChangeGraph)
+                        && snapshot.key_state[idx]
+                        && snapshot.key_changed_time[idx] != i64::MIN
+                    {
+                        if self.data.gauge_type >= groove_gauge::ASSISTEASY
+                            && self.data.gauge_type <= groove_gauge::HAZARD
+                        {
+                            self.data.gauge_type = (self.data.gauge_type + 1) % 6;
+                        } else {
+                            self.data.gauge_type = (self.data.gauge_type.max(5) - 5) % 3 + 6;
+                        }
+                    } else if self.property.assign(i).is_some()
+                        && snapshot.key_state[idx]
+                        && snapshot.key_changed_time[idx] != i64::MIN
                     {
                         ok = true;
                     }
+                }
 
-                    if input_processor.is_control_key_pressed(ControlKeys::Num1) {
-                        replay_index = Some(0);
-                    } else if input_processor.is_control_key_pressed(ControlKeys::Num2) {
-                        replay_index = Some(1);
-                    } else if input_processor.is_control_key_pressed(ControlKeys::Num3) {
-                        replay_index = Some(2);
-                    } else if input_processor.is_control_key_pressed(ControlKeys::Num4) {
-                        replay_index = Some(3);
-                    }
+                if snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Escape)
+                    .copied()
+                    .unwrap_or(false)
+                    || snapshot
+                        .control_key_states
+                        .get(&ControlKeys::Enter)
+                        .copied()
+                        .unwrap_or(false)
+                {
+                    ok = true;
+                }
 
-                    if input_processor.is_activated(KeyCommand::OpenIr) {
-                        open_ir = true;
-                    }
+                if snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Num1)
+                    .copied()
+                    .unwrap_or(false)
+                {
+                    replay_index = Some(0);
+                } else if snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Num2)
+                    .copied()
+                    .unwrap_or(false)
+                {
+                    replay_index = Some(1);
+                } else if snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Num3)
+                    .copied()
+                    .unwrap_or(false)
+                {
+                    replay_index = Some(2);
+                } else if snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Num4)
+                    .copied()
+                    .unwrap_or(false)
+                {
+                    replay_index = Some(3);
+                }
+
+                if snapshot.activated_commands.contains(&KeyCommand::OpenIr) {
+                    open_ir = true;
                 }
 
                 if self.resource.score_data().is_none() || ok {
@@ -1166,18 +1196,8 @@ impl MainState for MusicResult {
         self.do_input();
     }
 
-    fn sync_input_from(
-        &mut self,
-        input: &rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_from(input);
-    }
-
-    fn sync_input_back_to(
-        &mut self,
-        input: &mut rubato_input::bms_player_input_processor::BMSPlayerInputProcessor,
-    ) {
-        self.main.sync_input_back_to(input);
+    fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
+        self.input_snapshot = Some(snapshot.clone());
     }
 
     fn load_skin(&mut self, skin_type: i32) {

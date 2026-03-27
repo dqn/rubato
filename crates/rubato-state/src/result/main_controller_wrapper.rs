@@ -1,5 +1,4 @@
 use rubato_core::play_data_accessor::PlayDataAccessor;
-use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
 use rubato_types::config::Config;
 use rubato_types::player_config::PlayerConfig;
 use rubato_types::sound_type::SoundType;
@@ -13,13 +12,11 @@ use rubato_types::sync_utils::lock_or_recover;
 /// Delegates trait methods (config, player_config, change_state, save_last_recording)
 /// to `Box<dyn MainControllerAccess>`.
 /// Stores crate-local components whose types cannot go on the cross-crate trait:
-/// AudioDriver, BMSPlayerInputProcessor, IRStatus/IRSendStatus, PlayDataAccessor,
-/// RankingDataCache.
+/// AudioDriver, IRStatus/IRSendStatus, PlayDataAccessor, RankingDataCache.
 pub struct MainController {
     inner: Box<dyn MainControllerAccess>,
     ir_statuses: Vec<IRStatus>,
     ir_send_statuses: std::sync::Arc<std::sync::Mutex<Vec<IRSendStatusMain>>>,
-    pub input_processor: BMSPlayerInputProcessor,
     pub play_data_accessor: PlayDataAccessor,
     ranking_data_cache: Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>,
 }
@@ -27,7 +24,6 @@ pub struct MainController {
 impl MainController {
     pub fn new(inner: Box<dyn MainControllerAccess>) -> Self {
         let config = inner.config();
-        let input_processor = BMSPlayerInputProcessor::new_without_midi(config);
         let play_data_accessor = PlayDataAccessor::new(config);
         let ranking_data_cache = inner
             .ranking_data_cache()
@@ -37,7 +33,6 @@ impl MainController {
             inner,
             ir_statuses: Vec::new(),
             ir_send_statuses: crate::result::ir_resend::shared_ir_statuses(),
-            input_processor,
             play_data_accessor,
             ranking_data_cache,
         }
@@ -48,7 +43,6 @@ impl MainController {
         ir_statuses: Vec<IRStatus>,
     ) -> Self {
         let config = inner.config();
-        let input_processor = BMSPlayerInputProcessor::new_without_midi(config);
         let play_data_accessor = PlayDataAccessor::new(config);
         let ranking_data_cache = inner
             .ranking_data_cache()
@@ -58,7 +52,6 @@ impl MainController {
             inner,
             ir_statuses,
             ir_send_statuses: crate::result::ir_resend::shared_ir_statuses(),
-            input_processor,
             play_data_accessor,
             ranking_data_cache,
         }
@@ -111,18 +104,6 @@ impl MainController {
     }
 
     // ---- Locally-stored components (types not on MainControllerAccess trait) ----
-
-    pub fn input_processor(&mut self) -> &mut BMSPlayerInputProcessor {
-        &mut self.input_processor
-    }
-
-    pub fn sync_input_from(&mut self, input: &BMSPlayerInputProcessor) {
-        self.input_processor.sync_runtime_state_from(input);
-    }
-
-    pub fn sync_input_back_to(&mut self, input: &mut BMSPlayerInputProcessor) {
-        input.sync_runtime_state_from(&self.input_processor);
-    }
 
     pub fn ir_status(&self) -> &[IRStatus] {
         &self.ir_statuses

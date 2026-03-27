@@ -13,6 +13,7 @@ use crate::keyboard_input_processor::ControlKeys;
 /// Built by `BMSPlayerInputProcessor::build_snapshot()` once per frame,
 /// then passed to `MainState::sync_input_snapshot()` so states can read
 /// input without depending on the processor type.
+#[derive(Clone)]
 pub struct InputSnapshot {
     /// Per-key pressed state (256 keys).
     pub key_state: [bool; 256],
@@ -45,4 +46,26 @@ pub struct InputSnapshot {
     pub activated_commands: Vec<KeyCommand>,
     /// Control key states (non-consuming read of current pressed state).
     pub control_key_states: HashMap<ControlKeys, bool>,
+}
+
+impl Default for InputSnapshot {
+    fn default() -> Self {
+        Self {
+            key_state: [false; 256],
+            key_changed_time: [i64::MIN; 256],
+            start_pressed: false,
+            select_pressed: false,
+            mouse_x: 0,
+            mouse_y: 0,
+            mouse_button: 0,
+            mouse_pressed: false,
+            mouse_dragged: false,
+            scroll_x: 0.0,
+            scroll_y: 0.0,
+            is_analog: [false; 256],
+            analog_diff: [0.0; 256],
+            activated_commands: Vec::new(),
+            control_key_states: HashMap::new(),
+        }
+    }
 }
