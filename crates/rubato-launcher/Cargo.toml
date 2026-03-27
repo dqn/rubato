@@ -20,6 +20,7 @@ rubato-external = { workspace = true }
 rubato-state = { workspace = true }
 rubato-types = { workspace = true }
 bms-model = { workspace = true }
+rubato-render = { workspace = true }
 rubato-song = { workspace = true }
 arboard = { workspace = true }
 cpal = { workspace = true }
@@ -34,6 +35,5 @@ reqwest = { workspace = true }
 tempfile = { workspace = true }
 encoding_rs = { workspace = true }
 rusqlite = { workspace = true }
-rubato-render = { workspace = true }
 rubato-types = { workspace = true, features = ["test-support"] }
 rubato-ir = { workspace = true, features = ["test-support"] }

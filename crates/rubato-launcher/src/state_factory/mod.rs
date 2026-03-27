@@ -5,7 +5,7 @@
 // Java creates states eagerly in initializeStates(); Rust creates them on-demand via factory.
 
 mod queued_access;
-mod shared_selector;
+pub(crate) mod shared_selector;
 
 use std::sync::{Arc, Mutex};
 

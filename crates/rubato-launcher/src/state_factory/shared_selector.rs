@@ -18,7 +18,7 @@ use rubato_types::sync_utils::lock_or_recover;
 /// The wrapper owns a local `MainStateData` for the `main_state_data()` / `main_state_data_mut()`
 /// trait methods (which return references and cannot go through a Mutex). Lifecycle methods
 /// (create, render, etc.) delegate through the Arc<Mutex<>> to the shared selector.
-pub(super) struct SharedMusicSelectorState {
+pub struct SharedMusicSelectorState {
     selector: Arc<Mutex<MusicSelector>>,
     /// Local state data for skin/score property access.
     /// Synced from the shared selector on create() and after render().

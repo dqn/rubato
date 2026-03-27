@@ -1,6 +1,7 @@
 //! Configuration UI views for audio, input, skin, and gameplay settings.
 
 pub mod display_mode;
+pub mod game_screen;
 pub mod launcher_ui;
 pub mod main_loader;
 pub mod platform;
