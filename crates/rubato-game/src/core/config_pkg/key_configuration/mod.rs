@@ -9,7 +9,8 @@ use rubato_types::play_mode_config::{
 };
 
 use crate::core::main_controller::MainController;
-use crate::core::main_state::{MainState, MainStateData, MainStateType};
+use crate::core::app_context::GameContext;
+use crate::core::main_state::{MainState, MainStateData, MainStateType, StateTransition};
 use crate::core::timer_manager::TimerManager;
 
 use constants::{KEYS, KEYSA, MODE};
@@ -236,5 +237,15 @@ impl MainState for KeyConfiguration {
             skin.dispose_skin();
         }
         data.skin = None;
+    }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
     }
 }

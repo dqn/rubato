@@ -63,6 +63,16 @@ impl MainState for TestState {
         self.disposed = true;
         self.state_data.skin = None;
     }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
+    }
 }
 
 /// Create a test state creator closure that produces TestState instances.
@@ -137,6 +147,16 @@ impl MainState for AudioSyncTestState {
             &self.render_sync_calls
         };
         *counter.lock().expect("mutex poisoned") += 1;
+    }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
     }
 }
 
@@ -625,6 +645,16 @@ impl MainState for SkinTestState {
 
     fn create(&mut self) {}
     fn render(&mut self) {}
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
+    }
 }
 
 #[test]
@@ -1208,6 +1238,16 @@ impl MainState for TickBasedPreviewState {
             audio.play_path(&self.preview_path, 0.5, true);
             self.preview_started = true;
         }
+    }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
     }
 }
 
@@ -1843,6 +1883,16 @@ impl MainState for ModelTestState {
     fn bms_model(&self) -> Option<&BMSModel> {
         Some(&self.model)
     }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
+    }
 }
 
 /// Mock AudioDriver that uses a shared counter for set_model calls.
@@ -1943,6 +1993,16 @@ impl MainState for HandoffTestState {
 
     fn take_score_handoff(&mut self) -> Option<rubato_types::score_handoff::ScoreHandoff> {
         self.handoff.take()
+    }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
     }
 }
 
@@ -2194,6 +2254,16 @@ impl MainState for PlayConfigReceiverState {
     ) {
         self.received.lock().unwrap().push((mode, play_config));
     }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
+    }
 }
 
 #[test]
@@ -2348,6 +2418,16 @@ impl MainState for DisposableSkinState {
     }
     fn create(&mut self) {}
     fn render(&mut self) {}
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
+    }
 }
 
 #[test]
@@ -2495,6 +2575,16 @@ impl MainState for InputCountingState {
     fn render(&mut self) {}
     fn input(&mut self) {
         *self.input_count.lock().unwrap() += 1;
+    }
+
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        self.render();
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        self.input();
+        Some(())
     }
 }
 
@@ -2839,6 +2929,16 @@ fn test_transition_registers_stagefile_and_banner_into_skin() {
             }));
         }
         fn render(&mut self) {}
+
+        fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+            self.render();
+            Some(StateTransition::Continue)
+        }
+
+        fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+            self.input();
+            Some(())
+        }
     }
 
     let registered_for_factory = Arc::clone(&registered);
@@ -2981,6 +3081,16 @@ fn test_transition_without_bms_images_does_not_register() {
             }));
         }
         fn render(&mut self) {}
+
+        fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+            self.render();
+            Some(StateTransition::Continue)
+        }
+
+        fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+            self.input();
+            Some(())
+        }
     }
 
     let registered_for_factory = Arc::clone(&registered);
