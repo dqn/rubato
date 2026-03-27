@@ -85,6 +85,7 @@ impl MainController {
                 lifecycle: LifecycleState::new(),
                 exit_requested: AtomicBool::new(false),
                 resource: None,
+                transition: None,
             },
             auto,
             song_updated,

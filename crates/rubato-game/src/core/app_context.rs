@@ -61,6 +61,11 @@ pub struct GameContext {
     /// Player resource (gameplay session state).
     /// During active play, this is borrowed by the current state.
     pub resource: Option<PlayerResource>,
+
+    // --- Frame transition ---
+    /// Pending state transition from `render_with_game_context`.
+    /// Stored here so the outbox drain runs before the transition is applied.
+    pub transition: Option<crate::core::main_state::StateTransition>,
 }
 
 impl GameContext {

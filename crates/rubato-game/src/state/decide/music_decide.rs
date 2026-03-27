@@ -2001,6 +2001,7 @@ mod tests {
             lifecycle: LifecycleState::new(),
             exit_requested: AtomicBool::new(false),
             resource: None,
+            transition: None,
         }
     }
 

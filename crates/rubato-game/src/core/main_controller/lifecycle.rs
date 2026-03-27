@@ -156,28 +156,18 @@ impl MainController {
             // Try new-style render first. If it returns Some, the state has fully
             // adopted the GameContext pattern and we process the transition result.
             // If it returns None, fall through to the legacy render_with_ctx path.
+            //
+            // ChangeTo/Exit are stored and applied AFTER the outbox drain so that
+            // sounds, score handoff, and config updates are not lost.
             if let Some(transition) = current.render_with_game_context(&mut self.ctx) {
                 match transition {
                     StateTransition::Continue => { /* continue normal frame */ }
-                    StateTransition::ChangeTo(_) | StateTransition::Exit => {
-                        // Restore resource before processing transition; the outbox
-                        // drain and state change code below reads self.resource.
-                        self.resource = self.ctx.resource.take();
-                        self.current = Some(current);
-
-                        // Enqueue the transition as if the state used the outbox.
-                        // ChangeTo maps to the existing change_state path; Exit
-                        // triggers application shutdown.
-                        match transition {
-                            StateTransition::ChangeTo(state_type) => {
-                                self.change_state(state_type);
-                            }
-                            StateTransition::Exit => {
-                                self.exit();
-                            }
-                            StateTransition::Continue => unreachable!(),
-                        }
-                        return;
+                    StateTransition::ChangeTo(state_type) => {
+                        // Store for processing after outbox drain
+                        self.ctx.transition = Some(StateTransition::ChangeTo(state_type));
+                    }
+                    StateTransition::Exit => {
+                        self.ctx.transition = Some(StateTransition::Exit);
                     }
                 }
             } else {
@@ -296,6 +286,21 @@ impl MainController {
             pending_audio_path_stops = current.drain_pending_audio_path_stops();
             pending_stop_all_notes = current.take_pending_stop_all_notes();
             pending_change = current.take_pending_state_change();
+        }
+
+        // Merge transition from render_with_game_context (if set).
+        // This takes priority over the legacy outbox pending_change.
+        if let Some(transition) = self.ctx.transition.take() {
+            match transition {
+                StateTransition::ChangeTo(state_type) => {
+                    pending_change = Some(state_type);
+                }
+                StateTransition::Exit => {
+                    self.exit();
+                    return;
+                }
+                StateTransition::Continue => {}
+            }
         }
 
         // Capture sound count for observability event before consuming the Vec.
