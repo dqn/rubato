@@ -1,6 +1,5 @@
 .DS_Store
 target/
-.beads/
 /.agent
 /bms/
 .worktrees/
@@ -33,14 +32,8 @@ crates/bms-model/fuzz/artifacts/
 crates/bms-model/fuzz/corpus/
 crates/bms-model/fuzz/target/
 crates/bms-model/fuzz/Cargo.lock
-
-# Dolt database files (added by bd init)
-.dolt/
 *.db
 *.db-shm
 *.db-wal
 .agent/tmp/
 abs_test
-
-# Beads / Dolt files (added by bd init)
-.beads-credential-key
