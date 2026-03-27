@@ -9,6 +9,12 @@ pub mod render_reexports;
 // Re-exports (convenience imports for commonly used types)
 pub mod reexports;
 
+// Shared utilities (available to both loader and render code)
+pub mod util;
+
+// Bitmap font cache (shared between loader and render)
+pub mod bitmap_font_cache;
+
 // Real implementations and standalone types
 pub mod main_state;
 pub mod skin_config_offset;
@@ -82,7 +88,7 @@ pub use graphs::skin_timing_visualizer;
 
 // loaders/
 pub use loaders::bitmap_font_batch_loader;
-pub use loaders::bitmap_font_cache;
+// bitmap_font_cache is now a top-level module; loaders::bitmap_font_cache re-exports it
 pub use loaders::pomyu_chara_loader;
 pub use loaders::skin_data_converter;
 pub use loaders::skin_loader;

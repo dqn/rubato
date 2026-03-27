@@ -2,9 +2,9 @@
 // Mechanical line-by-line translation.
 // Gauge transition graph object (result screen).
 
-use crate::json::json_skin_object_loader::parse_hex_color;
 use crate::reexports::{MainState, Pixmap, PixmapFormat, Texture, TextureRegion};
 use crate::types::skin_object::{SkinObjectData, SkinObjectRenderer};
+use crate::util::parse_hex_color;
 use rubato_render::color::Color;
 
 /// Type-to-color-index mapping table (Java: typetable)

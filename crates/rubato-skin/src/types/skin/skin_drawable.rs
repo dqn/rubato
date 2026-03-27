@@ -580,7 +580,7 @@ impl rubato_core::main_state::SkinDrawable for Skin {
         // Clear the global bitmap font cache to release texture pixel data.
         // Java's equivalent is garbage collected when the skin is disposed;
         // without this, entries accumulate across skin loads (1-4 MB each).
-        crate::loaders::bitmap_font_cache::clear();
+        crate::bitmap_font_cache::clear();
     }
 
     fn skin_offsets(&self) -> std::collections::HashMap<i32, rubato_types::skin_offset::SkinOffset> {

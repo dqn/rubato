@@ -7,8 +7,8 @@ use std::path::{Path, PathBuf};
 
 use log::warn;
 
+use crate::bitmap_font_cache::{self, CacheableBitmapFont};
 use crate::json::json_skin;
-use crate::loaders::bitmap_font_cache::{self, CacheableBitmapFont};
 use crate::loaders::skin_loader;
 use crate::reexports::{BitmapFont, BitmapFontData, TextureRegion};
 
