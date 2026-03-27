@@ -1,0 +1,8 @@
+[package]
+name = "rubato-skin-model"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+rubato-types.workspace = true
+serde.workspace = true
