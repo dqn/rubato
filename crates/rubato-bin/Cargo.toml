@@ -9,19 +9,14 @@ path = "src/main.rs"
 
 [features]
 default = ["ffmpeg"]
-ffmpeg = ["rubato-state/ffmpeg"]
+ffmpeg = ["rubato-game/ffmpeg"]
 dhat-heap = ["dhat"]
 
 [dependencies]
 rubato-audio = { workspace = true }
-rubato-core = { workspace = true }
+rubato-game = { workspace = true }
 rubato-input = { workspace = true }
-rubato-external = { workspace = true }
-rubato-ir = { workspace = true }
 rubato-render = { workspace = true }
-rubato-song = { workspace = true }
-rubato-launcher = { workspace = true }
-rubato-state = { workspace = true }
 rubato-types = { workspace = true }
 anyhow = { workspace = true }
 log = { workspace = true }

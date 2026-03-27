@@ -7,7 +7,7 @@ use std::path::Path;
 use bms::model::bms_model::BMSModel;
 use bms::model::mode::Mode;
 use golden_master::pattern_fixtures::LaneShuffleFixture;
-use rubato_core::pattern::lane_shuffle_modifier::{
+use rubato_game::core::pattern::lane_shuffle_modifier::{
     LaneCrossShuffleModifier, LaneMirrorShuffleModifier, LaneRandomShuffleModifier,
     LaneRotateShuffleModifier, PlayerFlipModifier,
 };

@@ -6,7 +6,7 @@
 
 use bms::model::bms_model::BMSModel;
 use bms::model::mode::Mode;
-use rubato_play::groove_gauge::{
+use rubato_game::play::groove_gauge::{
     ASSISTEASY, EASY, EXHARD, GrooveGauge, HARD, HAZARD, NORMAL, create_groove_gauge,
 };
 use rubato_types::gauge_property::GaugeProperty;

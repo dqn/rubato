@@ -22,6 +22,6 @@ pub use rubato_types::skin_offset::SkinOffset;
 // TimingDistribution -- re-exported from rubato-types
 pub use rubato_types::timing_distribution::TimingDistribution;
 
-// beatoraja.song types (re-exports)
-pub use rubato_song::song_data::SongData;
-pub use rubato_song::song_information::SongInformation;
+// beatoraja.song types (re-exports from rubato-types)
+pub use rubato_types::song_data::SongData;
+pub use rubato_types::song_information::SongInformation;

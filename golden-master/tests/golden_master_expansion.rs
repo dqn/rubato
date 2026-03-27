@@ -15,9 +15,9 @@ use bms::model::bms_model::{
 use bms::model::chart_information::ChartInformation;
 use bms::model::judge_note::JudgeNote;
 use golden_master::e2e_helpers::*;
-use rubato_core::pattern::lane_shuffle_modifier::LaneRandomShuffleModifier;
-use rubato_core::pattern::pattern_modifier::PatternModifier;
-use rubato_play::bms_player_rule::BMSPlayerRule;
+use rubato_game::core::pattern::lane_shuffle_modifier::LaneRandomShuffleModifier;
+use rubato_game::core::pattern::pattern_modifier::PatternModifier;
+use rubato_game::play::bms_player_rule::BMSPlayerRule;
 use rubato_types::groove_gauge::{EXHARD, HARD, NORMAL};
 
 fn test_bms_dir() -> &'static Path {

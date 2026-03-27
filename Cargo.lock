@@ -1931,12 +1931,10 @@ dependencies = [
  "bms",
  "image",
  "rubato-audio",
- "rubato-core",
+ "rubato-game",
  "rubato-input",
- "rubato-play",
  "rubato-render",
  "rubato-skin",
- "rubato-song",
  "rubato-types",
  "serde",
  "serde_json",
@@ -4137,47 +4135,14 @@ dependencies = [
  "log",
  "pollster",
  "rubato-audio",
- "rubato-core",
- "rubato-external",
+ "rubato-game",
  "rubato-input",
- "rubato-ir",
- "rubato-launcher",
  "rubato-render",
- "rubato-song",
- "rubato-state",
  "rubato-types",
  "serde_json",
  "tempfile",
  "wgpu",
  "winit",
-]
-
-[[package]]
-name = "rubato-core"
-version = "0.1.0"
-dependencies = [
- "aes",
- "anyhow",
- "base64",
- "bms",
- "chrono",
- "criterion",
- "ecb",
- "flate2",
- "image",
- "log",
- "proptest",
- "rand 0.8.5",
- "rubato-audio",
- "rubato-db",
- "rubato-input",
- "rubato-render",
- "rubato-timing",
- "rubato-types",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
 ]
 
 [[package]]
@@ -4202,39 +4167,62 @@ dependencies = [
  "anyhow",
  "bms",
  "rubato-audio",
- "rubato-core",
+ "rubato-game",
  "rubato-input",
- "rubato-launcher",
- "rubato-play",
  "rubato-render",
  "rubato-types",
 ]
 
 [[package]]
-name = "rubato-external"
+name = "rubato-game"
 version = "0.1.0"
 dependencies = [
+ "aes",
  "anyhow",
  "arboard",
  "base64",
  "bms",
  "chrono",
+ "cpal",
+ "criterion",
+ "ecb",
+ "eframe",
+ "egui",
+ "encoding_rs",
+ "ffmpeg-next",
+ "flate2",
  "futures-util",
  "image",
+ "lazy_static",
  "log",
+ "md-5",
+ "open",
+ "proptest",
+ "quick-xml 0.37.5",
+ "rand 0.8.5",
+ "rayon",
+ "regex",
  "reqwest",
- "rubato-core",
+ "rfd",
+ "rubato-audio",
+ "rubato-db",
+ "rubato-input",
+ "rubato-render",
  "rubato-skin",
- "rubato-song",
+ "rubato-timing",
  "rubato-types",
  "rusqlite",
  "serde",
  "serde_json",
+ "sevenz-rust",
  "sha2",
+ "tar",
  "tempfile",
  "tokio",
  "tokio-tungstenite",
+ "urlencoding",
  "uuid",
+ "winit",
 ]
 
 [[package]]
@@ -4249,85 +4237,6 @@ dependencies = [
  "proptest",
  "rubato-types",
  "tempfile",
-]
-
-[[package]]
-name = "rubato-ir"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bms",
- "chrono",
- "encoding_rs",
- "lazy_static",
- "log",
- "md-5",
- "quick-xml 0.37.5",
- "regex",
- "reqwest",
- "rubato-core",
- "rubato-song",
- "rubato-types",
- "serde",
- "serde_json",
- "sha2",
- "urlencoding",
-]
-
-[[package]]
-name = "rubato-launcher"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arboard",
- "bms",
- "cpal",
- "eframe",
- "egui",
- "encoding_rs",
- "log",
- "open",
- "regex",
- "reqwest",
- "rfd",
- "rubato-audio",
- "rubato-core",
- "rubato-external",
- "rubato-input",
- "rubato-ir",
- "rubato-play",
- "rubato-render",
- "rubato-skin",
- "rubato-song",
- "rubato-state",
- "rubato-types",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "winit",
-]
-
-[[package]]
-name = "rubato-play"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bms",
- "chrono",
- "ffmpeg-next",
- "log",
- "proptest",
- "rand 0.8.5",
- "rubato-audio",
- "rubato-core",
- "rubato-input",
- "rubato-ir",
- "rubato-render",
- "rubato-song",
- "rubato-types",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -4365,12 +4274,10 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "rubato-audio",
- "rubato-core",
+ "rubato-game",
  "rubato-input",
- "rubato-play",
  "rubato-render",
  "rubato-skin-model",
- "rubato-song",
  "rubato-types",
  "serde",
  "serde_json",
@@ -4382,59 +4289,6 @@ version = "0.1.0"
 dependencies = [
  "rubato-types",
  "serde",
-]
-
-[[package]]
-name = "rubato-song"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bms",
- "encoding_rs",
- "flate2",
- "log",
- "rayon",
- "regex",
- "reqwest",
- "rubato-core",
- "rubato-db",
- "rubato-types",
- "rusqlite",
- "serde",
- "serde_json",
- "sevenz-rust",
- "sha2",
- "tar",
- "tempfile",
- "urlencoding",
-]
-
-[[package]]
-name = "rubato-state"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arboard",
- "bms",
- "chrono",
- "egui",
- "image",
- "log",
- "open",
- "rand 0.8.5",
- "regex",
- "rubato-audio",
- "rubato-core",
- "rubato-input",
- "rubato-ir",
- "rubato-play",
- "rubato-render",
- "rubato-skin",
- "rubato-song",
- "rubato-types",
- "serde",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]

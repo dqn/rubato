@@ -1,5 +1,5 @@
 // SkinNote wrapper for SkinObject enum (Phase 32a)
-// Wraps rubato_play::SkinNote with SkinObjectData for the skin pipeline.
+// Wraps rubato_game::play::SkinNote with SkinObjectData for the skin pipeline.
 // Translated from: SkinNote.java
 
 use rubato_types::draw_command::{DrawCommand, NoteImageType};

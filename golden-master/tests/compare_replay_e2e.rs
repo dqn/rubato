@@ -12,11 +12,11 @@ use bms::model::bms_model::{BMSModel, LNTYPE_LONGNOTE};
 use bms::model::chart_information::ChartInformation;
 use bms::model::mode::Mode;
 use golden_master::replay_e2e_fixtures::{ExpectedScore, ReplayE2EFixtures, ReplayE2ETestCase};
-use rubato_core::score_data::ScoreData;
-use rubato_play::bms_player_rule::BMSPlayerRule;
-use rubato_play::judge_algorithm::JudgeAlgorithm;
-use rubato_play::judge_manager::{JudgeConfig, JudgeManager};
-use rubato_play::lane_property::LaneProperty;
+use rubato_game::core::score_data::ScoreData;
+use rubato_game::play::bms_player_rule::BMSPlayerRule;
+use rubato_game::play::judge_algorithm::JudgeAlgorithm;
+use rubato_game::play::judge_manager::{JudgeConfig, JudgeManager};
+use rubato_game::play::lane_property::LaneProperty;
 use rubato_types::groove_gauge::GrooveGauge;
 
 #[path = "support/random_seeds.rs"]

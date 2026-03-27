@@ -1223,7 +1223,8 @@ mod tests {
     fn test_decode_via_chart_information() {
         // Test the decode() method that wraps decode_path via ChartInformation
         let path = test_bms_dir().join("bmson_minimal_7k.bmson");
-        let info = ChartInformation::new(Some(path), crate::model::bms_model::LnType::LongNote, None);
+        let info =
+            ChartInformation::new(Some(path), crate::model::bms_model::LnType::LongNote, None);
         let mut decoder = BMSONDecoder::new(crate::model::bms_model::LnType::LongNote);
         let model = decoder
             .decode(info)

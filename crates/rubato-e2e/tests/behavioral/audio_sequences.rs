@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use rubato_audio::audio_driver::AudioDriver;
 use rubato_e2e::{AudioEvent, E2eHarness, MainStateType, StateEvent};
-use rubato_launcher::state_factory::LauncherStateFactory;
+use rubato_game::state_factory::LauncherStateFactory;
 use rubato_types::main_controller_access::MainControllerAccess;
 
 fn test_bms_dir() -> PathBuf {

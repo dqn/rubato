@@ -8,7 +8,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use log::{info, warn};
 
-use rubato_core::main_controller::MainController;
+use rubato_game::core::main_controller::MainController;
 use rubato_types::ir_resend_service::IrResendService;
 
 use crate::{HttpDownloadProcessorWrapper, SongDbMainControllerRef, SongDbMusicDatabaseAdapter};
@@ -36,7 +36,8 @@ pub(crate) fn init_song_information_database(controller: &mut MainController) {
     }
 
     let songinfo_path = controller.config().paths.songinfopath.clone();
-    match rubato_song::song_information_accessor::SongInformationAccessor::new(&songinfo_path) {
+    match rubato_game::song::song_information_accessor::SongInformationAccessor::new(&songinfo_path)
+    {
         Ok(db) => {
             controller.set_info_database(Box::new(db));
             info!("Song information database initialized: {}", songinfo_path);
@@ -51,8 +52,8 @@ pub(crate) fn init_song_information_database(controller: &mut MainController) {
 }
 
 fn init_song_database_impl(update_all: bool, set_accessor: bool) {
-    use rubato_core::config::Config;
-    use rubato_core::main_loader::MainLoader;
+    use rubato_game::core::config::Config;
+    use rubato_game::core::main_loader::MainLoader;
     use rubato_types::validatable::Validatable;
 
     let mut config = Config::read().unwrap_or_default();
@@ -60,7 +61,7 @@ fn init_song_database_impl(update_all: bool, set_accessor: bool) {
     if config.paths.bmsroot.is_empty() {
         warn!("No bmsroot configured - song scan will find nothing");
     }
-    match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+    match rubato_game::song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
         &config.paths.songpath,
         &config.paths.bmsroot,
     ) {
@@ -86,8 +87,8 @@ fn init_song_database_impl(update_all: bool, set_accessor: bool) {
 
 /// Import scores from LR2 score database.
 /// Shows a file chooser dialog and imports the selected LR2 score.db.
-pub(crate) fn import_lr2_scores(config: &rubato_core::config::Config) {
-    let lr2_path = match rubato_launcher::platform::show_file_chooser("Select LR2 score database") {
+pub(crate) fn import_lr2_scores(config: &rubato_game::core::config::Config) {
+    let lr2_path = match rubato_game::platform::show_file_chooser("Select LR2 score database") {
         Some(p) => p,
         None => {
             info!("Import Score cancelled - no file selected.");
@@ -102,28 +103,30 @@ pub(crate) fn import_lr2_scores(config: &rubato_core::config::Config) {
         &config.paths.playerpath, player_name
     );
 
-    let scoredb =
-        match rubato_core::score_database_accessor::ScoreDatabaseAccessor::new(&score_db_path) {
-            Ok(db) => db,
-            Err(e) => {
-                warn!("Failed to open score database {}: {}", score_db_path, e);
-                return;
-            }
-        };
-
-    let songdb = match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
-        &config.paths.songpath,
-        &config.paths.bmsroot,
+    let scoredb = match rubato_game::core::score_database_accessor::ScoreDatabaseAccessor::new(
+        &score_db_path,
     ) {
         Ok(db) => db,
         Err(e) => {
-            warn!("Failed to open song database: {}", e);
+            warn!("Failed to open score database {}: {}", score_db_path, e);
             return;
         }
     };
 
+    let songdb =
+        match rubato_game::song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+            &config.paths.songpath,
+            &config.paths.bmsroot,
+        ) {
+            Ok(db) => db,
+            Err(e) => {
+                warn!("Failed to open song database: {}", e);
+                return;
+            }
+        };
+
     info!("Importing scores from LR2 database: {}", lr2_path);
-    let importer = rubato_external::score_data_importer::ScoreDataImporter::new(scoredb);
+    let importer = rubato_game::external::score_data_importer::ScoreDataImporter::new(scoredb);
     importer.import_from_lr2_score_database(&lr2_path, &songdb);
     info!("LR2 score import complete.");
 }
@@ -157,13 +160,14 @@ pub(crate) fn init_state_listeners(controller: &mut MainController) -> Vec<Box<d
         )
     };
     if use_discord_rpc {
-        let (sender, listener) = rubato_external::discord_listener::DiscordListener::new();
+        let (sender, listener) = rubato_game::external::discord_listener::DiscordListener::new();
         controller.add_event_sender(sender);
         handles.push(Box::new(listener));
     }
     if use_obs_ws {
-        let obs_client = rubato_external::obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
-        let (sender, listener) = rubato_external::obs::obs_listener::ObsListener::new(cfg_clone);
+        let obs_client = rubato_game::external::obs::obs_ws_client::ObsWsClient::new(&cfg_clone);
+        let (sender, listener) =
+            rubato_game::external::obs::obs_listener::ObsListener::new(cfg_clone);
         controller.add_event_sender(sender);
         handles.push(Box::new(listener));
         if let Ok(client) = obs_client {
@@ -176,20 +180,21 @@ pub(crate) fn init_state_listeners(controller: &mut MainController) -> Vec<Box<d
 /// Wire IR (Internet Ranking) initialization at startup.
 pub(crate) fn init_ir_config(controller: &mut MainController) {
     // Register the LR2IR connection so IRConnectionManager can find it
-    rubato_ir::ir_connection_manager::register_ir_connections(vec![
-        rubato_ir::ir_connection_manager::IRConnectionEntry {
-            name: rubato_ir::lr2_ir_connection_adapter::LR2IR_NAME.to_string(),
+    rubato_game::ir::ir_connection_manager::register_ir_connections(vec![
+        rubato_game::ir::ir_connection_manager::IRConnectionEntry {
+            name: rubato_game::ir::lr2_ir_connection_adapter::LR2IR_NAME.to_string(),
             home: Some("http://www.dream-pro.info/~lavalse/LR2IR/".to_string()),
             factory: Box::new(|| {
-                Box::new(rubato_ir::lr2_ir_connection_adapter::LR2IRConnectionAdapter::new())
+                Box::new(rubato_game::ir::lr2_ir_connection_adapter::LR2IRConnectionAdapter::new())
             }),
         },
     ]);
 
     let player_config = controller.player_config().clone();
-    let ir_statuses = rubato_state::result::ir_initializer::initialize_ir_config(&player_config);
+    let ir_statuses =
+        rubato_game::state::result::ir_initializer::initialize_ir_config(&player_config);
     for ir_status in ir_statuses {
-        let rival_provider = rubato_ir::ir_rival_provider_impl::IRRivalProviderImpl::new(
+        let rival_provider = rubato_game::ir::ir_rival_provider_impl::IRRivalProviderImpl::new(
             ir_status.connection.clone(),
             ir_status.player.clone(),
             ir_status.config.irname.clone(),
@@ -198,16 +203,17 @@ pub(crate) fn init_ir_config(controller: &mut MainController) {
         );
         controller
             .ir_status_mut()
-            .push(rubato_core::main_controller::IRStatus {
+            .push(rubato_game::core::main_controller::IRStatus {
                 config: ir_status.config,
                 rival_provider: Some(Box::new(rival_provider)),
-                connection: Some(Box::new(ir_status.connection.clone())),
-                player_data: Some(Box::new(ir_status.player.clone())),
+                connection: Some(ir_status.connection.clone()),
+                player_data: Some(ir_status.player.clone()),
             });
     }
     // Wire IR resend service
     let ir_send_count = controller.config().network.ir_send_count;
-    let resend_service = rubato_state::result::ir_resend::IrResendServiceImpl::new(ir_send_count);
+    let resend_service =
+        rubato_game::state::result::ir_resend::IrResendServiceImpl::new(ir_send_count);
     resend_service.start();
     controller.set_ir_resend_service(Box::new(resend_service));
 }
@@ -233,9 +239,9 @@ pub(crate) fn init_download_processors(controller: &mut MainController) {
 
 fn init_ipfs_download_processor(
     controller: &mut MainController,
-    config: &rubato_core::config::Config,
+    config: &rubato_game::core::config::Config,
 ) {
-    match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+    match rubato_game::song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
         &config.paths.songpath,
         &config.paths.bmsroot,
     ) {
@@ -245,7 +251,7 @@ fn init_ipfs_download_processor(
                 bmsroot: config.paths.bmsroot.clone(),
             });
             let processor =
-                rubato_song::md_processor::music_download_processor::MusicDownloadProcessor::new(
+                rubato_game::song::md_processor::music_download_processor::MusicDownloadProcessor::new(
                     config.network.ipfsurl.clone(),
                     adapter,
                     std::path::PathBuf::from(&config.network.download_directory),
@@ -265,43 +271,43 @@ fn init_ipfs_download_processor(
 
 fn init_http_download_processor(
     controller: &mut MainController,
-    config: &rubato_core::config::Config,
+    config: &rubato_game::core::config::Config,
 ) {
     // Look up download source by config.network.download_source, fall back to default
-    let source_meta = rubato_song::md_processor::http_download_processor::DOWNLOAD_SOURCES
+    let source_meta = rubato_game::song::md_processor::http_download_processor::DOWNLOAD_SOURCES
         .get(&config.network.download_source)
         .copied()
         .unwrap_or_else(|| {
-            rubato_song::md_processor::http_download_processor::HttpDownloadProcessor::default_download_source()
+            rubato_game::song::md_processor::http_download_processor::HttpDownloadProcessor::default_download_source()
         });
     let http_download_source: Arc<
-        dyn rubato_song::md_processor::http_download_source::HttpDownloadSource,
+        dyn rubato_game::song::md_processor::http_download_source::HttpDownloadSource,
     > = Arc::from(source_meta.build(config));
 
     // The MainControllerRef adapter opens its own song DB connection so the background
     // download thread can call update_song() without borrowing MainController.
-    match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+    match rubato_game::song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
         &config.paths.songpath,
         &config.paths.bmsroot,
     ) {
         Ok(songdb) => {
             let bmsroot = config.paths.bmsroot.clone();
             let info_db: Option<Box<dyn rubato_types::song_information_db::SongInformationDb>> =
-                rubato_song::song_information_accessor::SongInformationAccessor::new(
+                rubato_game::song::song_information_accessor::SongInformationAccessor::new(
                     &config.paths.songinfopath,
                 )
                 .ok()
                 .map(|db| {
                     Box::new(db) as Box<dyn rubato_types::song_information_db::SongInformationDb>
                 });
-            let main_ref: Arc<dyn rubato_song::md_processor::MainControllerRef> =
+            let main_ref: Arc<dyn rubato_game::song::md_processor::MainControllerRef> =
                 Arc::new(SongDbMainControllerRef {
                     songdb,
                     bmsroot,
                     info_db,
                 });
             let processor = Arc::new(
-                rubato_song::md_processor::http_download_processor::HttpDownloadProcessor::new(
+                rubato_game::song::md_processor::http_download_processor::HttpDownloadProcessor::new(
                     main_ref,
                     http_download_source,
                     config.network.download_directory.clone(),
@@ -309,11 +315,11 @@ fn init_http_download_processor(
             );
 
             // Java: DownloadTaskState.initialize(httpDownloadProcessor)
-            rubato_song::md_processor::download_task_state::DownloadTaskState::initialize();
+            rubato_game::song::md_processor::download_task_state::DownloadTaskState::initialize();
             // Java: DownloadTaskMenu.setProcessor(httpDownloadProcessor)
-            rubato_state::modmenu::download_task_menu::DownloadTaskMenu::set_processor(Arc::clone(
-                &processor,
-            ));
+            rubato_game::state::modmenu::download_task_menu::DownloadTaskMenu::set_processor(
+                Arc::clone(&processor),
+            );
 
             controller.set_http_download_processor(Box::new(HttpDownloadProcessorWrapper(
                 Arc::clone(&processor),
@@ -346,34 +352,38 @@ pub(crate) fn init_stream_controller(controller: &mut MainController) {
 
     let config = controller.config().clone();
     let mut selector =
-        match rubato_song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
+        match rubato_game::song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor::new(
             &config.paths.songpath,
             &config.paths.bmsroot,
         ) {
-            Ok(db) => rubato_state::select::music_selector::MusicSelector::with_song_database(
-                Box::new(db),
-            ),
+            Ok(db) => {
+                rubato_game::state::select::music_selector::MusicSelector::with_song_database(
+                    Box::new(db),
+                )
+            }
             Err(e) => {
                 log::warn!(
                     "Failed to open song database for shared MusicSelector: {}",
                     e
                 );
-                rubato_state::select::music_selector::MusicSelector::with_config(config.clone())
+                rubato_game::state::select::music_selector::MusicSelector::with_config(
+                    config.clone(),
+                )
             }
         };
     // Wire dependencies so the shared selector can access config, sounds, scores, etc.
     {
         selector.set_main_controller(
-            rubato_launcher::state_factory::new_state_main_controller_access(controller),
+            rubato_game::state_factory::new_state_main_controller_access(controller),
         );
         selector.config = controller.player_config().clone();
         selector.app_config = config;
     }
     let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
     // Store the shared selector on MainController for the StateCreator to retrieve
-    controller.set_shared_music_selector(Box::new(std::sync::Arc::clone(&selector)));
+    controller.set_shared_music_selector(std::sync::Arc::clone(&selector));
     let mut stream_controller =
-        rubato_state::stream::stream_controller::StreamController::new(selector);
+        rubato_game::state::stream::stream_controller::StreamController::new(selector);
     stream_controller.run();
     controller.set_stream_controller(Box::new(stream_controller));
 }
@@ -381,8 +391,8 @@ pub(crate) fn init_stream_controller(controller: &mut MainController) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_core::config::Config;
-    use rubato_core::player_config::PlayerConfig;
+    use rubato_game::core::config::Config;
+    use rubato_game::core::player_config::PlayerConfig;
 
     #[test]
     fn init_song_information_database_sets_controller_info_database() {

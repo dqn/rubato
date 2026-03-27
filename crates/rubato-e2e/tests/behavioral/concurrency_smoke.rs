@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use rubato_e2e::{E2eHarness, MainStateType};
-use rubato_launcher::state_factory::LauncherStateFactory;
+use rubato_game::state_factory::LauncherStateFactory;
 
 fn harness_with_factory() -> E2eHarness {
     E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator())

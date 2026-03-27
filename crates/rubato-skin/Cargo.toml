@@ -9,7 +9,6 @@ rubato-types.workspace = true
 rubato-skin-model.workspace = true
 rubato-audio.workspace = true
 rubato-input.workspace = true
-rubato-song.workspace = true
 log.workspace = true
 rand.workspace = true
 serde.workspace = true
@@ -29,8 +28,7 @@ ffmpeg = ["dep:ffmpeg-next"]
 criterion.workspace = true
 proptest.workspace = true
 rubato-types = { workspace = true, features = ["test-support"] }
-rubato-core.workspace = true
-rubato-play.workspace = true
+rubato-game.workspace = true
 
 [[bench]]
 name = "skin_loader_bench"

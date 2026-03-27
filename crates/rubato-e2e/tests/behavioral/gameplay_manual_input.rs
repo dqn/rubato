@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use rubato_audio::recording_audio_driver::AudioEvent;
 use rubato_e2e::{E2eHarness, MainStateType};
-use rubato_launcher::state_factory::LauncherStateFactory;
+use rubato_game::state_factory::LauncherStateFactory;
 use rubato_types::main_controller_access::MainControllerAccess;
 use rubato_types::timer_id::TimerId;
 

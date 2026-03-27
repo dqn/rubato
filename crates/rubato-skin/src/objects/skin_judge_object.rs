@@ -1,5 +1,5 @@
 // SkinJudge wrapper for SkinObject enum (Phase 32a)
-// Wraps rubato_play::SkinJudge with SkinObjectData for the skin pipeline.
+// Wraps rubato_game::play::SkinJudge with SkinObjectData for the skin pipeline.
 // Translated from: SkinJudge.java
 
 use crate::objects::skin_image::SkinImage;

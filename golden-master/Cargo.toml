@@ -11,9 +11,7 @@ serde.workspace = true
 serde_json.workspace = true
 
 # Needed by pending modules (src/pending/ and tests/pending/)
-rubato-play.workspace = true
-rubato-core.workspace = true
-rubato-song.workspace = true
+rubato-game.workspace = true
 rubato-input.workspace = true
 rubato-audio.workspace = true
 rubato-skin.workspace = true

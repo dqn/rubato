@@ -5,13 +5,11 @@ edition.workspace = true
 
 [dependencies]
 # Internal crates
-rubato-core = { workspace = true }
+rubato-game = { workspace = true }
 rubato-audio = { workspace = true }
 rubato-types = { workspace = true }
 rubato-input = { workspace = true }
 rubato-render = { workspace = true }
-rubato-play = { workspace = true }
-rubato-launcher = { workspace = true }
 bms = { workspace = true }
 
 # Error handling

@@ -1,0 +1,115 @@
+[package]
+name = "rubato-game"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Internal crates (external to rubato-game)
+bms = { workspace = true }
+rubato-audio = { workspace = true }
+rubato-db = { workspace = true }
+rubato-input = { workspace = true }
+rubato-render = { workspace = true }
+rubato-skin = { workspace = true }
+rubato-timing = { workspace = true }
+rubato-types = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Logging
+log = { workspace = true }
+
+# Regex
+regex = { workspace = true }
+
+# Encoding
+base64 = { workspace = true }
+encoding_rs = { workspace = true }
+flate2 = { workspace = true }
+urlencoding = { workspace = true }
+
+# Crypto (from rubato-core for IRConfig cipher)
+aes = { workspace = true }
+ecb = "0.1"
+
+# Random
+rand = { workspace = true }
+
+# Date/Time
+chrono = { workspace = true }
+
+# Hashing
+md-5 = { workspace = true }
+sha2 = { workspace = true }
+
+# HTTP
+reqwest = { workspace = true, features = ["json"] }
+
+# XML
+quick-xml = { workspace = true }
+
+# Lazy initialization
+lazy_static = { workspace = true }
+
+# Rendering
+image = { workspace = true }
+
+# Clipboard
+arboard = { workspace = true }
+
+# Audio device enumeration
+cpal = { workspace = true }
+
+# File dialog
+rfd = { workspace = true }
+
+# Open URLs/files
+open = { workspace = true }
+
+# GUI
+egui = { workspace = true }
+eframe = { workspace = true }
+winit = { workspace = true }
+
+# Database
+rusqlite = { workspace = true }
+
+# Parallelism
+rayon = { workspace = true }
+
+# Archive extraction
+tar = { workspace = true }
+sevenz-rust = { workspace = true }
+
+# Temp files
+tempfile = { workspace = true }
+
+# Async
+tokio = { workspace = true }
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+# Video decoding (optional)
+ffmpeg-next = { workspace = true, optional = true }
+
+[features]
+ffmpeg = ["dep:ffmpeg-next"]
+test-support = []
+
+[dev-dependencies]
+tempfile = { workspace = true }
+criterion = { workspace = true }
+proptest = { workspace = true }
+rubato-types = { workspace = true, features = ["test-support"] }
+
+[[bench]]
+name = "modifier_bench"
+harness = false

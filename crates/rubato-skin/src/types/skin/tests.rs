@@ -258,7 +258,7 @@ fn test_offset_value_delegates_through_timer_only_adapter() {
 /// Before the fix, all per-timer-id queries returned 0 (frozen animations).
 #[test]
 fn test_timer_manager_values_flow_through_to_skin_adapter() {
-    use rubato_core::timer_manager::TimerManager;
+    use rubato_game::core::timer_manager::TimerManager;
     let mut tm = TimerManager::new();
     tm.update(); // Advance nowmicrotime from Instant::now()
     tm.set_timer_on(rubato_types::timer_id::TimerId::new(10)); // Timer 10 = ON at current micro time

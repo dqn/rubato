@@ -12,7 +12,7 @@ use bms::model::time_line::TimeLine;
 use golden_master::rule_fixtures::{
     GaugePropertyFixture, GaugeSequenceFixture, JudgeWindowFixture,
 };
-use rubato_play::judge_property::{self, JudgeProperty, NoteType};
+use rubato_game::play::judge_property::{self, JudgeProperty, NoteType};
 use rubato_types::clear_type::ClearType;
 use rubato_types::gauge_property::GaugeProperty;
 use rubato_types::groove_gauge::Gauge;
