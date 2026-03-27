@@ -12,24 +12,6 @@ pub fn has_sound(main: &MainController, sound: &SoundType) -> bool {
     main.sound_path(sound).is_some()
 }
 
-/// Play a sound (non-looping).
-#[inline]
-pub fn play_sound(main: &mut MainController, sound: &SoundType) {
-    main.play_sound(sound, false);
-}
-
-/// Stop a sound.
-#[inline]
-pub fn stop_sound(main: &mut MainController, sound: &SoundType) {
-    main.stop_sound(sound);
-}
-
-/// Play a sound with optional looping.
-#[inline]
-pub fn play_sound_loop(main: &mut MainController, sound: &SoundType, loop_sound: bool) {
-    main.play_sound(sound, loop_sound);
-}
-
 /// Set gauge_type from the player resource's groove gauge.
 /// Returns the gauge type value (0 if no groove gauge is available).
 #[inline]

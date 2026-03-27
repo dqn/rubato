@@ -56,6 +56,16 @@ pub struct MusicResult {
     /// Only used by legacy ResultMouseContext in tests after PropertySnapshot migration.
     #[allow(dead_code)]
     pub(crate) pending_custom_events: Vec<(i32, i32, i32)>,
+    /// Outbox: pending system sound plays (sound_type, is_loop).
+    pending_sounds: Vec<(SoundType, bool)>,
+    /// Outbox: pending system sound stops.
+    pending_sound_stops: Vec<SoundType>,
+    /// Outbox: pending audio path plays (path, volume, is_loop).
+    pending_audio_path_plays: Vec<(String, f32, bool)>,
+    /// Outbox: pending audio path stops.
+    pending_audio_path_stops: Vec<String>,
+    /// Outbox: pending audio config update.
+    pending_audio_config: Option<rubato_types::audio_config::AudioConfig>,
 }
 
 impl MusicResult {
@@ -70,6 +80,11 @@ impl MusicResult {
             ir_rx: None,
             ir_thread: None,
             pending_custom_events: Vec::new(),
+            pending_sounds: Vec::new(),
+            pending_sound_stops: Vec::new(),
+            pending_audio_path_plays: Vec::new(),
+            pending_audio_path_stops: Vec::new(),
+            pending_audio_config: None,
         }
     }
 
@@ -687,15 +702,15 @@ impl MusicResult {
     }
 
     fn play_sound_inner(&mut self, sound: SoundType) {
-        super::result_common::play_sound(&mut self.main, &sound);
+        self.pending_sounds.push((sound, false));
     }
 
     fn play_sound_loop_inner(&mut self, sound: SoundType, loop_sound: bool) {
-        super::result_common::play_sound_loop(&mut self.main, &sound, loop_sound);
+        self.pending_sounds.push((sound, loop_sound));
     }
 
     fn stop_sound_inner(&mut self, sound: SoundType) {
-        super::result_common::stop_sound(&mut self.main, &sound);
+        self.pending_sound_stops.push(sound);
     }
 
     /// Build a PropertySnapshot capturing all raw data needed for skin rendering.
@@ -929,38 +944,35 @@ impl MusicResult {
     }
 
     /// Apply queued actions from the snapshot back to live game state.
+    /// Audio actions are stored in pending lists for lifecycle outbox consumption
+    /// (bypassing the command queue).
     fn drain_actions(&mut self, actions: &mut SkinActionQueue, timer: &mut TimerManager) {
         // Timer sets
         for (timer_id, micro_time) in actions.timer_sets.drain(..) {
             timer.set_micro_timer(timer_id, micro_time);
         }
 
-        // State changes
+        // State changes (must stay on command queue)
         for state in actions.state_changes.drain(..) {
             self.main.change_state(state);
         }
 
-        // Audio
+        // Audio: store in pending lists for outbox drain
         for (path, volume, is_loop) in actions.audio_plays.drain(..) {
-            self.main.play_audio_path(&path, volume, is_loop);
+            self.pending_audio_path_plays.push((path, volume, is_loop));
         }
         for path in actions.audio_stops.drain(..) {
-            self.main.stop_audio_path(&path);
+            self.pending_audio_path_stops.push(path);
         }
 
-        // Config propagation
-        if actions.audio_config_changed {
-            if let Some(audio) = self.main.config().audio.clone() {
-                self.main.update_audio_config(audio);
-            }
-            actions.audio_config_changed = false;
-        }
-
-        // Float writes (volume sliders IDs 17-19)
+        // Float writes (volume sliders) -- apply to pending audio config
         for (id, value) in actions.float_writes.drain(..) {
-            if (17..=19).contains(&id)
-                && let Some(mut audio) = self.main.config().audio.clone()
-            {
+            if (17..=19).contains(&id) {
+                let mut audio = self
+                    .pending_audio_config
+                    .clone()
+                    .or_else(|| self.main.config().audio.clone())
+                    .unwrap_or_default();
                 let clamped = value.clamp(0.0, 1.0);
                 match id {
                     17 => audio.systemvolume = clamped,
@@ -968,8 +980,16 @@ impl MusicResult {
                     19 => audio.bgvolume = clamped,
                     _ => {}
                 }
-                self.main.update_audio_config(audio);
+                self.pending_audio_config = Some(audio);
             }
+        }
+
+        // Config propagation
+        if actions.audio_config_changed {
+            if self.pending_audio_config.is_none() {
+                self.pending_audio_config = self.main.config().audio.clone();
+            }
+            actions.audio_config_changed = false;
         }
 
         // Replay save events from custom events
@@ -978,7 +998,7 @@ impl MusicResult {
 
         // Option change sound
         if actions.option_change_sound {
-            self.main.play_sound(&SoundType::OptionChange, false);
+            self.pending_sounds.push((SoundType::OptionChange, false));
             actions.option_change_sound = false;
         }
     }
@@ -1205,6 +1225,26 @@ impl MainState for MusicResult {
 
     fn take_player_resource_box(&mut self) -> Option<Box<dyn std::any::Any + Send>> {
         self.resource.take_inner().map(|b| b.into_any_send())
+    }
+
+    fn drain_pending_sounds(&mut self) -> Vec<(SoundType, bool)> {
+        std::mem::take(&mut self.pending_sounds)
+    }
+
+    fn drain_pending_sound_stops(&mut self) -> Vec<SoundType> {
+        std::mem::take(&mut self.pending_sound_stops)
+    }
+
+    fn drain_pending_audio_path_plays(&mut self) -> Vec<(String, f32, bool)> {
+        std::mem::take(&mut self.pending_audio_path_plays)
+    }
+
+    fn drain_pending_audio_path_stops(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.pending_audio_path_stops)
+    }
+
+    fn take_pending_audio_config(&mut self) -> Option<rubato_types::audio_config::AudioConfig> {
+        self.pending_audio_config.take()
     }
 }
 
