@@ -1,7 +1,8 @@
 // Translated from MusicDecide.java
 // Music decide screen state.
 
-use crate::core::main_state::{MainState, MainStateData, MainStateType};
+use crate::core::app_context::GameContext;
+use crate::core::main_state::{MainState, MainStateData, MainStateType, StateTransition};
 use crate::core::system_sound_manager::SoundType;
 use crate::core::timer_manager::TimerManager;
 use rubato_skin::skin_property::{TIMER_FADEOUT, TIMER_STARTINPUT};
@@ -1492,6 +1493,67 @@ impl MainState for MusicDecide {
         }
     }
 
+    fn render_with_game_context(
+        &mut self,
+        _ctx: &mut GameContext,
+    ) -> Option<StateTransition> {
+        let nowtime = self.data.timer.now_time();
+        // Skin timing values; fall back to 0 when no skin is loaded so the
+        // decide screen still transitions to Play instead of stalling forever.
+        let input_time = self.data.skin.as_ref().map_or(0, |s| s.input() as i64);
+        let fadeout_time = self.data.skin.as_ref().map_or(0, |s| s.fadeout() as i64);
+        let scene_time = self.data.skin.as_ref().map_or(0, |s| s.scene() as i64);
+
+        if nowtime > input_time {
+            self.data.timer.switch_timer(TIMER_STARTINPUT, true);
+        }
+        if self.data.timer.is_timer_on(TIMER_FADEOUT) {
+            if self.data.timer.now_time_for_id(TIMER_FADEOUT) > fadeout_time {
+                return Some(StateTransition::ChangeTo(if self.cancel {
+                    MainStateType::MusicSelect
+                } else {
+                    MainStateType::Play
+                }));
+            }
+        } else if nowtime > scene_time {
+            self.data.timer.set_timer_on(TIMER_FADEOUT);
+        }
+
+        Some(StateTransition::Continue)
+    }
+
+    fn input_with_game_context(&mut self, ctx: &mut GameContext) -> Option<()> {
+        if let Some(ref snapshot) = self.input_snapshot
+            && !self.data.timer.is_timer_on(TIMER_FADEOUT)
+            && self.data.timer.is_timer_on(TIMER_STARTINPUT)
+        {
+            let decide = snapshot.key_state[0]
+                || snapshot.key_state[2]
+                || snapshot.key_state[4]
+                || snapshot.key_state[6]
+                || snapshot
+                    .control_key_states
+                    .get(&ControlKeys::Enter)
+                    .copied()
+                    .unwrap_or(false);
+            let cancel = snapshot
+                .control_key_states
+                .get(&ControlKeys::Escape)
+                .copied()
+                .unwrap_or(false)
+                || (snapshot.start_pressed && snapshot.select_pressed);
+            if decide {
+                self.data.timer.set_timer_on(TIMER_FADEOUT);
+            }
+            if cancel {
+                self.cancel = true;
+                ctx.set_global_pitch(1f32);
+                self.data.timer.set_timer_on(TIMER_FADEOUT);
+            }
+        }
+        Some(())
+    }
+
     fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {
         self.input_snapshot = Some(snapshot.clone());
     }
@@ -1916,6 +1978,175 @@ mod tests {
         decide.data.timer.set_timer_on(TIMER_FADEOUT);
         decide.render();
         // change_state(Play) is a stub that logs — verify no panic
+    }
+
+    /// Build a minimal GameContext for testing.
+    fn make_game_context() -> GameContext {
+        use crate::core::main_controller::{DatabaseState, IntegrationState, LifecycleState};
+        use std::sync::atomic::AtomicBool;
+        GameContext {
+            config: rubato_types::config::Config::default(),
+            player: rubato_types::player_config::PlayerConfig::default(),
+            audio: None,
+            sound: None,
+            loudness_analyzer: None,
+            timer: TimerManager::new(),
+            input: None,
+            input_poll_quit: std::sync::Arc::new(AtomicBool::new(false)),
+            db: DatabaseState::default(),
+            offset: Vec::new(),
+            showfps: false,
+            debug: false,
+            integration: IntegrationState::default(),
+            lifecycle: LifecycleState::new(),
+            exit_requested: AtomicBool::new(false),
+            resource: None,
+        }
+    }
+
+    // ============================================================
+    // render_with_game_context tests
+    // ============================================================
+
+    #[test]
+    fn test_render_with_game_context_no_skin_returns_continue() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // data.skin is None -- should return Continue (no transition)
+        let result = decide.render_with_game_context(&mut ctx);
+        assert_eq!(result, Some(StateTransition::Continue));
+    }
+
+    #[test]
+    fn test_render_with_game_context_nowtime_zero_no_startinput() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        decide.data.skin = Some(Box::new(MockSkin::new()));
+        // nowmicrotime=0, skin.input()=0, 0 > 0 = false
+        let result = decide.render_with_game_context(&mut ctx);
+        assert_eq!(result, Some(StateTransition::Continue));
+        assert!(!decide.data.timer.is_timer_on(TIMER_STARTINPUT));
+    }
+
+    #[test]
+    fn test_render_with_game_context_sets_startinput_when_past_input_time() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // input=-1 so that nowtime(0) > input(-1) is true
+        decide.data.skin = Some(Box::new(MockSkin::with_values(-1, i32::MAX, 0)));
+        let result = decide.render_with_game_context(&mut ctx);
+        assert_eq!(result, Some(StateTransition::Continue));
+        assert!(decide.data.timer.is_timer_on(TIMER_STARTINPUT));
+    }
+
+    #[test]
+    fn test_render_with_game_context_scene_timeout_triggers_fadeout() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // scene=-1 so that nowtime(0) > scene(-1) is true
+        decide.data.skin = Some(Box::new(MockSkin::with_values(0, -1, 0)));
+        let result = decide.render_with_game_context(&mut ctx);
+        assert_eq!(result, Some(StateTransition::Continue));
+        assert!(decide.data.timer.is_timer_on(TIMER_FADEOUT));
+    }
+
+    #[test]
+    fn test_render_with_game_context_fadeout_cancel_returns_change_to_select() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // fadeout=-1 so that now_time_for_id(TIMER_FADEOUT)(=0) > fadeout(-1) is true
+        decide.data.skin = Some(Box::new(MockSkin::with_values(0, i32::MAX, -1)));
+        decide.cancel = true;
+        decide.data.timer.set_timer_on(TIMER_FADEOUT);
+        let result = decide.render_with_game_context(&mut ctx);
+        assert_eq!(
+            result,
+            Some(StateTransition::ChangeTo(MainStateType::MusicSelect))
+        );
+    }
+
+    #[test]
+    fn test_render_with_game_context_fadeout_no_cancel_returns_change_to_play() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // fadeout=-1 so that now_time_for_id(TIMER_FADEOUT)(=0) > fadeout(-1) is true
+        decide.data.skin = Some(Box::new(MockSkin::with_values(0, i32::MAX, -1)));
+        decide.cancel = false;
+        decide.data.timer.set_timer_on(TIMER_FADEOUT);
+        let result = decide.render_with_game_context(&mut ctx);
+        assert_eq!(
+            result,
+            Some(StateTransition::ChangeTo(MainStateType::Play))
+        );
+    }
+
+    // ============================================================
+    // input_with_game_context tests
+    // ============================================================
+
+    #[test]
+    fn test_input_with_game_context_returns_some() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // Even with no timers/input, input_with_game_context returns Some(())
+        let result = decide.input_with_game_context(&mut ctx);
+        assert_eq!(result, Some(()));
+    }
+
+    #[test]
+    fn test_input_with_game_context_no_timers_no_action() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        // Neither TIMER_FADEOUT nor TIMER_STARTINPUT is on
+        decide.input_with_game_context(&mut ctx);
+        assert!(!decide.cancel);
+        assert!(!decide.data.timer.is_timer_on(TIMER_FADEOUT));
+    }
+
+    #[test]
+    fn test_input_with_game_context_decide_key_triggers_fadeout() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        decide.data.timer.set_timer_on(TIMER_STARTINPUT);
+        // Set up snapshot with key_state[0] = true (decide key)
+        let mut snapshot = rubato_input::input_snapshot::InputSnapshot::default();
+        snapshot.key_state[0] = true;
+        decide.input_snapshot = Some(snapshot);
+        decide.input_with_game_context(&mut ctx);
+        assert!(decide.data.timer.is_timer_on(TIMER_FADEOUT));
+        assert!(!decide.cancel);
+    }
+
+    #[test]
+    fn test_input_with_game_context_cancel_key_triggers_fadeout_and_cancel() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        decide.data.timer.set_timer_on(TIMER_STARTINPUT);
+        // Set up snapshot with Escape pressed
+        let mut snapshot = rubato_input::input_snapshot::InputSnapshot::default();
+        snapshot
+            .control_key_states
+            .insert(ControlKeys::Escape, true);
+        decide.input_snapshot = Some(snapshot);
+        decide.input_with_game_context(&mut ctx);
+        assert!(decide.data.timer.is_timer_on(TIMER_FADEOUT));
+        assert!(decide.cancel);
+    }
+
+    #[test]
+    fn test_input_with_game_context_during_fadeout_no_action() {
+        let mut decide = make_decide();
+        let mut ctx = make_game_context();
+        decide.data.timer.set_timer_on(TIMER_FADEOUT);
+        decide.data.timer.set_timer_on(TIMER_STARTINPUT);
+        // Set up snapshot with decide key -- should be blocked by fadeout
+        let mut snapshot = rubato_input::input_snapshot::InputSnapshot::default();
+        snapshot.key_state[0] = true;
+        decide.input_snapshot = Some(snapshot);
+        let result = decide.input_with_game_context(&mut ctx);
+        assert_eq!(result, Some(()));
+        // cancel should not be changed
+        assert!(!decide.cancel);
     }
 
     #[test]
