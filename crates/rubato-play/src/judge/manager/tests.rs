@@ -3506,3 +3506,413 @@ fn ln_press_on_time_release_way_too_early_triggers_deferred_path() {
     // Combo should be 0.
     assert_eq!(jm.combo(), 0, "Releasing 700ms early should break combo");
 }
+
+// =========================================================================
+// Gap 2b: Deferred LN release timeout with non-zero releasemargin
+// =========================================================================
+
+/// Helper: create a JudgeManager for manual LN testing with a custom JudgeProperty.
+///
+/// Returns (JudgeManager, notes, gauge, key_count, key_for_lane_0).
+fn make_manual_ln_jm_with_judge_property(
+    start_us: i64,
+    end_us: i64,
+    ln_type: LnType,
+    judge_property: &crate::judge::property::JudgeProperty,
+) -> (JudgeManager, Vec<JudgeNote>, GrooveGauge, usize, usize) {
+    let model = make_model_with_ln_pair(start_us, end_us);
+    let notes = build_judge_notes(&model);
+
+    let config = JudgeConfig {
+        notes: &notes,
+        mode: &Mode::BEAT_7K,
+        ln_type,
+        judge_rank: 100,
+        judge_window_rate: [100, 100, 100],
+        scratch_judge_window_rate: [100, 100, 100],
+        algorithm: JudgeAlgorithm::Combo,
+        autoplay: false,
+        judge_property,
+        lane_property: None,
+        auto_adjust_enabled: false,
+        is_play_or_practice: false,
+        judgeregion: 1,
+    };
+    let jm = JudgeManager::from_config(&config);
+    let gp = crate::gauge_property::GaugeProperty::Lr2;
+    let gauge = GrooveGauge::new(&model, GrooveGauge::NORMAL, &gp);
+    let lp = LaneProperty::new(&Mode::BEAT_7K);
+    let key_count = lp.key_lane_assign().len();
+    let lane0_key = key_for_lane(0);
+    (jm, notes, gauge, key_count, lane0_key)
+}
+
+#[test]
+fn deferred_ln_release_resolves_exactly_at_margin_boundary() {
+    // LN pair: start at 1s, end at 2s. LnType::LongNote.
+    // Use a custom JudgeProperty with longnote_margin = 100_000 (100ms).
+    // Press at exactly 1s. Release at 1.3s (700ms before end, triggers deferred path).
+    //
+    // Deferred path sets releasetime = 1_300_000, lnend_judge = 3.
+    // Resolution condition: releasetime + releasemargin <= mtime
+    //   => 1_300_000 + 100_000 <= mtime => mtime >= 1_400_000
+    //
+    // At mtime = 1_399_999: NOT resolved (1_400_000 > 1_399_999).
+    // At mtime = 1_400_000: resolved (1_400_000 <= 1_400_000).
+    let mut jp = crate::judge_property::lr2();
+    jp.longnote_margin = 100_000;
+
+    let (mut jm, notes, mut gauge, key_count, lane0_key) =
+        make_manual_ln_jm_with_judge_property(1_000_000, 2_000_000, LnType::LongNote, &jp);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before the LN start
+    let mut time = 0i64;
+    while time < 1_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press key at exactly 1s
+    let press_time = 1_000_000i64;
+    let mut keys_pressed = vec![false; key_count];
+    keys_pressed[lane0_key] = true;
+    let mut key_times_pressed = vec![i64::MIN; key_count];
+    key_times_pressed[lane0_key] = press_time;
+    jm.update(
+        press_time,
+        &notes,
+        &keys_pressed,
+        &key_times_pressed,
+        &mut gauge,
+    );
+
+    // Hold briefly then release at 1.3s
+    time = press_time + 10_000;
+    while time < 1_300_000 {
+        jm.update(
+            time,
+            &notes,
+            &keys_pressed,
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Release key at 1_300_000
+    let release_time = 1_300_000i64;
+    let mut key_times_released = vec![i64::MIN; key_count];
+    key_times_released[lane0_key] = release_time;
+    jm.update(
+        release_time,
+        &notes,
+        &vec![false; key_count],
+        &key_times_released,
+        &mut gauge,
+    );
+
+    // Advance to 1 microsecond before the margin boundary: 1_399_999
+    time = release_time + 1_000;
+    while time <= 1_399_999 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+
+    // At this point, the note should NOT be resolved yet.
+    assert_eq!(
+        jm.past_notes(),
+        0,
+        "LN should NOT be judged before releasetime + margin (1_400_000)"
+    );
+
+    // Now advance to exactly the margin boundary: 1_400_000
+    jm.update(
+        1_400_000,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // NOW the note should be resolved.
+    assert_eq!(
+        jm.past_notes(),
+        1,
+        "LN should be judged at exactly releasetime + margin (1_400_000)"
+    );
+
+    // The deferred path uses lnend_judge=3 (BAD level), so combo should break.
+    assert_eq!(jm.combo(), 0, "Deferred BAD judgment should break combo");
+}
+
+#[test]
+fn deferred_ln_release_with_nonzero_margin_delays_resolution() {
+    // Verify that a non-zero releasemargin truly delays the resolution of the
+    // deferred LN release judgment. Compare behavior with margin=0 vs margin=200_000.
+    //
+    // LN pair: start at 1s, end at 2s. Release at 1.3s (deferred path).
+    //
+    // With margin=0 (LR2 default): resolves on the same update frame as the release.
+    // With margin=200_000: resolves only at 1_300_000 + 200_000 = 1_500_000.
+    //
+    // Test the margin=200_000 case: confirm not resolved at 1_499_999, resolved at 1_500_000.
+    let mut jp = crate::judge_property::lr2();
+    jp.longnote_margin = 200_000;
+
+    let (mut jm, notes, mut gauge, key_count, lane0_key) =
+        make_manual_ln_jm_with_judge_property(1_000_000, 2_000_000, LnType::LongNote, &jp);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before LN start
+    let mut time = 0i64;
+    while time < 1_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press key at exactly 1s
+    let press_time = 1_000_000i64;
+    let mut keys_pressed = vec![false; key_count];
+    keys_pressed[lane0_key] = true;
+    let mut key_times_pressed = vec![i64::MIN; key_count];
+    key_times_pressed[lane0_key] = press_time;
+    jm.update(
+        press_time,
+        &notes,
+        &keys_pressed,
+        &key_times_pressed,
+        &mut gauge,
+    );
+
+    // Hold then release at 1.3s
+    time = press_time + 10_000;
+    while time < 1_300_000 {
+        jm.update(
+            time,
+            &notes,
+            &keys_pressed,
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Release key at 1_300_000 (triggers deferred path)
+    let release_time = 1_300_000i64;
+    let mut key_times_released = vec![i64::MIN; key_count];
+    key_times_released[lane0_key] = release_time;
+    jm.update(
+        release_time,
+        &notes,
+        &vec![false; key_count],
+        &key_times_released,
+        &mut gauge,
+    );
+
+    // Immediately after release: should NOT be resolved (margin=200ms remaining)
+    assert_eq!(
+        jm.past_notes(),
+        0,
+        "With 200ms margin, LN should not resolve immediately on release"
+    );
+
+    // Advance to 100ms after release (1_400_000): still within margin, NOT resolved
+    time = release_time + 1_000;
+    while time <= 1_400_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+    assert_eq!(
+        jm.past_notes(),
+        0,
+        "At 100ms after release (need 200ms margin), LN should still not be resolved"
+    );
+
+    // Advance to 1 microsecond before the margin boundary: 1_499_999
+    while time <= 1_499_999 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+    assert_eq!(
+        jm.past_notes(),
+        0,
+        "LN should not be resolved at 1_499_999 (1us before margin boundary)"
+    );
+
+    // Advance to exactly 1_500_000: margin boundary reached
+    jm.update(
+        1_500_000,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+    assert_eq!(
+        jm.past_notes(),
+        1,
+        "LN should be resolved at exactly releasetime + margin = 1_500_000"
+    );
+}
+
+#[test]
+fn deferred_ln_release_timeout_uses_lnend_judge_3_for_final_judgment() {
+    // Verify that the deferred release path records lnend_judge=3 at deferral time,
+    // and uses that value (not a recalculated one) when the timeout resolves.
+    //
+    // LN pair: start at 1s, end at 2s.
+    // Press at exactly 1s (PG start). Release at 1.3s (700ms before end).
+    // margin = 100_000 (100ms).
+    //
+    // At release: judge >= 3 && dmtime > 0 -> deferred. lnend_judge = 3 (forced).
+    // At resolution (1_400_000): update_micro uses judge=3 (JUDGE_BD=3).
+    //
+    // Expected: the ghost record should show JUDGE_BD (3), not PG/GR/GD/PR/MS.
+    // judge_counts should show a BD entry (ebd or lbd).
+    let mut jp = crate::judge_property::lr2();
+    jp.longnote_margin = 100_000;
+
+    let (mut jm, notes, mut gauge, key_count, lane0_key) =
+        make_manual_ln_jm_with_judge_property(1_000_000, 2_000_000, LnType::LongNote, &jp);
+
+    // Prime
+    jm.update(
+        -1,
+        &notes,
+        &vec![false; key_count],
+        &vec![i64::MIN; key_count],
+        &mut gauge,
+    );
+
+    // Advance to just before LN start
+    let mut time = 0i64;
+    while time < 1_000_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Press key at exactly 1s
+    let press_time = 1_000_000i64;
+    let mut keys_pressed = vec![false; key_count];
+    keys_pressed[lane0_key] = true;
+    let mut key_times_pressed = vec![i64::MIN; key_count];
+    key_times_pressed[lane0_key] = press_time;
+    jm.update(
+        press_time,
+        &notes,
+        &keys_pressed,
+        &key_times_pressed,
+        &mut gauge,
+    );
+
+    // Hold then release at 1.3s
+    time = press_time + 10_000;
+    while time < 1_300_000 {
+        jm.update(
+            time,
+            &notes,
+            &keys_pressed,
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 10_000;
+    }
+
+    // Release key at 1_300_000
+    let release_time = 1_300_000i64;
+    let mut key_times_released = vec![i64::MIN; key_count];
+    key_times_released[lane0_key] = release_time;
+    jm.update(
+        release_time,
+        &notes,
+        &vec![false; key_count],
+        &key_times_released,
+        &mut gauge,
+    );
+
+    // Advance past the margin boundary to let the deferred judgment resolve
+    time = release_time + 1_000;
+    while time <= 1_500_000 {
+        jm.update(
+            time,
+            &notes,
+            &vec![false; key_count],
+            &vec![i64::MIN; key_count],
+            &mut gauge,
+        );
+        time += 1_000;
+    }
+
+    assert_eq!(jm.past_notes(), 1, "LN should be judged via deferred path");
+
+    // The deferred path forces lnend_judge = 3 (JUDGE_BD).
+    // Verify no PG or GR was recorded.
+    let pg_count = jm.score().judge_counts.epg + jm.score().judge_counts.lpg;
+    let gr_count = jm.score().judge_counts.egr + jm.score().judge_counts.lgr;
+    let gd_count = jm.score().judge_counts.egd + jm.score().judge_counts.lgd;
+    assert_eq!(pg_count, 0, "Deferred release should not produce PGREAT");
+    assert_eq!(gr_count, 0, "Deferred release should not produce GREAT");
+    assert_eq!(gd_count, 0, "Deferred release should not produce GOOD");
+
+    // JUDGE_BD = 3; in LR2 combo table, index 3 is false, so combo breaks.
+    assert_eq!(jm.combo(), 0, "lnend_judge=3 (BD) should break combo");
+
+    // Ghost should record the judge value from the deferred path (BD=3).
+    let ghost_val = jm.ghost()[0];
+    assert_eq!(
+        ghost_val, 3,
+        "Ghost should record JUDGE_BD (3) from the deferred lnend_judge, got {ghost_val}"
+    );
+}

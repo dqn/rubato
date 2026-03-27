@@ -6477,3 +6477,249 @@ fn build_score_handoff_score_data_none_in_autoplay_mode() {
         "replay_data should be Some even in Autoplay mode"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Scoring: create_score_data clear type & minbp tests
+// ---------------------------------------------------------------------------
+
+/// Create a BMSPlayer with judge counts set for scoring tests.
+/// Returns a player in Play state with notes hit (so create_score_data won't return None).
+fn make_scoring_player() -> BMSPlayer {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.state = PlayState::Play; // Not Failed
+    // Set at least one PG so the early return check passes
+    player.judge.score_data_mut().judge_counts.epg = 1;
+    player
+}
+
+#[test]
+fn create_score_data_clear_type_failed_when_state_is_failed() {
+    let mut player = make_scoring_player();
+    player.state = PlayState::Failed;
+    // Even with a qualified gauge, Failed state should yield ClearType::Failed.
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::Failed.id());
+}
+
+#[test]
+fn create_score_data_clear_type_failed_when_gauge_none() {
+    let mut player = make_scoring_player();
+    player.gauge = None;
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::Failed.id());
+}
+
+#[test]
+fn create_score_data_clear_type_failed_when_gauge_not_qualified() {
+    let mut player = make_scoring_player();
+    // NORMAL gauge: init=20, border=80 -> NOT qualified by default
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::NORMAL,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::Failed.id());
+}
+
+#[test]
+fn create_score_data_clear_type_light_assist_easy() {
+    let mut player = make_scoring_player();
+    player.assist = 1;
+    // Qualified gauge (HARD: init=100, border=0)
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::LightAssistEasy.id());
+}
+
+#[test]
+fn create_score_data_clear_type_assist_easy() {
+    let mut player = make_scoring_player();
+    player.assist = 2;
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::AssistEasy.id());
+}
+
+#[test]
+fn create_score_data_clear_type_assist_in_course_mode_stays_failed() {
+    let mut player = make_scoring_player();
+    player.assist = 1;
+    player.is_course_mode = true;
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    // In course mode, the assist branch does NOT set clear type (stays Failed).
+    assert_eq!(score.clear, ClearType::Failed.id());
+}
+
+#[test]
+fn create_score_data_clear_type_max() {
+    let mut player = make_scoring_player();
+    // All PG, no GR, no GD: past_notes==combo, judge_count(1)==0, judge_count(2)==0
+    player.judge.score_data_mut().judge_counts.epg = 10;
+    player.judge.score_data_mut().passnotes = 10;
+    player.judge.set_combo_for_test(10);
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::Max.id());
+}
+
+#[test]
+fn create_score_data_clear_type_perfect() {
+    let mut player = make_scoring_player();
+    // PG + GR, no GD: past_notes==combo, judge_count(1)>0, judge_count(2)==0
+    player.judge.score_data_mut().judge_counts.epg = 8;
+    player.judge.score_data_mut().judge_counts.egr = 2;
+    player.judge.score_data_mut().passnotes = 10;
+    player.judge.set_combo_for_test(10);
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::Perfect.id());
+}
+
+#[test]
+fn create_score_data_clear_type_fullcombo() {
+    let mut player = make_scoring_player();
+    // PG + GR + GD, combo == past_notes: judge_count(2)>0
+    player.judge.score_data_mut().judge_counts.epg = 5;
+    player.judge.score_data_mut().judge_counts.egr = 3;
+    player.judge.score_data_mut().judge_counts.egd = 2;
+    player.judge.score_data_mut().passnotes = 10;
+    player.judge.set_combo_for_test(10);
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::FullCombo.id());
+}
+
+#[test]
+fn create_score_data_clear_type_gauge_based() {
+    let mut player = make_scoring_player();
+    // past_notes != combo (broken combo) -> falls through to gauge.clear_type()
+    player.judge.score_data_mut().judge_counts.epg = 8;
+    player.judge.score_data_mut().judge_counts.ebd = 2;
+    player.judge.score_data_mut().passnotes = 10;
+    player.judge.set_combo_for_test(8); // combo < past_notes
+    // HARD gauge -> clear_type() returns ClearType::Hard
+    let gauge = GrooveGauge::new(
+        &player.model,
+        rubato_types::groove_gauge::HARD,
+        &rubato_types::gauge_property::GaugeProperty::SevenKeys,
+    );
+    player.gauge = Some(gauge);
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.clear, ClearType::Hard.id());
+}
+
+#[test]
+fn create_score_data_minbp_all_zeros() {
+    // All notes judged as PG, no bad/poor/miss -> minbp = 0
+    let model = make_model_with_timed_notes(&[(1, 0), (1, 0), (1, 0)]);
+    let total = model.total_notes();
+    let mut player = BMSPlayer::new(model);
+    player.state = PlayState::Play;
+    player.judge.score_data_mut().judge_counts.epg = total;
+    player.judge.score_data_mut().passnotes = total;
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.minbp, 0);
+}
+
+#[test]
+fn create_score_data_minbp_with_bad_and_miss() {
+    // 10 notes total, all judged. ebd=2, lbd=3, epr=1, lpr=1, ems=2, lms=1 -> minbp=10
+    let notes: Vec<(i32, i64)> = (0..10).map(|_| (1, 0)).collect();
+    let model = make_model_with_timed_notes(&notes);
+    let mut player = BMSPlayer::new(model);
+    player.state = PlayState::Play;
+    let sd = player.judge.score_data_mut();
+    sd.judge_counts.epg = 1; // Need at least 1 PG/GR/GD/BD for early-return check
+    sd.judge_counts.ebd = 2;
+    sd.judge_counts.lbd = 3;
+    sd.judge_counts.epr = 1;
+    sd.judge_counts.lpr = 1;
+    sd.judge_counts.ems = 2;
+    sd.judge_counts.lms = 1;
+    sd.passnotes = 10;
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    // minbp = ebd(2) + lbd(3) + epr(1) + lpr(1) + ems(2) + lms(1) + (10-10) = 10
+    assert_eq!(score.minbp, 10);
+}
+
+#[test]
+fn create_score_data_minbp_with_unjudged_notes() {
+    // 5 notes in model, only 3 judged -> unjudged count (2) contributes to minbp
+    let notes: Vec<(i32, i64)> = (0..5).map(|_| (1, 0)).collect();
+    let model = make_model_with_timed_notes(&notes);
+    let total = model.total_notes();
+    assert_eq!(total, 5);
+    let mut player = BMSPlayer::new(model);
+    player.state = PlayState::Play;
+    let sd = player.judge.score_data_mut();
+    sd.judge_counts.epg = 1; // passes early-return check
+    sd.judge_counts.ebd = 1;
+    sd.judge_counts.lms = 1;
+    sd.passnotes = 3;
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    // minbp = ebd(1) + lbd(0) + epr(0) + lpr(0) + ems(0) + lms(1) + (5-3) = 4
+    assert_eq!(score.minbp, 4);
+}
+
+#[test]
+fn create_score_data_minbp_floor_at_zero() {
+    // Edge case: all zeros, empty model (total_notes=0, past_notes=0)
+    // saturating_sub(0, 0) = 0, then max(0) = 0
+    let player = make_scoring_player();
+
+    let score = player.create_score_data(DeviceType::Keyboard).unwrap();
+    assert_eq!(score.minbp, 0);
+}

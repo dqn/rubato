@@ -257,6 +257,12 @@ impl JudgeManager {
         &mut self.score
     }
 
+    /// Set combo value (for testing).
+    #[cfg(test)]
+    pub fn set_combo_for_test(&mut self, combo: i32) {
+        self.combo = combo;
+    }
+
     /// Get the judge laser color value for a given player and offset (for testing).
     ///
     /// Returns 0 for out-of-bounds indices.

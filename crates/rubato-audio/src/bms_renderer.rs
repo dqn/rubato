@@ -372,4 +372,273 @@ mod tests {
         }
         // Either None or Some with empty data is acceptable
     }
+
+    // --- mix_short_pcm tests ---
+
+    #[test]
+    fn mix_short_pcm_basic() {
+        use crate::short_pcm::ShortPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = ShortPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 3,
+            sample: Arc::new(vec![16384, -16384, 32767]),
+        };
+        let mut buf = vec![0.0f32; 5];
+        renderer.mix_short_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - 16384.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[1] - (-16384.0 / 32768.0)).abs() < 1e-6);
+        assert!((buf[2] - 32767.0 / 32768.0).abs() < 1e-6);
+        assert_eq!(buf[3], 0.0);
+        assert_eq!(buf[4], 0.0);
+    }
+
+    #[test]
+    fn mix_short_pcm_additive() {
+        use crate::short_pcm::ShortPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = ShortPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 2,
+            sample: Arc::new(vec![16384, -16384]),
+        };
+        let mut buf = vec![0.5f32; 4];
+        renderer.mix_short_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - (0.5 + 16384.0 / 32768.0)).abs() < 1e-6);
+        assert!((buf[1] - (0.5 + (-16384.0 / 32768.0))).abs() < 1e-6);
+        assert_eq!(buf[2], 0.5);
+        assert_eq!(buf[3], 0.5);
+    }
+
+    #[test]
+    fn mix_short_pcm_negative_start_exits_silently() {
+        use crate::short_pcm::ShortPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = ShortPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 2,
+            sample: Arc::new(vec![16384, -16384]),
+        };
+        let mut buf = vec![0.0f32; 4];
+        renderer.mix_short_pcm(&pcm, -1, &mut buf);
+
+        assert_eq!(buf, vec![0.0f32; 4]);
+    }
+
+    #[test]
+    fn mix_short_pcm_clips_at_buffer_end() {
+        use crate::short_pcm::ShortPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = ShortPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 5,
+            sample: Arc::new(vec![1000, 2000, 3000, 4000, 5000]),
+        };
+        let mut buf = vec![0.0f32; 3];
+        renderer.mix_short_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - 1000.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[1] - 2000.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[2] - 3000.0 / 32768.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn mix_short_pcm_with_start_offset() {
+        use crate::short_pcm::ShortPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = ShortPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 2,
+            len: 2,
+            sample: Arc::new(vec![100, 200, 300, 400]),
+        };
+        let mut buf = vec![0.0f32; 4];
+        renderer.mix_short_pcm(&pcm, 0, &mut buf);
+
+        // src starts at index 2, so samples 300 and 400 are mixed
+        assert!((buf[0] - 300.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[1] - 400.0 / 32768.0).abs() < 1e-6);
+        assert_eq!(buf[2], 0.0);
+        assert_eq!(buf[3], 0.0);
+    }
+
+    #[test]
+    fn mix_short_pcm_stereo_channels() {
+        use crate::short_pcm::ShortPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 2);
+        let pcm = ShortPCM {
+            channels: 2,
+            sample_rate: 44100,
+            start: 0,
+            len: 4,
+            sample: Arc::new(vec![1000, 2000, 3000, 4000]),
+        };
+        // start_sample=1, dst_start = 1 * 2 = 2
+        let mut buf = vec![0.0f32; 8];
+        renderer.mix_short_pcm(&pcm, 1, &mut buf);
+
+        assert_eq!(buf[0], 0.0);
+        assert_eq!(buf[1], 0.0);
+        assert!((buf[2] - 1000.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[3] - 2000.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[4] - 3000.0 / 32768.0).abs() < 1e-6);
+        assert!((buf[5] - 4000.0 / 32768.0).abs() < 1e-6);
+        assert_eq!(buf[6], 0.0);
+        assert_eq!(buf[7], 0.0);
+    }
+
+    // --- mix_float_pcm tests ---
+
+    #[test]
+    fn mix_float_pcm_basic() {
+        use crate::float_pcm::FloatPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = FloatPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 3,
+            sample: Arc::new(vec![0.25, -0.5, 1.0]),
+        };
+        let mut buf = vec![0.0f32; 5];
+        renderer.mix_float_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - 0.25).abs() < 1e-6);
+        assert!((buf[1] - (-0.5)).abs() < 1e-6);
+        assert!((buf[2] - 1.0).abs() < 1e-6);
+        assert_eq!(buf[3], 0.0);
+        assert_eq!(buf[4], 0.0);
+    }
+
+    #[test]
+    fn mix_float_pcm_additive() {
+        use crate::float_pcm::FloatPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = FloatPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 2,
+            sample: Arc::new(vec![0.3, -0.2]),
+        };
+        let mut buf = vec![0.5f32; 4];
+        renderer.mix_float_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - 0.8).abs() < 1e-6);
+        assert!((buf[1] - 0.3).abs() < 1e-6);
+        assert_eq!(buf[2], 0.5);
+        assert_eq!(buf[3], 0.5);
+    }
+
+    #[test]
+    fn mix_float_pcm_negative_start_exits_silently() {
+        use crate::float_pcm::FloatPCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = FloatPCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 2,
+            sample: Arc::new(vec![0.5, -0.5]),
+        };
+        let mut buf = vec![0.0f32; 4];
+        renderer.mix_float_pcm(&pcm, -1, &mut buf);
+
+        assert_eq!(buf, vec![0.0f32; 4]);
+    }
+
+    // --- mix_byte_pcm tests ---
+
+    #[test]
+    fn mix_byte_pcm_basic() {
+        use crate::byte_pcm::BytePCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = BytePCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 3,
+            sample: Arc::new(vec![64, 128, 255]),
+        };
+        let mut buf = vec![0.0f32; 5];
+        renderer.mix_byte_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - 64.0 / 128.0).abs() < 1e-6);
+        assert!((buf[1] - 128.0 / 128.0).abs() < 1e-6);
+        assert!((buf[2] - 255.0 / 128.0).abs() < 1e-6);
+        assert_eq!(buf[3], 0.0);
+        assert_eq!(buf[4], 0.0);
+    }
+
+    #[test]
+    fn mix_byte_pcm_additive() {
+        use crate::byte_pcm::BytePCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = BytePCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 2,
+            sample: Arc::new(vec![64, 128]),
+        };
+        let mut buf = vec![0.5f32; 4];
+        renderer.mix_byte_pcm(&pcm, 0, &mut buf);
+
+        assert!((buf[0] - (0.5 + 64.0 / 128.0)).abs() < 1e-6);
+        assert!((buf[1] - (0.5 + 128.0 / 128.0)).abs() < 1e-6);
+        assert_eq!(buf[2], 0.5);
+        assert_eq!(buf[3], 0.5);
+    }
+
+    #[test]
+    fn mix_byte_pcm_negative_start_exits_silently() {
+        use crate::byte_pcm::BytePCM;
+        use std::sync::Arc;
+
+        let renderer = BMSRenderer::new(44100, 1);
+        let pcm = BytePCM {
+            channels: 1,
+            sample_rate: 44100,
+            start: 0,
+            len: 2,
+            sample: Arc::new(vec![64, 128]),
+        };
+        let mut buf = vec![0.0f32; 4];
+        renderer.mix_byte_pcm(&pcm, -1, &mut buf);
+
+        assert_eq!(buf, vec![0.0f32; 4]);
+    }
 }
