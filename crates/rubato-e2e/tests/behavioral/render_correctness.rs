@@ -23,12 +23,12 @@ fn test_bms_dir() -> PathBuf {
 }
 
 fn harness_with_factory() -> E2eHarness {
-    E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()))
+    E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator())
 }
 
 fn harness_with_player(player: PlayerConfig) -> E2eHarness {
     E2eHarness::new_with_player_config(player)
-        .with_state_factory(Box::new(LauncherStateFactory::new()))
+        .with_state_factory(LauncherStateFactory::new().into_creator())
 }
 
 fn harness_with_bms(bms_filename: &str) -> Option<E2eHarness> {
@@ -92,7 +92,7 @@ fn main_loader_harness_with_bms(bms_filename: &str) -> Option<E2eHarness> {
         false,
     )
     .expect("MainLoader::play should succeed");
-    controller.set_state_factory(Box::new(LauncherStateFactory::new()));
+    controller.set_state_factory(LauncherStateFactory::new().into_creator());
 
     let mut harness = E2eHarness::from_controller(controller);
     harness.controller_mut().create();

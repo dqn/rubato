@@ -52,7 +52,7 @@ fn make_controller_with_factory() -> MainController {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
     mc
 }
 
@@ -180,7 +180,7 @@ fn build_ecfn_select_controller(bars: Vec<Bar>) -> (MainController, Arc<Mutex<Mu
     }
     let shared = Arc::new(Mutex::new(selector));
     let mut mc = MainController::new(None, Config::default(), player, None, false);
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
     mc.set_shared_music_selector(Box::new(Arc::clone(&shared)));
     mc.create();
     assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
@@ -418,7 +418,7 @@ fn e2e_ecfn_select_enter_reaches_manual_play_without_stuck_beams() {
     selector.manager.selectedindex = 0;
 
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
     mc.set_shared_music_selector(Box::new(Arc::new(Mutex::new(selector))));
     mc.create();
 
@@ -545,7 +545,7 @@ fn e2e_music_select_standalone_default_json_skin_draws_runtime_numeric_value_qua
 
     let mut mc = MainController::new(None, config, player, None, false);
     mc.set_info_database(Box::new(info_db));
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
     mc.create();
 
     assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
@@ -707,7 +707,7 @@ fn e2e_gameplay_direct_bms_launch_play_to_result() {
         false,
     )
     .expect("MainLoader::play() should succeed");
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     // create() loads the BMS file and enters Play directly
     mc.create();
@@ -915,7 +915,7 @@ fn e2e_gameplay_skip_decide_with_bms() {
     config.select.skip_decide_screen = true;
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
     mc.create();
 
     // Load BMS

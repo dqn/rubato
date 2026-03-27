@@ -22,7 +22,8 @@ fn harness_with_bms(bms_filename: &str) -> Option<E2eHarness> {
         return None;
     }
 
-    let mut harness = E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()));
+    let mut harness =
+        E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator());
     harness.controller_mut().create();
 
     let loaded = harness
@@ -36,7 +37,7 @@ fn harness_with_bms(bms_filename: &str) -> Option<E2eHarness> {
 }
 
 fn harness_with_factory() -> E2eHarness {
-    E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()))
+    E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator())
 }
 
 // ============================================================

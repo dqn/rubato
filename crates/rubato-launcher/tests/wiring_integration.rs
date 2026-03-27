@@ -56,7 +56,7 @@ fn play_with_bmsfile() -> MainController {
 #[test]
 fn play_set_factory_change_state_succeeds() {
     let mut mc = play_default();
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     mc.change_state(MainStateType::MusicSelect);
 
@@ -70,7 +70,7 @@ fn play_set_factory_change_state_succeeds() {
 #[test]
 fn play_create_enters_music_select() {
     let mut mc = play_default();
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     mc.create();
 
@@ -84,7 +84,7 @@ fn play_create_enters_music_select() {
 #[test]
 fn play_with_bmsfile_create_enters_play() {
     let mut mc = play_with_bmsfile();
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     mc.create();
 
@@ -110,7 +110,7 @@ fn create_without_factory_panics() {
 #[test]
 fn create_then_render_first_frame() {
     let mut mc = play_default();
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     mc.create();
     mc.render();
@@ -125,7 +125,7 @@ fn create_then_render_first_frame() {
 #[test]
 fn event_senders_receive_state_changed_on_transition() {
     let mut mc = play_default();
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     let (tx, rx) = std::sync::mpsc::sync_channel::<AppEvent>(256);
     mc.add_event_sender(tx);
@@ -150,7 +150,7 @@ fn event_senders_receive_state_changed_on_transition() {
 #[test]
 fn create_without_audio_driver_succeeds() {
     let mut mc = play_default();
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     // No audio driver set — create() should succeed (audio is optional)
     mc.create();
@@ -168,7 +168,7 @@ fn full_production_wiring_sequence() {
     let mut mc = play_default();
 
     // 2. set_state_factory()
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
     // 3. Add event sender (mirrors Discord/OBS listener wiring)
     let (tx, rx) = std::sync::mpsc::sync_channel::<AppEvent>(256);

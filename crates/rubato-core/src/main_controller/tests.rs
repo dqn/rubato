@@ -65,27 +65,23 @@ impl MainState for TestState {
     }
 }
 
-/// A test factory that creates TestState instances.
-struct TestStateFactory;
-
-impl StateFactory for TestStateFactory {
-    fn create_state(
-        &self,
-        state_type: MainStateType,
-        _controller: &mut MainController,
-    ) -> Option<StateCreateResult> {
-        Some(StateCreateResult {
-            state: Box::new(TestState::new(state_type)),
-            target_score: None,
-        })
-    }
+/// Create a test state creator closure that produces TestState instances.
+fn test_state_creator() -> StateCreator {
+    Box::new(
+        |state_type: MainStateType, _controller: &mut MainController| {
+            Some(StateCreateResult {
+                state: Box::new(TestState::new(state_type)),
+                target_score: None,
+            })
+        },
+    )
 }
 
 fn make_test_controller() -> MainController {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(TestStateFactory));
+    mc.set_state_factory(test_state_creator());
     mc
 }
 
@@ -144,35 +140,22 @@ impl MainState for AudioSyncTestState {
     }
 }
 
-struct AudioSyncStateFactory {
+fn audio_sync_state_creator(
     render_sync_calls: Arc<Mutex<usize>>,
     shutdown_sync_calls: Arc<Mutex<usize>>,
-}
-
-impl AudioSyncStateFactory {
-    fn new(render_sync_calls: Arc<Mutex<usize>>, shutdown_sync_calls: Arc<Mutex<usize>>) -> Self {
-        Self {
-            render_sync_calls,
-            shutdown_sync_calls,
-        }
-    }
-}
-
-impl StateFactory for AudioSyncStateFactory {
-    fn create_state(
-        &self,
-        state_type: MainStateType,
-        _controller: &mut MainController,
-    ) -> Option<StateCreateResult> {
-        Some(StateCreateResult {
-            state: Box::new(AudioSyncTestState::new(
-                state_type,
-                Arc::clone(&self.render_sync_calls),
-                Arc::clone(&self.shutdown_sync_calls),
-            )),
-            target_score: None,
-        })
-    }
+) -> StateCreator {
+    Box::new(
+        move |state_type: MainStateType, _controller: &mut MainController| {
+            Some(StateCreateResult {
+                state: Box::new(AudioSyncTestState::new(
+                    state_type,
+                    Arc::clone(&render_sync_calls),
+                    Arc::clone(&shutdown_sync_calls),
+                )),
+                target_score: None,
+            })
+        },
+    )
 }
 
 #[test]
@@ -284,7 +267,7 @@ fn test_decide_skip_creates_play_state() {
     };
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(TestStateFactory));
+    mc.set_state_factory(test_state_creator());
 
     mc.change_state(MainStateType::Decide);
 
@@ -303,7 +286,7 @@ fn test_decide_no_skip_creates_decide_state() {
     };
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(TestStateFactory));
+    mc.set_state_factory(test_state_creator());
 
     mc.change_state(MainStateType::Decide);
 
@@ -321,7 +304,7 @@ fn test_music_select_with_bmsfile_calls_exit() {
         None,
         false,
     );
-    mc.set_state_factory(Box::new(TestStateFactory));
+    mc.set_state_factory(test_state_creator());
 
     // When bmsfile is set and we try to go to MusicSelect, it should call exit()
     // (which just logs a warning) and not create a state
@@ -499,7 +482,7 @@ fn test_render_input_gating_by_time() {
 #[test]
 fn test_render_dispatches_to_current_state() {
     let mut mc = make_test_controller();
-    mc.set_state_factory(Box::new(TestStateFactory));
+    mc.set_state_factory(test_state_creator());
     mc.change_state(MainStateType::MusicSelect);
 
     // render() should dispatch to current state's render()
@@ -1117,10 +1100,10 @@ fn render_invokes_state_sync_audio_when_audio_driver_exists() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(AudioSyncStateFactory::new(
+    mc.set_state_factory(audio_sync_state_creator(
         Arc::clone(&render_sync_calls),
         Arc::clone(&shutdown_sync_calls),
-    )));
+    ));
     mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     mc.change_state(MainStateType::MusicSelect);
@@ -1141,10 +1124,10 @@ fn state_transition_flushes_audio_before_and_after_shutdown() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(AudioSyncStateFactory::new(
+    mc.set_state_factory(audio_sync_state_creator(
         Arc::clone(&render_sync_calls),
         Arc::clone(&shutdown_sync_calls),
-    )));
+    ));
     mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     mc.change_state(MainStateType::MusicSelect);
@@ -1228,28 +1211,22 @@ impl MainState for TickBasedPreviewState {
     }
 }
 
-struct TickBasedPreviewStateFactory {
-    preview_path: String,
-}
-
-impl StateFactory for TickBasedPreviewStateFactory {
-    fn create_state(
-        &self,
-        state_type: MainStateType,
-        _controller: &mut MainController,
-    ) -> Option<StateCreateResult> {
-        if state_type == MainStateType::MusicSelect {
-            Some(StateCreateResult {
-                state: Box::new(TickBasedPreviewState::new(&self.preview_path)),
-                target_score: None,
-            })
-        } else {
-            Some(StateCreateResult {
-                state: Box::new(TestState::new(state_type)),
-                target_score: None,
-            })
-        }
-    }
+fn tick_based_preview_state_creator(preview_path: String) -> StateCreator {
+    Box::new(
+        move |state_type: MainStateType, _controller: &mut MainController| {
+            if state_type == MainStateType::MusicSelect {
+                Some(StateCreateResult {
+                    state: Box::new(TickBasedPreviewState::new(&preview_path)),
+                    target_score: None,
+                })
+            } else {
+                Some(StateCreateResult {
+                    state: Box::new(TestState::new(state_type)),
+                    target_score: None,
+                })
+            }
+        },
+    )
 }
 
 #[test]
@@ -1261,9 +1238,7 @@ fn state_transition_stops_tick_based_preview_audio() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(TickBasedPreviewStateFactory {
-        preview_path: preview_path.to_string(),
-    }));
+    mc.set_state_factory(tick_based_preview_state_creator(preview_path.to_string()));
     mc.set_audio_driver(AudioSystem::Recording(RecordingAudioDriver::new()));
 
     // Enter MusicSelect: the pre-shutdown sync_audio tick starts preview.
@@ -1385,9 +1360,7 @@ fn state_transition_emits_stop_and_dispose_events_for_preview() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(TickBasedPreviewStateFactory {
-        preview_path: preview_path.to_string(),
-    }));
+    mc.set_state_factory(tick_based_preview_state_creator(preview_path.to_string()));
     mc.set_audio_driver(AudioSystem::Boxed(Box::new(EventTrackingAudioDriver::new(
         Arc::clone(&stopped),
         Arc::clone(&disposed),
@@ -1905,19 +1878,15 @@ impl AudioDriver for SetModelTrackingAudioDriver {
     fn dispose(&mut self) {}
 }
 
-struct ModelTestStateFactory;
-
-impl StateFactory for ModelTestStateFactory {
-    fn create_state(
-        &self,
-        _state_type: MainStateType,
-        _controller: &mut MainController,
-    ) -> Option<StateCreateResult> {
-        Some(StateCreateResult {
-            state: Box::new(ModelTestState::new()),
-            target_score: None,
-        })
-    }
+fn model_test_state_creator() -> StateCreator {
+    Box::new(
+        |_state_type: MainStateType, _controller: &mut MainController| {
+            Some(StateCreateResult {
+                state: Box::new(ModelTestState::new()),
+                target_score: None,
+            })
+        },
+    )
 }
 
 #[test]
@@ -1927,7 +1896,7 @@ fn test_transition_to_play_calls_audio_set_model() {
     mc.set_audio_driver(AudioSystem::Boxed(Box::new(SetModelTrackingAudioDriver {
         set_model_count: Arc::clone(&set_model_count),
     })));
-    mc.set_state_factory(Box::new(ModelTestStateFactory));
+    mc.set_state_factory(model_test_state_creator());
 
     mc.change_state(MainStateType::Play);
 
@@ -2329,29 +2298,23 @@ impl SkinDrawable for DisposableSkinDrawable {
     fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
 }
 
-/// A state factory that produces states carrying a disposable skin.
-struct DisposableSkinStateFactory {
-    dispose_count: Arc<Mutex<usize>>,
-}
-
-impl StateFactory for DisposableSkinStateFactory {
-    fn create_state(
-        &self,
-        state_type: MainStateType,
-        _controller: &mut MainController,
-    ) -> Option<StateCreateResult> {
-        let skin = Box::new(DisposableSkinDrawable::new(self.dispose_count.clone()));
-        let mut data = MainStateData::new(TimerManager::new());
-        data.skin = Some(skin);
-        let state = DisposableSkinState {
-            state_data: data,
-            state_type,
-        };
-        Some(StateCreateResult {
-            state: Box::new(state),
-            target_score: None,
-        })
-    }
+/// Create a state creator that produces states carrying a disposable skin.
+fn disposable_skin_state_creator(dispose_count: Arc<Mutex<usize>>) -> StateCreator {
+    Box::new(
+        move |state_type: MainStateType, _controller: &mut MainController| {
+            let skin = Box::new(DisposableSkinDrawable::new(dispose_count.clone()));
+            let mut data = MainStateData::new(TimerManager::new());
+            data.skin = Some(skin);
+            let state = DisposableSkinState {
+                state_data: data,
+                state_type,
+            };
+            Some(StateCreateResult {
+                state: Box::new(state),
+                target_score: None,
+            })
+        },
+    )
 }
 
 struct DisposableSkinState {
@@ -2379,9 +2342,7 @@ fn transition_to_state_calls_dispose_skin_on_old_state() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(DisposableSkinStateFactory {
-        dispose_count: dispose_count.clone(),
-    }));
+    mc.set_state_factory(disposable_skin_state_creator(dispose_count.clone()));
 
     // Transition to first state (creates skin via factory)
     mc.change_state(MainStateType::Config);
@@ -2523,24 +2484,15 @@ impl MainState for InputCountingState {
     }
 }
 
-struct InputCountingFactory {
-    input_count: Arc<Mutex<usize>>,
-}
-
-impl StateFactory for InputCountingFactory {
-    fn create_state(
-        &self,
-        state_type: MainStateType,
-        _controller: &mut MainController,
-    ) -> Option<StateCreateResult> {
-        Some(StateCreateResult {
-            state: Box::new(InputCountingState::new(
-                state_type,
-                self.input_count.clone(),
-            )),
-            target_score: None,
-        })
-    }
+fn input_counting_creator(input_count: Arc<Mutex<usize>>) -> StateCreator {
+    Box::new(
+        move |state_type: MainStateType, _controller: &mut MainController| {
+            Some(StateCreateResult {
+                state: Box::new(InputCountingState::new(state_type, input_count.clone())),
+                target_score: None,
+            })
+        },
+    )
 }
 
 #[test]
@@ -2549,9 +2501,7 @@ fn input_gate_override_forces_input_processing() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(InputCountingFactory {
-        input_count: input_count.clone(),
-    }));
+    mc.set_state_factory(input_counting_creator(input_count.clone()));
     mc.change_state(MainStateType::MusicSelect);
 
     // Set prevtime to far future so the wall-clock gate would never pass
@@ -2581,9 +2531,7 @@ fn input_gate_override_is_consumed_after_render() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(InputCountingFactory {
-        input_count: input_count.clone(),
-    }));
+    mc.set_state_factory(input_counting_creator(input_count.clone()));
     mc.change_state(MainStateType::MusicSelect);
 
     // Set prevtime to far future
@@ -2879,30 +2827,21 @@ fn test_transition_registers_stagefile_and_banner_into_skin() {
         fn render(&mut self) {}
     }
 
-    struct SharedImageCaptureFactory {
-        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
-    }
-
-    impl StateFactory for SharedImageCaptureFactory {
-        fn create_state(
-            &self,
-            _state_type: MainStateType,
-            _controller: &mut MainController,
-        ) -> Option<StateCreateResult> {
+    let registered_for_factory = Arc::clone(&registered);
+    let creator: StateCreator = Box::new(
+        move |_state_type: MainStateType, _controller: &mut MainController| {
             Some(StateCreateResult {
                 state: Box::new(SharedImageCaptureState {
                     state_data: MainStateData::new(TimerManager::new()),
-                    registered: Arc::clone(&self.registered),
+                    registered: Arc::clone(&registered_for_factory),
                 }),
                 target_score: None,
             })
-        }
-    }
+        },
+    );
 
     let mut mc = make_test_controller();
-    mc.set_state_factory(Box::new(SharedImageCaptureFactory {
-        registered: Arc::clone(&registered),
-    }));
+    mc.set_state_factory(creator);
 
     // Set up a PlayerResource with BMS resource images
     let mut resource = PlayerResource::new(Config::default(), PlayerConfig::default());
@@ -3030,29 +2969,19 @@ fn test_transition_without_bms_images_does_not_register() {
         fn render(&mut self) {}
     }
 
-    struct NoImageFactory {
-        registered: Arc<Mutex<Vec<(i32, rubato_render::texture::TextureRegion)>>>,
-    }
-    impl StateFactory for NoImageFactory {
-        fn create_state(
-            &self,
-            _: MainStateType,
-            _: &mut MainController,
-        ) -> Option<StateCreateResult> {
-            Some(StateCreateResult {
-                state: Box::new(NoImageState {
-                    state_data: MainStateData::new(TimerManager::new()),
-                    registered: Arc::clone(&self.registered),
-                }),
-                target_score: None,
-            })
-        }
-    }
+    let registered_for_factory = Arc::clone(&registered);
+    let creator: StateCreator = Box::new(move |_: MainStateType, _: &mut MainController| {
+        Some(StateCreateResult {
+            state: Box::new(NoImageState {
+                state_data: MainStateData::new(TimerManager::new()),
+                registered: Arc::clone(&registered_for_factory),
+            }),
+            target_score: None,
+        })
+    });
 
     let mut mc = make_test_controller();
-    mc.set_state_factory(Box::new(NoImageFactory {
-        registered: Arc::clone(&registered),
-    }));
+    mc.set_state_factory(creator);
 
     // PlayerResource with NO BMS images (default)
     mc.restore_player_resource(PlayerResource::new(

@@ -23,7 +23,8 @@ fn harness_with_bms(bms_filename: &str) -> Option<E2eHarness> {
     if !bms_path.exists() {
         return None;
     }
-    let mut harness = E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()));
+    let mut harness =
+        E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator());
     harness.controller_mut().create();
     let loaded = harness
         .controller_mut()
@@ -169,7 +170,8 @@ fn bms_load_with_5key_preserves_mode() {
         eprintln!("skipping: 5key.bms not found");
         return;
     }
-    let mut harness = E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()));
+    let mut harness =
+        E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator());
     harness.controller_mut().create();
     let loaded = harness
         .controller_mut()
@@ -195,7 +197,8 @@ fn bms_load_with_bpm_changes_has_timelines() {
         eprintln!("skipping: bpm_change.bms not found");
         return;
     }
-    let mut harness = E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()));
+    let mut harness =
+        E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator());
     harness.controller_mut().create();
     let loaded = harness
         .controller_mut()
@@ -266,7 +269,8 @@ fn audio_events_accumulate_across_transitions() {
 
 #[test]
 fn clear_audio_events_resets_between_tests() {
-    let mut harness = E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()));
+    let mut harness =
+        E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator());
     harness.controller_mut().create();
 
     // Generate some audio events

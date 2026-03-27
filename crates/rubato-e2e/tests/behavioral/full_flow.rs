@@ -18,7 +18,7 @@ fn test_bms_dir() -> PathBuf {
 }
 
 fn harness_with_factory() -> E2eHarness {
-    E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()))
+    E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator())
 }
 
 fn harness_with_bms(bms_filename: &str) -> Option<E2eHarness> {

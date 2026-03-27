@@ -193,7 +193,7 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
     // Set the state factory so that change_state() can create concrete state instances.
     // Without this, the controller has no factory and all state transitions silently fail,
     // resulting in a black screen.
-    main_controller.set_state_factory(Box::new(LauncherStateFactory::new()));
+    main_controller.set_state_factory(LauncherStateFactory::new().into_creator());
 
     let _listener_handles = subsystem_init::init_state_listeners(&mut main_controller);
     subsystem_init::init_ir_config(&mut main_controller);

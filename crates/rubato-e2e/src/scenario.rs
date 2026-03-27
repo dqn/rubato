@@ -11,7 +11,7 @@
 //! ```
 
 use crate::E2eHarness;
-use rubato_core::main_controller::StateFactory;
+use rubato_core::main_controller::StateCreator;
 use rubato_launcher::state_factory::LauncherStateFactory;
 use rubato_types::main_state_type::MainStateType;
 
@@ -32,7 +32,7 @@ enum ScenarioStep {
 /// execute them against an `E2eHarness`.
 pub struct E2eScenario {
     initial_state: Option<MainStateType>,
-    state_factory: Option<Box<dyn StateFactory>>,
+    state_factory: Option<StateCreator>,
     steps: Vec<ScenarioStep>,
 }
 
@@ -53,7 +53,7 @@ impl E2eScenario {
     }
 
     /// Override the state factory (default: `LauncherStateFactory`).
-    pub fn with_state_factory(mut self, factory: Box<dyn StateFactory>) -> Self {
+    pub fn with_state_factory(mut self, factory: StateCreator) -> Self {
         self.state_factory = Some(factory);
         self
     }
@@ -102,9 +102,9 @@ impl E2eScenario {
 
     /// Build the harness and execute all steps in order.
     pub fn run(self) {
-        let factory: Box<dyn StateFactory> = self
+        let factory: StateCreator = self
             .state_factory
-            .unwrap_or_else(|| Box::new(LauncherStateFactory::new()));
+            .unwrap_or_else(|| LauncherStateFactory::new().into_creator());
 
         let mut harness = E2eHarness::new().with_state_factory(factory);
 

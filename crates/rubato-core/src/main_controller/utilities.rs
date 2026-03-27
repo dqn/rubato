@@ -407,7 +407,7 @@ impl MainController {
     /// }
     /// ```
     ///
-    /// In Rust, concrete state instances are created on-demand via the StateFactory
+    /// In Rust, concrete state instances are created on-demand via the StateCreator
     /// (set by the launcher). This method only initializes the PlayerResource.
     /// States are created lazily in change_state().
     pub fn initialize_states(&mut self) {

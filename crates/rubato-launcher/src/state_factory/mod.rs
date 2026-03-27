@@ -1,4 +1,4 @@
-// LauncherStateFactory -- concrete StateFactory implementation.
+// LauncherStateFactory -- concrete StateCreator provider.
 // Creates all 6 screen state types for MainController state dispatch.
 //
 // Translated from: MainController.initializeStates() + createBMSPlayerState()
@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use rubato_audio::audio_system::AudioSystem;
 use rubato_core::config_pkg::key_configuration::KeyConfiguration;
 use rubato_core::config_pkg::skin_configuration::SkinConfiguration;
-use rubato_core::main_controller::{MainController, StateCreateResult, StateFactory};
+use rubato_core::main_controller::{MainController, StateCreateResult, StateCreator};
 use rubato_core::main_state::{MainState, MainStateType};
 use rubato_core::timer_manager::TimerManager;
 use rubato_play::bga::bga_processor::BGAProcessor;
@@ -69,9 +69,10 @@ fn extract_ir_statuses(
 
 /// LauncherStateFactory -- creates concrete state instances for all screen types.
 ///
-/// This is the concrete implementation of StateFactory that lives in beatoraja-launcher,
-/// which has access to all screen state crates. Core cannot import these directly due
-/// to the dependency direction (screen crates depend on core, not vice versa).
+/// This struct provides the `StateCreator` closure (via `into_creator()`) that lives
+/// in beatoraja-launcher, which has access to all screen state crates. Core cannot
+/// import these directly due to the dependency direction (screen crates depend on
+/// core, not vice versa).
 ///
 /// Translated from: MainController.initializeStates() (Java lines 554-571)
 /// ```java
@@ -129,10 +130,13 @@ impl LauncherStateFactory {
             }
         }
     }
-}
 
-impl StateFactory for LauncherStateFactory {
-    fn create_state(
+    /// Convert this factory into a `StateCreator` closure for use with `MainController`.
+    pub fn into_creator(self) -> StateCreator {
+        Box::new(move |state_type, controller| self.create_state(state_type, controller))
+    }
+
+    pub fn create_state(
         &self,
         state_type: MainStateType,
         controller: &mut MainController,
@@ -825,7 +829,7 @@ mod tests {
         let config = Config::default();
         let player = PlayerConfig::default();
         let mut mc = MainController::new(None, config, player, None, false);
-        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
         // Test full state dispatch via MainController
         mc.change_state(MainStateType::MusicSelect);
@@ -865,7 +869,7 @@ mod tests {
         let config = Config::default();
         let player = PlayerConfig::default();
         let mut mc = MainController::new(None, config, player, None, false);
-        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.set_state_factory(LauncherStateFactory::new().into_creator());
 
         // Create state, then transition through lifecycle
         mc.change_state(MainStateType::MusicSelect);
@@ -1218,7 +1222,7 @@ mod tests {
         let config = Config::default();
         let player = PlayerConfig::default();
         let mut mc = MainController::new(None, config, player, None, false);
-        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.set_state_factory(LauncherStateFactory::new().into_creator());
         // create() initializes PlayerResource, which Decide requires
         mc.create();
         mc.change_state(MainStateType::Decide);
@@ -1258,7 +1262,7 @@ mod tests {
         let config = Config::default();
         let player = PlayerConfig::default();
         let mut mc = MainController::new(None, config, player, None, false);
-        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.set_state_factory(LauncherStateFactory::new().into_creator());
         mc.create();
         assert!(
             mc.player_resource_mut()
@@ -1393,7 +1397,7 @@ mod tests {
         use rubato_ir::ir_player_data::IRPlayerData;
 
         let mut mc = make_test_controller_with_resource();
-        mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+        mc.set_state_factory(LauncherStateFactory::new().into_creator());
         let conn: Arc<dyn rubato_ir::ir_connection::IRConnection + Send + Sync> =
             Arc::new(MockIRConnection);
         let player = IRPlayerData::new("ir-test".into(), "IRPlayer".into(), "2nd".into());

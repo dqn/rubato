@@ -2,7 +2,7 @@ use rubato_e2e::E2eHarness;
 
 #[test]
 fn initial_state_is_none_without_factory() {
-    // Without a StateFactory, no state is created during construction.
+    // Without a StateCreator, no state is created during construction.
     // MainController starts with current = None.
     let harness = E2eHarness::new();
     assert!(

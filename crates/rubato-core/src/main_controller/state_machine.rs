@@ -90,7 +90,7 @@ impl MainController {
 
         // Create the new state via factory.
         // Take the factory out temporarily to avoid borrow conflict
-        // (factory is borrowed immutably, but create_state needs &mut self).
+        // (factory closure captures nothing from self, but the call needs &mut self).
         // Restore the factory before resuming any panic so that subsequent
         // state transitions don't double-panic on a missing factory.
         let factory = self.state_factory.take().unwrap_or_else(|| {
@@ -101,7 +101,7 @@ impl MainController {
             );
         });
         let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            factory.create_state(actual_type, self)
+            factory(actual_type, self)
         })) {
             Ok(result) => result,
             Err(payload) => {

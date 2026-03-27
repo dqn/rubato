@@ -12,7 +12,7 @@ use rubato_e2e::{E2eHarness, E2eScenario, MainStateType, StateEvent};
 use rubato_launcher::state_factory::LauncherStateFactory;
 
 fn harness_with_factory() -> E2eHarness {
-    E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()))
+    E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator())
 }
 
 fn harness_with_controller_create() -> E2eHarness {

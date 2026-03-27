@@ -370,7 +370,7 @@ pub(crate) fn init_stream_controller(controller: &mut MainController) {
         selector.app_config = config;
     }
     let selector = std::sync::Arc::new(std::sync::Mutex::new(selector));
-    // Store the shared selector on MainController for StateFactory to retrieve
+    // Store the shared selector on MainController for the StateCreator to retrieve
     controller.set_shared_music_selector(Box::new(std::sync::Arc::clone(&selector)));
     let mut stream_controller =
         rubato_state::stream::stream_controller::StreamController::new(selector);

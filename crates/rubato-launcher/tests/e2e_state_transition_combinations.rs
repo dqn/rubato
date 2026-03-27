@@ -34,7 +34,7 @@ fn make_controller_with_factory() -> MainController {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    mc.set_state_factory(Box::new(LauncherStateFactory::new()));
+    mc.set_state_factory(LauncherStateFactory::new().into_creator());
     mc
 }
 

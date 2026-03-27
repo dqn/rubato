@@ -33,25 +33,18 @@ pub(crate) use crate::system_sound_manager::SystemSoundManager;
 pub(crate) use crate::timer_manager::TimerManager;
 pub(crate) use crate::version;
 
-/// StateFactory - trait for creating concrete state instances.
+/// Function pointer type for creating concrete state instances.
 ///
 /// Because the concrete state types (MusicSelector, BMSPlayer, etc.) live in separate crates
 /// that depend on beatoraja-core, core cannot import them directly. Instead, a higher-level
-/// crate (e.g. beatoraja-launcher) provides a concrete StateFactory implementation that
+/// crate (e.g. beatoraja-launcher) provides a concrete StateCreator closure that
 /// knows how to create each state type.
 ///
 /// Translated from: MainController.initializeStates() + createBMSPlayerState()
-pub trait StateFactory {
-    /// Create a state instance for the given type.
-    /// Returns None if the state type is not supported or cannot be created.
-    fn create_state(
-        &self,
-        state_type: MainStateType,
-        controller: &mut MainController,
-    ) -> Option<StateCreateResult>;
-}
+pub type StateCreator =
+    Box<dyn Fn(MainStateType, &mut MainController) -> Option<StateCreateResult> + Send>;
 
-/// Result from `StateFactory::create_state` containing the state and optional
+/// Result from `StateCreator` containing the state and optional
 /// metadata that `MainController::change_state` should apply after creation.
 pub struct StateCreateResult {
     pub state: Box<dyn MainState>,
@@ -217,9 +210,9 @@ pub struct MainController {
     /// Translated from: MainController.current (MainState)
     current: Option<Box<dyn MainState>>,
 
-    /// State factory for creating concrete state instances.
+    /// State creator for creating concrete state instances.
     /// Set by the application entry point (e.g. launcher) before state transitions.
-    state_factory: Option<Box<dyn StateFactory>>,
+    state_factory: Option<StateCreator>,
 
     /// SpriteBatch (LibGDX)
     sprite: Option<SpriteBatch>,
@@ -239,7 +232,7 @@ pub struct MainController {
 
     /// Shared music selector (type-erased Arc<Mutex<MusicSelector>>).
     /// Java shares the same MusicSelector between StreamController and MusicSelect state.
-    /// The launcher stores this so StateFactory can reuse it instead of creating a new one.
+    /// The launcher stores this so the StateCreator can reuse it instead of creating a new one.
     shared_music_selector: Option<Box<dyn std::any::Any + Send>>,
 
     /// Callback for updating cross-state references (modmenu wiring).

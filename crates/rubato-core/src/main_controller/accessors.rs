@@ -123,7 +123,7 @@ impl MainController {
     }
 
     /// Take the PlayerResource out of MainController (leaving None).
-    /// Used by StateFactory to give states ownership during their lifecycle.
+    /// Used by the StateCreator to give states ownership during their lifecycle.
     pub fn take_player_resource(&mut self) -> Option<PlayerResource> {
         self.resource.take()
     }
@@ -220,11 +220,11 @@ impl MainController {
         }
     }
 
-    /// Set the state factory. Must be called before any state transitions.
+    /// Set the state creator. Must be called before any state transitions.
     ///
-    /// The factory is typically set by the application entry point (beatoraja-launcher)
+    /// The creator is typically set by the application entry point (beatoraja-launcher)
     /// which has access to all concrete state types.
-    pub fn set_state_factory(&mut self, factory: Box<dyn StateFactory>) {
+    pub fn set_state_factory(&mut self, factory: StateCreator) {
         self.state_factory = Some(factory);
     }
 

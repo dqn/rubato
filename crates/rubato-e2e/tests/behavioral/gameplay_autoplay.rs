@@ -17,7 +17,8 @@ fn test_bms_dir() -> PathBuf {
 }
 
 fn harness_with_bms(bms_filename: &str) -> E2eHarness {
-    let mut harness = E2eHarness::new().with_state_factory(Box::new(LauncherStateFactory::new()));
+    let mut harness =
+        E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator());
     harness.controller_mut().create();
 
     let bms_path = test_bms_dir().join(bms_filename);

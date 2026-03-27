@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use rubato_audio::recording_audio_driver::{AudioEvent, RecordingAudioDriver};
 use rubato_audio::shared_recording_audio_driver::SharedRecordingAudioDriver;
 use rubato_core::config::Config;
-use rubato_core::main_controller::{MainController, StateFactory};
+use rubato_core::main_controller::{MainController, StateCreator};
 use rubato_core::player_config::PlayerConfig;
 use rubato_core::player_resource::PlayerResource;
 use rubato_render::sprite_batch::CapturedDrawQuad;
@@ -173,7 +173,7 @@ impl E2eHarness {
     // ============================================================
 
     /// Set a custom state factory for the harness.
-    pub fn with_state_factory(mut self, factory: Box<dyn StateFactory>) -> Self {
+    pub fn with_state_factory(mut self, factory: StateCreator) -> Self {
         self.controller.set_state_factory(factory);
         self
     }
@@ -581,19 +581,13 @@ mod tests {
         fn render(&mut self) {}
     }
 
-    struct TimerSyncFactory;
-
-    impl StateFactory for TimerSyncFactory {
-        fn create_state(
-            &self,
-            state_type: MainStateType,
-            _controller: &mut MainController,
-        ) -> Option<StateCreateResult> {
+    fn timer_sync_creator() -> StateCreator {
+        Box::new(|state_type, _controller| {
             Some(StateCreateResult {
                 state: Box::new(TimerSyncState::new(state_type)),
                 target_score: None,
             })
-        }
+        })
     }
 
     #[test]
@@ -729,7 +723,7 @@ mod tests {
 
     #[test]
     fn step_frame_keeps_current_state_timer_in_sync_when_frozen() {
-        let mut harness = E2eHarness::new().with_state_factory(Box::new(TimerSyncFactory));
+        let mut harness = E2eHarness::new().with_state_factory(timer_sync_creator());
         harness.controller_mut().create();
         harness.change_state(MainStateType::MusicSelect);
 
