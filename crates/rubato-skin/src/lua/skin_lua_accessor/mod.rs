@@ -9,8 +9,10 @@ use std::sync::Arc;
 use mlua::StdLib;
 use mlua::prelude::*;
 
+use rubato_types::property_snapshot::PropertySnapshot;
+
 use crate::lua::event_utility::EventUtility;
-use crate::lua::main_state_accessor::MainStateAccessor;
+use crate::lua::main_state_accessor::{MainStateAccessor, SnapshotAccessor};
 use crate::lua::timer_utility::TimerUtility;
 use crate::reexports::MainState;
 
@@ -191,6 +193,40 @@ impl SkinLuaAccessor {
             })();
             if let Err(e) = result {
                 log::warn!("Failed to export main_state module: {}", e);
+            }
+        }
+    }
+
+    /// Export PropertySnapshot-backed accessor functions to Lua.
+    ///
+    /// This is the render-time counterpart of `export_main_state_accessor`.
+    /// Reads go through `PropertySnapshot` fields directly (via `SkinRenderContext`
+    /// and `TimerAccess` trait impls). Writes push actions into
+    /// `snapshot.actions` (a `SkinActionQueue`).
+    ///
+    /// # Safety
+    /// `snapshot` must point to a valid `PropertySnapshot` that outlives the Lua VM
+    /// and any closures exported from it. The caller must ensure single-threaded
+    /// access to the snapshot while Lua callbacks are active.
+    pub unsafe fn export_snapshot_accessor(&self, snapshot: *mut PropertySnapshot) {
+        let accessor = unsafe { SnapshotAccessor::new(snapshot) };
+        if self.is_global {
+            let globals = self.lua.globals();
+            accessor.export(&self.lua, &globals);
+        } else {
+            let result: Result<(), LuaError> = (|| {
+                let table = self.lua.create_table()?;
+                accessor.export(&self.lua, &table);
+                let loaded: LuaTable = self
+                    .lua
+                    .globals()
+                    .get::<LuaTable>("package")?
+                    .get::<LuaTable>("loaded")?;
+                loaded.set(MAIN_STATE, table)?;
+                Ok(())
+            })();
+            if let Err(e) = result {
+                log::warn!("Failed to export snapshot main_state module: {}", e);
             }
         }
     }

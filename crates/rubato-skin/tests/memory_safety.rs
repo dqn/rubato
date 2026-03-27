@@ -10,7 +10,7 @@
 // or the types must be redesigned.
 
 use rubato_skin::lua::event_utility::EventUtility;
-use rubato_skin::lua::main_state_accessor::MainStateAccessor;
+use rubato_skin::lua::main_state_accessor::{MainStateAccessor, SnapshotAccessor};
 use rubato_skin::lua::timer_utility::TimerUtility;
 
 /// Static assertion helper: compiles only if T: Send + Sync.
@@ -38,4 +38,12 @@ fn memory_safety_timer_utility_is_send_sync() {
 #[test]
 fn memory_safety_event_utility_is_send_sync() {
     assert_send_sync::<EventUtility>();
+}
+
+/// SnapshotAccessor wraps a raw *mut PropertySnapshot pointer with
+/// unsafe impl Send + Sync. This test documents that the type claims
+/// thread safety despite containing a raw pointer to PropertySnapshot.
+#[test]
+fn memory_safety_snapshot_accessor_is_send_sync() {
+    assert_send_sync::<SnapshotAccessor>();
 }
