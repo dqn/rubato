@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::collections::HashMap;
 
 use crate::app_context::AppContext;
@@ -389,6 +390,22 @@ pub trait MainState {
     /// Used by MainController to call audio.set_model() during state transition
     /// so keysounds are loaded before playback begins.
     fn bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
+        None
+    }
+
+    /// Downcast to `&dyn Any` for concrete type recovery.
+    ///
+    /// Concrete wrapper types (e.g. `GameScreen`) override this to return
+    /// `Some(self)`, enabling callers to downcast `&dyn MainState` back to
+    /// the concrete enum when pattern matching is needed. The default
+    /// returns `None` for types that cannot be downcast (e.g. those with
+    /// non-`'static` lifetimes).
+    fn as_any(&self) -> Option<&dyn Any> {
+        None
+    }
+
+    /// Downcast to `&mut dyn Any` for concrete type recovery.
+    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
         None
     }
 }

@@ -17,6 +17,20 @@ use rubato_state::select::music_selector::MusicSelector;
 
 use crate::state_factory::shared_selector::SharedMusicSelectorState;
 
+/// Attempt to downcast a `&dyn MainState` to `&GameScreen`.
+///
+/// Returns `Some(&GameScreen)` when the trait object's concrete type is
+/// `GameScreen` (i.e. it was produced by `LauncherStateFactory`), or
+/// `None` otherwise (e.g. test-only mock states).
+pub fn downcast_game_screen(state: &dyn MainState) -> Option<&GameScreen> {
+    state.as_any()?.downcast_ref::<GameScreen>()
+}
+
+/// Attempt to downcast a `&mut dyn MainState` to `&mut GameScreen`.
+pub fn downcast_game_screen_mut(state: &mut dyn MainState) -> Option<&mut GameScreen> {
+    state.as_any_mut()?.downcast_mut::<GameScreen>()
+}
+
 /// Concrete enum of all production game screens.
 ///
 /// Each variant holds the state struct that implements `MainState`.
@@ -358,5 +372,13 @@ impl MainState for GameScreen {
 
     fn bms_model(&self) -> Option<&bms_model::bms_model::BMSModel> {
         delegate!(self, bms_model() -> Option<&bms_model::bms_model::BMSModel>)
+    }
+
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        Some(self)
     }
 }

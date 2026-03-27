@@ -35,6 +35,8 @@ pub use queued_access::new_state_main_controller_access;
 use queued_access::{QueuedAudioDriver, QueuedControllerAccess};
 use shared_selector::SharedMusicSelectorState;
 
+use crate::game_screen::GameScreen;
+
 /// Extract result-crate IR statuses from core MainController's type-erased IR statuses.
 ///
 /// Core IRStatus stores connection as `Box<dyn Any>` and player_data as `Box<dyn Any>`.
@@ -145,7 +147,7 @@ impl StateFactory for LauncherStateFactory {
                 {
                     let wrapper = SharedMusicSelectorState::new(Arc::clone(arc));
                     return Some(StateCreateResult {
-                        state: Box::new(wrapper),
+                        state: Box::new(GameScreen::SharedSelect(Box::new(wrapper))),
                         target_score: None,
                     });
                 }
@@ -170,7 +172,7 @@ impl StateFactory for LauncherStateFactory {
                 selector.config = controller.player_config().clone();
                 selector.app_config = config;
                 Some(StateCreateResult {
-                    state: Box::new(selector),
+                    state: Box::new(GameScreen::Select(Box::new(selector))),
                     target_score: None,
                 })
             }
@@ -192,7 +194,7 @@ impl StateFactory for LauncherStateFactory {
                             TimerManager::new(),
                         );
                         Some(StateCreateResult {
-                            state: Box::new(decide),
+                            state: Box::new(GameScreen::Decide(Box::new(decide))),
                             target_score: None,
                         })
                     }
@@ -411,7 +413,7 @@ impl StateFactory for LauncherStateFactory {
                 }
 
                 Some(StateCreateResult {
-                    state: Box::new(player),
+                    state: Box::new(GameScreen::Play(Box::new(player))),
                     target_score,
                 })
             }
@@ -454,7 +456,7 @@ impl StateFactory for LauncherStateFactory {
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {
-                    state: Box::new(result),
+                    state: Box::new(GameScreen::Result(Box::new(result))),
                     target_score: None,
                 })
             }
@@ -497,7 +499,7 @@ impl StateFactory for LauncherStateFactory {
                     TimerManager::new(),
                 );
                 Some(StateCreateResult {
-                    state: Box::new(course_result),
+                    state: Box::new(GameScreen::CourseResult(Box::new(course_result))),
                     target_score: None,
                 })
             }
@@ -505,7 +507,7 @@ impl StateFactory for LauncherStateFactory {
                 // Java: keyconfig = new KeyConfiguration(this);
                 let keyconfig = KeyConfiguration::new(controller);
                 Some(StateCreateResult {
-                    state: Box::new(keyconfig),
+                    state: Box::new(GameScreen::Config(Box::new(keyconfig))),
                     target_score: None,
                 })
             }
@@ -513,7 +515,7 @@ impl StateFactory for LauncherStateFactory {
                 // Java: skinconfig = new SkinConfiguration(this, player);
                 let skinconfig = SkinConfiguration::new(controller, controller.player_config());
                 Some(StateCreateResult {
-                    state: Box::new(skinconfig),
+                    state: Box::new(GameScreen::SkinConfig(Box::new(skinconfig))),
                     target_score: None,
                 })
             }
