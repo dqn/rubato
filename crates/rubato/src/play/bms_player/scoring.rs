@@ -236,7 +236,7 @@ impl BMSPlayer {
                             avgduration += time.saturating_abs();
                             average += time;
                         } else {
-                            // Unjudged note: 1-second penalty (Java parity)
+                            // Unjudged (state 0) or POOR/MISS (state 5): 1-second penalty (Java parity)
                             avgduration += 1_000_000;
                         }
                     }

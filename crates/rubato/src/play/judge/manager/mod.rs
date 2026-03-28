@@ -166,7 +166,8 @@ impl MultiBadCollector {
             }
         }
         let Some(tdmtime) = tdmtime else {
-            // tnote not in collector - should not happen
+            // tnote not in collector: clear so the multi-bad loop processes zero notes
+            self.clear();
             return;
         };
 

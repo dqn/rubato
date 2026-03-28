@@ -489,7 +489,7 @@ impl LaneRenderer {
     /// Calculate the visible scroll region (duration) based on BPM, hispeed, and scroll.
     /// Java: (240000 / nbpm / hispeed) / nscroll
     pub fn calc_region(bpm: f64, hispeed: f32, scroll: f64) -> f64 {
-        if scroll > 0.0 && bpm > 0.0 && hispeed != 0.0 {
+        if scroll != 0.0 && bpm > 0.0 && hispeed != 0.0 {
             (240000.0 / bpm / hispeed as f64) / scroll
         } else {
             0.0

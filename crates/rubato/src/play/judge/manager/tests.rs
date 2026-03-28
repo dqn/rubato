@@ -1002,6 +1002,61 @@ fn multi_bad_filter_with_minus_one_dmtime() {
     assert_eq!(collector.time_list[0], -100);
 }
 
+#[test]
+fn multi_bad_filter_clears_when_tnote_not_in_collector() {
+    // Regression: when filter() is called with a tnote that is not in the collector's
+    // note_list, it must clear() so the multi-bad iteration loop processes zero notes
+    // instead of all unfiltered entries.
+    let mut collector = MultiBadCollector::new();
+    collector.set_judge(&[
+        [-1000, 1000], // PG
+        [-500, 500],   // GR
+        [-50, 50],     // GD (good)
+        [-200, 200],   // BD (bad)
+        [-300, 300],   // PR
+    ]);
+
+    // Add two notes, but NOT note index 99 (the target we'll ask for)
+    collector.add(0, -100);
+    collector.add(1, 50);
+    assert_eq!(collector.size, 2);
+
+    let notes = vec![
+        JudgeNote {
+            time_us: 1000,
+            end_time_us: 0,
+            lane: 0,
+            wav: 1,
+            kind: bms::model::judge_note::JudgeNoteKind::Normal,
+            ln_type: 0,
+            damage: 0.0,
+            pair_index: None,
+        },
+        JudgeNote {
+            time_us: 2000,
+            end_time_us: 0,
+            lane: 1,
+            wav: 1,
+            kind: bms::model::judge_note::JudgeNoteKind::Normal,
+            ln_type: 0,
+            damage: 0.0,
+            pair_index: None,
+        },
+    ];
+
+    // Filter with note index 99 which is NOT in the collector
+    collector.filter(Some(99), &notes);
+
+    // After filter, the collector must be cleared: size=0, array_start=0
+    assert_eq!(
+        collector.size, 0,
+        "collector should be cleared when tnote not found"
+    );
+    assert_eq!(collector.array_start, 0);
+    assert!(collector.note_list.is_empty());
+    assert!(collector.time_list.is_empty());
+}
+
 // --- Regression tests for judge system wiring fixes ---
 
 #[test]

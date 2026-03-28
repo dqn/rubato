@@ -97,6 +97,21 @@ fn calc_region_zero_scroll_returns_zero() {
     assert!((region).abs() < 0.001);
 }
 
+#[test]
+fn calc_region_negative_scroll() {
+    // Negative scroll is a valid BMS gimmick feature (reverses scroll direction).
+    // At 120 BPM, hispeed 1.0, scroll -1.0: 240000/120/1 / -1 = -2000
+    let region = LaneRenderer::calc_region(120.0, 1.0, -1.0);
+    assert!((region - (-2000.0)).abs() < 0.001);
+}
+
+#[test]
+fn calc_region_negative_scroll_with_hispeed() {
+    // At 120 BPM, hispeed 2.0, scroll -0.5: (240000/120/2) / -0.5 = -2000
+    let region = LaneRenderer::calc_region(120.0, 2.0, -0.5);
+    assert!((region - (-2000.0)).abs() < 0.001);
+}
+
 // =========================================================================
 // calc_constant_alpha tests
 // =========================================================================
