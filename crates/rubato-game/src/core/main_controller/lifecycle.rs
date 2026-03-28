@@ -301,16 +301,20 @@ impl MainController {
             }
         }
 
-        // Drain database/state outbox fields
-        if let Some(path_opt) = self.ctx.db.pending_update_song.take() {
-            let path = path_opt.as_deref().unwrap_or("");
-            self.update_song(path);
-        }
-        for source in std::mem::take(&mut self.ctx.db.pending_update_table) {
-            self.update_table(source);
-        }
-        if let Some(pc) = self.ctx.db.pending_load_new_profile.take() {
-            self.load_new_profile(pc);
+        // Drain typed command queue
+        for cmd in std::mem::take(&mut self.ctx.commands) {
+            match cmd {
+                crate::core::command::Command::UpdateSong(path_opt) => {
+                    let path = path_opt.as_deref().unwrap_or("");
+                    self.update_song(path);
+                }
+                crate::core::command::Command::UpdateTable(source) => {
+                    self.update_table(source);
+                }
+                crate::core::command::Command::LoadNewProfile(pc) => {
+                    self.load_new_profile(*pc);
+                }
+            }
         }
 
         // Prune finished background threads: join them to observe panics,

@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use rubato_audio::audio_system::AudioSystem;
 
+use crate::core::command::Command;
 use crate::core::config::Config;
 use crate::core::main_controller::{DatabaseState, IntegrationState, LifecycleState, SkinOffset};
 use crate::core::player_config::PlayerConfig;
@@ -70,6 +71,11 @@ pub struct GameContext {
     /// Pending state transition from `render_with_game_context`.
     /// Stored here so the outbox drain runs before the transition is applied.
     pub transition: Option<crate::core::main_state::StateTransition>,
+
+    // --- Command queue ---
+    /// Typed command queue, drained by MainController after each render frame.
+    /// Replaces the scattered outbox fields on DatabaseState.
+    pub commands: Vec<Command>,
 }
 
 impl GameContext {
@@ -224,6 +230,28 @@ impl GameContext {
         self.exit_requested.store(true, Ordering::Release);
         self.save_config();
         log::info!("Exit requested");
+    }
+
+    // --- Command queue convenience methods ---
+
+    pub fn queue_command(&mut self, cmd: Command) {
+        self.commands.push(cmd);
+    }
+
+    pub fn queue_update_song(&mut self, path: Option<String>) {
+        self.commands.push(Command::UpdateSong(path));
+    }
+
+    pub fn queue_update_table(
+        &mut self,
+        source: Box<dyn rubato_types::table_update_source::TableUpdateSource>,
+    ) {
+        self.commands.push(Command::UpdateTable(source));
+    }
+
+    pub fn queue_load_new_profile(&mut self, config: PlayerConfig) {
+        self.commands
+            .push(Command::LoadNewProfile(Box::new(config)));
     }
 
     pub fn save_last_recording(&self, reason: &str) {

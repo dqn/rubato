@@ -185,14 +185,6 @@ pub struct DatabaseState {
     pub rivals: RivalDataAccessor,
     pub ircache: Option<Box<dyn RankingDataCacheAccess>>,
     pub ir: Vec<IRStatus>,
-
-    // --- State outbox fields (drained by lifecycle after render) ---
-    /// Pending update_song request from state (Some(Some(path)) for specific, Some(None) for all).
-    pub pending_update_song: Option<Option<String>>,
-    /// Pending update_table requests from state.
-    pub pending_update_table: Vec<Box<dyn rubato_types::table_update_source::TableUpdateSource>>,
-    /// Pending load new profile request from state.
-    pub pending_load_new_profile: Option<rubato_types::player_config::PlayerConfig>,
 }
 
 /// External integration state (ImGui, OBS, IR, downloads, streaming).

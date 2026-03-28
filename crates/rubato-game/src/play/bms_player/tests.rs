@@ -4488,6 +4488,7 @@ fn play_config_update_drained_via_render_with_game_context() {
         resource: None,
         modmenu_outbox: std::sync::Arc::new(crate::state::modmenu::ModmenuOutbox::new()),
         transition: None,
+        commands: Vec::new(),
     };
 
     let result = player.render_with_game_context(&mut ctx);

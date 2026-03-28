@@ -34,6 +34,7 @@ pub mod table_data_bridge;
 // Core types
 pub mod app_context;
 pub mod bms_resource;
+pub mod command;
 pub mod disposable_object;
 pub mod main_controller;
 pub mod main_loader;

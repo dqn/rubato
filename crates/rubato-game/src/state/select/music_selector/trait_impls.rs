@@ -1170,17 +1170,17 @@ impl MainState for MusicSelector {
             }
         }
         if let Some(path) = self.pending_update_song.take() {
-            ctx.db.pending_update_song = Some(path);
+            ctx.queue_update_song(path);
         }
         for source in self.pending_update_table.drain(..) {
-            ctx.db.pending_update_table.push(source);
+            ctx.queue_update_table(source);
         }
         if self.pending_save_config {
             self.pending_save_config = false;
             ctx.save_config();
         }
         if let Some(pc) = self.pending_load_new_profile.take() {
-            ctx.db.pending_load_new_profile = Some(pc);
+            ctx.queue_load_new_profile(pc);
         }
         for song in self.pending_start_ipfs.drain(..) {
             ctx.start_ipfs_download(&song);

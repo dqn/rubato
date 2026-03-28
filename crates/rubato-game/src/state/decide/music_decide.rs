@@ -1874,6 +1874,7 @@ mod tests {
             resource: None,
             modmenu_outbox: std::sync::Arc::new(crate::state::modmenu::ModmenuOutbox::new()),
             transition: None,
+            commands: Vec::new(),
         }
     }
 

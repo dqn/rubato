@@ -2765,6 +2765,7 @@ fn render_with_game_context_drains_player_config_update() {
         resource: None,
         modmenu_outbox: std::sync::Arc::new(crate::state::modmenu::ModmenuOutbox::new()),
         transition: None,
+        commands: Vec::new(),
     };
 
     use crate::core::main_state::MainState;
