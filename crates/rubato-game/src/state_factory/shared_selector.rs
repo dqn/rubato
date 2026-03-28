@@ -26,7 +26,7 @@ pub struct SharedMusicSelectorState {
 }
 
 impl SharedMusicSelectorState {
-    pub(super) fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
+    pub(crate) fn new(selector: Arc<Mutex<MusicSelector>>) -> Self {
         let state_data = {
             let mut selector_guard = lock_or_recover(&selector);
             std::mem::replace(

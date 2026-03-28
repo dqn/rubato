@@ -17,7 +17,6 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::keyboard::PhysicalKey;
 use winit::window::{Window, WindowId};
 
-use rubato_game::LauncherStateFactory;
 use rubato_game::core::bms_player_mode::BMSPlayerMode;
 use rubato_game::core::config::DisplayMode;
 use rubato_game::core::main_controller::MainController;
@@ -189,11 +188,6 @@ fn play(bms_path: Option<PathBuf>, player_mode: Option<BMSPlayerMode>) -> Result
 
     subsystem_init::init_audio_driver(&mut main_controller)?;
     subsystem_init::init_song_information_database(&mut main_controller);
-
-    // Set the state factory so that change_state() can create concrete state instances.
-    // Without this, the controller has no factory and all state transitions silently fail,
-    // resulting in a black screen.
-    main_controller.set_state_factory(LauncherStateFactory::new().into_creator());
 
     let _listener_handles = subsystem_init::init_state_listeners(&mut main_controller);
     subsystem_init::init_ir_config(&mut main_controller);

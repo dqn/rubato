@@ -87,28 +87,30 @@ impl MainController {
             self.resource = Some(resource);
         }
 
-        // Create the new state via factory.
-        // Take the factory out temporarily to avoid borrow conflict
-        // (factory closure captures nothing from self, but the call needs &mut self).
-        // Restore the factory before resuming any panic so that subsequent
-        // state transitions don't double-panic on a missing factory.
-        let factory = self.state_factory.take().unwrap_or_else(|| {
-            panic!(
-                "No state factory set; cannot create state {:?}. \
-                 Caller must call set_state_factory() before any state transitions.",
-                actual_type
-            );
-        });
-        let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            factory(actual_type, self)
-        })) {
-            Ok(result) => result,
-            Err(payload) => {
-                self.state_factory = Some(factory);
-                std::panic::resume_unwind(payload);
-            }
+        // Create the new state.
+        // If a custom factory has been set (test mocks), use it.
+        // Otherwise, use the built-in creation logic.
+        let result = if let Some(factory) = self.state_factory.take() {
+            // Test override path: use custom factory.
+            // Take the factory out temporarily to avoid borrow conflict
+            // (factory closure captures nothing from self, but the call needs &mut self).
+            // Restore the factory before resuming any panic so that subsequent
+            // state transitions don't double-panic on a missing factory.
+            let r = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                factory(actual_type, self)
+            })) {
+                Ok(result) => result,
+                Err(payload) => {
+                    self.state_factory = Some(factory);
+                    std::panic::resume_unwind(payload);
+                }
+            };
+            self.state_factory = Some(factory);
+            r
+        } else {
+            // Default path: create state directly without factory indirection.
+            self.create_state_for_type(actual_type)
         };
-        self.state_factory = Some(factory);
 
         if let Some(result) = result {
             // Apply target score to PlayerResource so the result screen can read it.

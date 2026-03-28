@@ -373,13 +373,15 @@ fn test_dispose_clears_current_state() {
 }
 
 #[test]
-#[should_panic(expected = "No state factory set; cannot create state MusicSelect")]
-fn test_no_factory_panics() {
+fn test_no_factory_uses_default_creation() {
     let config = Config::default();
     let player = PlayerConfig::default();
     let mut mc = MainController::new(None, config, player, None, false);
-    // No factory set — must panic to make wiring bugs immediately visible
+    // No factory set -- the built-in create_state_for_type path should be used.
+    // MusicSelect creation will attempt to open a song database, which may fail
+    // with default config, but it should not panic.
     mc.change_state(MainStateType::MusicSelect);
+    assert_eq!(mc.current_state_type(), Some(MainStateType::MusicSelect));
 }
 
 #[test]

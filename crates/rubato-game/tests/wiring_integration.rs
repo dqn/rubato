@@ -92,15 +92,15 @@ fn play_with_bmsfile_create_enters_play() {
 }
 
 // ---------------------------------------------------------------------------
-// D. create() without factory panics (fail-fast verification)
+// D. create() without factory uses built-in state creation
 // ---------------------------------------------------------------------------
 
 #[test]
-#[should_panic(expected = "No state factory set")]
-fn create_without_factory_panics() {
+fn create_without_factory_uses_default() {
     let mut mc = play_default();
-    // Do NOT set factory
+    // No factory set -- the built-in create_state_for_type path should be used.
     mc.create();
+    assert!(mc.current_state_type().is_some());
 }
 
 // ---------------------------------------------------------------------------
