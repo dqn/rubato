@@ -14,7 +14,6 @@ use super::{
     AVAILABLE_FILES, CURRENT_SKIN, CURRENT_SKIN_TYPE, DIRTY_CONFIG, OffsetValue, READY, SET_FILES,
     SET_OFFSETS, SET_OPTIONS, SKIN_MENU_STATE,
 };
-use rubato_types::main_controller_access::MainControllerCommand;
 use rubato_types::sync_utils::lock_or_recover;
 
 pub(super) fn refresh() {
@@ -453,9 +452,13 @@ pub(super) fn save_current_config(next_skin: &SkinHeader) {
         properties: Some(property),
     };
 
-    // Determine command to push while holding SKIN_MENU_STATE, then release
-    // before actually pushing (push_command re-acquires the lock for the queue).
-    let command = {
+    // Determine what to push while holding SKIN_MENU_STATE, then release
+    // before actually pushing (push_outbox re-acquires the lock for the outbox).
+    enum OutboxAction {
+        SkinConfig(usize, super::super::SkinConfig),
+        SkinHistory(String, super::super::SkinConfig),
+    }
+    let action = {
         let mut menu_state = lock_or_recover(&SKIN_MENU_STATE);
         let Some(ref mut pc) = menu_state.player_config else {
             return;
@@ -469,30 +472,32 @@ pub(super) fn save_current_config(next_skin: &SkinHeader) {
             if id < pc.skin.len() {
                 pc.skin[id] = Some(config.clone());
             }
-            MainControllerCommand::UpdateSkinConfig(id, Some(Box::new(config)))
+            OutboxAction::SkinConfig(id, config)
         } else if let Some(entry) = pc
             .skin_history
             .iter_mut()
             .find(|h| h.path().is_some_and(|p| p == skin_path))
         {
             *entry = config.clone();
-            MainControllerCommand::UpdateSkinHistory(skin_path, Box::new(config))
+            OutboxAction::SkinHistory(skin_path, config)
         } else {
             // this skin hasn't been in the config history before, add it
             pc.skin_history.push(config.clone());
-            MainControllerCommand::UpdateSkinHistory(skin_path, Box::new(config))
+            OutboxAction::SkinHistory(skin_path, config)
         }
     };
     drop(current_skin);
 
-    push_command(command);
-}
-
-/// Push a command to MainController via the command queue in SKIN_MENU_STATE.
-fn push_command(command: MainControllerCommand) {
     let state = lock_or_recover(&SKIN_MENU_STATE);
-    if let Some(ref q) = state.command_queue {
-        q.push(command);
+    if let Some(ref ob) = state.outbox {
+        match action {
+            OutboxAction::SkinConfig(id, cfg) => {
+                ob.push_skin_config_update(id, Some(cfg));
+            }
+            OutboxAction::SkinHistory(path, cfg) => {
+                ob.push_skin_history_update(path, cfg);
+            }
+        }
     }
 }
 

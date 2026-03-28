@@ -62,6 +62,10 @@ pub struct GameContext {
     /// During active play, this is borrowed by the current state.
     pub resource: Option<PlayerResource>,
 
+    // --- Modmenu outbox ---
+    /// Thread-safe outbox for modmenu actions (egui callbacks -> MainController drain).
+    pub modmenu_outbox: std::sync::Arc<crate::state::modmenu::ModmenuOutbox>,
+
     // --- Frame transition ---
     /// Pending state transition from `render_with_game_context`.
     /// Stored here so the outbox drain runs before the transition is applied.
