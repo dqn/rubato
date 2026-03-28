@@ -8,13 +8,13 @@
 
 use rubato::core::config::Config;
 use rubato::core::player_config::PlayerConfig;
-use rubato::state::select::bar::bar::Bar;
-use rubato::state::select::bar::hash_bar::HashBar;
-use rubato::state::select::bar::search_word_bar::SearchWordBar;
-use rubato::state::select::bar::song_bar::SongBar;
-use rubato::state::select::bar_manager::{BarManager, UpdateBarContext};
-use rubato::state::select::bar_sorter::BarSorter;
-use rubato::state::select::null_song_database_accessor::NullSongDatabaseAccessor;
+use rubato::select::bar::bar::Bar;
+use rubato::select::bar::hash_bar::HashBar;
+use rubato::select::bar::search_word_bar::SearchWordBar;
+use rubato::select::bar::song_bar::SongBar;
+use rubato::select::bar_manager::{BarManager, UpdateBarContext};
+use rubato::select::bar_sorter::BarSorter;
+use rubato::select::null_song_database_accessor::NullSongDatabaseAccessor;
 use rubato_skin::song_data::SongData;
 
 // ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ fn update_bar_root_clears_directory_stack() {
 
     // Push a fake directory level
     manager.dir.push(Box::new(Bar::Folder(Box::new(
-        rubato::state::select::bar::folder_bar::FolderBar::new(None, "test_dir".to_string()),
+        rubato::select::bar::folder_bar::FolderBar::new(None, "test_dir".to_string()),
     ))));
     assert!(!manager.dir.is_empty());
 
@@ -250,7 +250,7 @@ fn close_returns_to_parent() {
 
     // Set up a directory entry
     manager.dir.push(Box::new(Bar::Folder(Box::new(
-        rubato::state::select::bar::folder_bar::FolderBar::new(None, "parent".to_string()),
+        rubato::select::bar::folder_bar::FolderBar::new(None, "parent".to_string()),
     ))));
 
     // Need favorites so update_bar doesn't recurse infinitely

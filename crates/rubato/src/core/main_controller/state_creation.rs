@@ -13,14 +13,14 @@ use crate::core::main_state::{MainState, MainStateType};
 use crate::core::timer_manager::TimerManager;
 use crate::game_screen::GameScreen;
 use crate::play::bms_player::BMSPlayer;
-use crate::state::decide::music_decide::MusicDecide;
-use crate::state::result::BMSPlayerMode;
-use crate::state::result::BMSPlayerModeType;
-use crate::state::result::MainController as ResultMainController;
-use crate::state::result::PlayerResource as ResultPlayerResource;
-use crate::state::result::course_result::CourseResult;
-use crate::state::result::music_result::MusicResult;
-use crate::state::select::music_selector::MusicSelector;
+use crate::decide::music_decide::MusicDecide;
+use crate::result::BMSPlayerMode;
+use crate::result::BMSPlayerModeType;
+use crate::result::MainController as ResultMainController;
+use crate::result::PlayerResource as ResultPlayerResource;
+use crate::result::course_result::CourseResult;
+use crate::result::music_result::MusicResult;
+use crate::select::music_selector::MusicSelector;
 use crate::state_factory::shared_selector::SharedMusicSelectorState;
 use crate::state_factory::wire_selector_dependencies;
 use rubato_skin::score_data::ScoreData;
@@ -28,14 +28,14 @@ use rubato_skin::score_data::ScoreData;
 /// Extract result-crate IR statuses from core MainController's IR statuses.
 fn extract_ir_statuses(
     controller: &MainController,
-) -> Vec<crate::state::result::ir_status::IRStatus> {
+) -> Vec<crate::result::ir_status::IRStatus> {
     controller
         .ir_status()
         .iter()
         .filter_map(|core_ir| {
             let connection = core_ir.connection.as_ref()?.clone();
             let player = core_ir.player_data.as_ref()?.clone();
-            Some(crate::state::result::ir_status::IRStatus::new(
+            Some(crate::result::ir_status::IRStatus::new(
                 core_ir.config.clone(),
                 connection,
                 player,
@@ -283,7 +283,7 @@ impl MainController {
                 // via ScoreHandoff when the play session ends.
                 {
                     let freq =
-                        crate::state::modmenu::freq_trainer_menu::FreqTrainerMenu::get_freq();
+                        crate::modmenu::freq_trainer_menu::FreqTrainerMenu::get_freq();
                     let is_play_mode =
                         player.play_mode().mode == crate::core::bms_player_mode::Mode::Play;
                     let freq_option = self

@@ -11,10 +11,10 @@ use crate::core::main_state::{
     MainState, MainStateData, MainStateType, StateCreateEffects, StateTransition,
 };
 use crate::play::bms_player::BMSPlayer;
-use crate::state::decide::music_decide::MusicDecide;
-use crate::state::result::course_result::CourseResult;
-use crate::state::result::music_result::MusicResult;
-use crate::state::select::music_selector::MusicSelector;
+use crate::decide::music_decide::MusicDecide;
+use crate::result::course_result::CourseResult;
+use crate::result::music_result::MusicResult;
+use crate::select::music_selector::MusicSelector;
 use rubato_render::sprite_batch::SpriteBatch;
 
 use crate::state_factory::shared_selector::SharedMusicSelectorState;

@@ -2,7 +2,7 @@
 
 use crate::core::config::{Config, SongPreview};
 use crate::core::player_config::PlayerConfig;
-use crate::state::select::music_selector::ChartReplicationMode;
+use crate::select::music_selector::ChartReplicationMode;
 
 /// Translates: MusicSelectConfigurationView (JavaFX → egui)
 ///

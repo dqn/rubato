@@ -304,7 +304,7 @@ impl MainController {
     pub fn shared_music_selector(
         &self,
     ) -> Option<
-        &std::sync::Arc<std::sync::Mutex<crate::state::select::music_selector::MusicSelector>>,
+        &std::sync::Arc<std::sync::Mutex<crate::select::music_selector::MusicSelector>>,
     > {
         self.shared_music_selector.as_ref()
     }
@@ -313,7 +313,7 @@ impl MainController {
     pub fn set_shared_music_selector(
         &mut self,
         selector: std::sync::Arc<
-            std::sync::Mutex<crate::state::select::music_selector::MusicSelector>,
+            std::sync::Mutex<crate::select::music_selector::MusicSelector>,
         >,
     ) {
         self.shared_music_selector = Some(selector);

@@ -7,7 +7,11 @@ pub mod external;
 pub mod ir;
 pub mod play;
 pub mod song;
-pub mod state;
+pub mod select;
+pub mod decide;
+pub mod result;
+pub mod modmenu;
+pub mod stream;
 
 // Launcher modules (original rubato-launcher)
 pub mod display_mode;

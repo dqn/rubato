@@ -1,7 +1,7 @@
 // Translated from TrainerView.java
 
 use crate::core::player_config::PlayerConfig;
-use crate::state::modmenu::random_trainer::RandomTrainer;
+use crate::modmenu::random_trainer::RandomTrainer;
 use egui;
 use log::warn;
 

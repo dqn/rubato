@@ -4,7 +4,7 @@
 // direct config fields, this test validates basic construction/drop safety.
 
 use rubato::core::player_resource::PlayerResource;
-use rubato::state::decide::music_decide::MusicDecide;
+use rubato::decide::music_decide::MusicDecide;
 
 /// MusicDecide can be constructed and dropped without leak.
 #[test]

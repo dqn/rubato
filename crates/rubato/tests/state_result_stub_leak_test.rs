@@ -4,7 +4,7 @@
 // Now they return references to owned fields, so repeated calls return the same address.
 // input_processor was removed during InputSnapshot migration.
 
-use rubato::state::result::MainController;
+use rubato::result::MainController;
 
 fn make_mc() -> MainController {
     MainController::new(
