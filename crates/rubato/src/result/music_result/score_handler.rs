@@ -174,7 +174,10 @@ impl MusicResult {
                 } else if !(cs.clear == ClearType::LightAssistEasy.id()
                     || cs.clear == ClearType::AssistEasy.id())
                     && let Some(models) = self.resource.course_bms_models()
-                    && self.resource.course_index() == models.len() - 1
+                    && models
+                        .len()
+                        .checked_sub(1)
+                        .is_some_and(|last| self.resource.course_index() == last)
                 {
                     let mut course_total_notes = 0;
                     for m in models {
@@ -1136,6 +1139,35 @@ mod tests {
             cs.clear,
             ClearType::LightAssistEasy.id(),
             "LightAssistEasy should be sticky"
+        );
+    }
+
+    // --- 9. Empty course models (regression: usize underflow on models.len() - 1) ---
+
+    #[test]
+    fn test_accumulate_course_score_empty_models_no_panic() {
+        let config = make_test_config("cs-empty-models");
+        let mut ra = CourseScoreResourceAccess::new(config);
+        ra.assist = 0;
+        ra.gauge = Some(vec![vec![50.0]]);
+        ra.groove_gauge = Some(make_groove_gauge(0));
+        ra.course_index = 0;
+
+        // Empty course model list -- previously caused usize underflow
+        let models: Vec<bms::model::bms_model::BMSModel> = vec![];
+        let mut mr = make_course_result(ra, models);
+
+        let mut newscore = ScoreData::default();
+        newscore.clear = ClearType::Normal.id();
+        mr.accumulate_course_score(&newscore);
+
+        let cs = mr.resource.course_score_data().unwrap();
+        // With empty models, the "last song" branch should not be entered,
+        // so clear stays at default NoPlay.
+        assert_eq!(
+            cs.clear,
+            ClearType::NoPlay.id(),
+            "Empty models should not enter last-song clear logic"
         );
     }
 }

@@ -95,6 +95,22 @@ fn test_bar_renderer_new() {
     assert!(renderer.bartextupdate);
 }
 
+/// Regression: analog_ticks_per_scroll=0 caused division by zero in input().
+#[test]
+fn test_bar_renderer_new_clamps_zero_analog_ticks() {
+    let renderer = BarRenderer::new(300, 100, 0);
+    assert_eq!(
+        renderer.analog_ticks_per_scroll, 1,
+        "analog_ticks_per_scroll=0 should be clamped to 1 to prevent division by zero"
+    );
+
+    let renderer_neg = BarRenderer::new(300, 100, -5);
+    assert_eq!(
+        renderer_neg.analog_ticks_per_scroll, 1,
+        "negative analog_ticks_per_scroll should be clamped to 1"
+    );
+}
+
 #[test]
 fn test_bar_renderer_two_phase_prepare_render() {
     let mut renderer = BarRenderer::new(300, 100, 5);

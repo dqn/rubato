@@ -53,7 +53,7 @@ impl BarRenderer {
             angle: 0,
             keyinput: false,
             analog_scroll_buffer: 0,
-            analog_ticks_per_scroll,
+            analog_ticks_per_scroll: analog_ticks_per_scroll.max(1),
             barlength,
             bararea,
             bartextupdate: true,

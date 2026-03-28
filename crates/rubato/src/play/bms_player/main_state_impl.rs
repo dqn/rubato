@@ -498,7 +498,7 @@ impl MainState for BMSPlayer {
 
                 // Check if media loaded and load timers elapsed
                 let load_threshold =
-                    (self.play_skin.loadstart + self.play_skin.loadend) as i64 * 1000;
+                    (self.play_skin.loadstart as i64 + self.play_skin.loadend as i64) * 1000;
                 // Translated from: Java BMSPlayer.render() lines 607-608
                 if self.media_load_finished
                     && micronow > load_threshold
@@ -620,7 +620,7 @@ impl MainState for BMSPlayer {
                     .copied()
                     .unwrap_or(false);
                 let load_threshold =
-                    (self.play_skin.loadstart + self.play_skin.loadend) as i64 * 1000;
+                    (self.play_skin.loadstart as i64 + self.play_skin.loadend as i64) * 1000;
                 if key0_pressed
                     && self.media_load_finished
                     && micronow > load_threshold
