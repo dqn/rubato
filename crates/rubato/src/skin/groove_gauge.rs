@@ -383,6 +383,17 @@ mod tests {
     }
 
     #[test]
+    fn test_gauge_modifier_modify_damage_zero_notes() {
+        // With zero total_notes, ModifyDamage takes the total_notes <= 20 branch
+        // so fix2 = 10.0. With total = 300.0, fix1 = 10.0 / min(10.0, floor(300/16) - 5) = 1.0.
+        // Result: f * max(fix1, fix2) = -5.0 * max(1.0, 10.0) = -50.0
+        let model = make_model(); // total = 300.0, no notes
+        assert_eq!(model.total_notes(), 0);
+        let result = GaugeModifier::ModifyDamage.modify(-5.0, &model);
+        assert_eq!(result, -50.0);
+    }
+
+    #[test]
     fn test_gauge_modifier_equality() {
         assert_eq!(GaugeModifier::Total, GaugeModifier::Total);
         assert_ne!(GaugeModifier::Total, GaugeModifier::LimitIncrement);

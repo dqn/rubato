@@ -2811,4 +2811,36 @@ mod tests {
         // First SWITCH sets title to "Case2First", second overwrites to "Case1Second".
         assert_eq!(model.title, "Case1Second");
     }
+
+    // --- Unterminated LN cleanup ---
+
+    #[test]
+    fn decode_unterminated_ln_removes_orphaned_start_note() {
+        // Channel 51 is P1 LN lane 1. A single data value "01" places an LN
+        // start at position 0 with WAV01, but no matching LN end follows.
+        // The decoder's build_timelines cleanup should remove the orphaned
+        // start note and emit a warning.
+        let mut decoder = BMSDecoder::new();
+        let data = make_bms_bytes(&["#BPM 120", "#WAV01 kick.wav", "#00051:01"]);
+        let model = decoder.decode_bytes(&data, false, None);
+        assert!(model.is_some());
+        let model = model.unwrap();
+
+        // The orphaned LN start note should have been removed from lane 0
+        // (channel 51 maps to cassign[0] = 0 for BEAT_5K).
+        let has_note_on_lane_0 = model.timelines.iter().any(|tl| tl.note(0).is_some());
+        assert!(
+            !has_note_on_lane_0,
+            "orphaned LN start note should be removed from timeline"
+        );
+
+        // A warning about unterminated LN should be logged.
+        assert!(
+            decoder
+                .log
+                .iter()
+                .any(|l| l.message.contains("LN終端定義されていないLN")),
+            "expected warning about unterminated LN"
+        );
+    }
 }

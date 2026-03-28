@@ -7,6 +7,7 @@ use crate::core::sprite_batch_helper::SpriteBatch;
 use crate::input::bms_player_input_device::DeviceType;
 use crate::input::bms_player_input_processor::{BMSPlayerInputProcessor, KEYSTATE_SIZE};
 use crate::input::keyboard_input_processor::ControlKeys;
+use crate::skin::skin_render_context::SkinRenderContext;
 use bms::model::bms_model::BMSModel;
 use bms::model::mode::Mode;
 use std::sync::Arc;
@@ -6727,4 +6728,102 @@ fn create_score_data_minbp_floor_at_zero() {
 
     let score = player.create_score_data(DeviceType::Keyboard).unwrap();
     assert_eq!(score.minbp, 0);
+}
+
+// --- build_snapshot course mode tests ---
+
+#[test]
+fn build_snapshot_course_mode_fields() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+    player.course_index = 2;
+    player.course_song_count = 4;
+
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let snapshot = player.build_snapshot(&timer);
+
+    assert!(snapshot.is_course_mode);
+    assert_eq!(snapshot.course_index, 2);
+    assert_eq!(snapshot.course_song_count, 4);
+
+    // Verify skin boolean properties derived from course fields
+    assert!(!snapshot.boolean_value(280)); // stage 0
+    assert!(!snapshot.boolean_value(281)); // stage 1
+    assert!(snapshot.boolean_value(282)); // stage 2 (current)
+    assert!(!snapshot.boolean_value(283)); // stage 3
+    assert!(!snapshot.boolean_value(289)); // not final stage (index 2 != 3)
+    assert!(snapshot.boolean_value(290)); // is course mode
+}
+
+#[test]
+fn build_snapshot_course_mode_final_stage() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.is_course_mode = true;
+    player.course_index = 3;
+    player.course_song_count = 4;
+
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let snapshot = player.build_snapshot(&timer);
+
+    assert!(snapshot.boolean_value(289)); // final stage
+}
+
+#[test]
+fn build_snapshot_non_course_mode_defaults() {
+    let model = make_model();
+    let player = BMSPlayer::new(model);
+
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let snapshot = player.build_snapshot(&timer);
+
+    assert!(!snapshot.is_course_mode);
+    assert_eq!(snapshot.course_index, 0);
+    assert_eq!(snapshot.course_song_count, 0);
+    assert!(!snapshot.boolean_value(280));
+    assert!(!snapshot.boolean_value(290));
+}
+
+// --- build_snapshot is_update_score tests ---
+
+#[test]
+fn build_snapshot_is_update_score_no_assist() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.assist = 0;
+
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let snapshot = player.build_snapshot(&timer);
+
+    assert!(snapshot.is_update_score);
+    // Boolean 60 = score saving disabled, 61 = score saving enabled
+    assert!(!snapshot.boolean_value(60));
+    assert!(snapshot.boolean_value(61));
+}
+
+#[test]
+fn build_snapshot_is_update_score_with_assist() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.assist = 1;
+
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let snapshot = player.build_snapshot(&timer);
+
+    assert!(!snapshot.is_update_score);
+    // Boolean 60 = score saving disabled, 61 = score saving enabled
+    assert!(snapshot.boolean_value(60));
+    assert!(!snapshot.boolean_value(61));
+}
+
+// --- set_course_info tests ---
+
+#[test]
+fn set_course_info_persists() {
+    let model = make_model();
+    let mut player = BMSPlayer::new(model);
+    player.set_course_info(2, 4);
+    assert_eq!(player.course_index, 2);
+    assert_eq!(player.course_song_count, 4);
 }
