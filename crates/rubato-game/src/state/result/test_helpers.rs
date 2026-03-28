@@ -3,8 +3,6 @@
 
 use crate::core::main_state::SkinDrawable;
 use crate::core::sprite_batch_helper::SpriteBatch;
-use rubato_types::main_controller_access::MainControllerAccess;
-use rubato_types::player_resource_access::PlayerResourceAccess;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Mock skin that fires execute_event with a configurable event_id on mouse press.
@@ -133,53 +131,6 @@ impl SkinDrawable for PlayerConfigMutatingSkin {
     }
 
     fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
-}
-
-/// Test MainControllerAccess implementation with configurable Config.
-pub struct TestMainControllerAccess {
-    pub config: rubato_types::config::Config,
-    pub player_config: rubato_types::player_config::PlayerConfig,
-}
-
-impl TestMainControllerAccess {
-    pub fn new(config: rubato_types::config::Config) -> Self {
-        Self {
-            config,
-            player_config: rubato_types::player_config::PlayerConfig::default(),
-        }
-    }
-}
-
-impl MainControllerAccess for TestMainControllerAccess {
-    fn config(&self) -> &rubato_types::config::Config {
-        &self.config
-    }
-
-    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        &self.player_config
-    }
-
-    fn change_state(&mut self, _state: crate::core::main_state::MainStateType) {}
-
-    fn save_config(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn exit(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn save_last_recording(&self, _reason: &str) {}
-
-    fn update_song(&mut self, _path: Option<&str>) {}
-
-    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-
-    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
-    }
 }
 
 /// Create a test Config with a unique temp directory for player data.

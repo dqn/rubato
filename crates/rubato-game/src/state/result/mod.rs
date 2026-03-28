@@ -24,7 +24,6 @@ pub use rubato_skin::skin_header::SkinHeader;
 pub use rubato_skin::skin_object::SkinObjectData;
 pub use rubato_skin::skin_object::SkinObjectRenderer;
 pub use rubato_types::groove_gauge::GrooveGauge;
-pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 pub use rubato_types::player_resource_access::{NullPlayerResource, PlayerResourceAccess};
 
 // Convenience re-exports for the wrapper types

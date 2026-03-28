@@ -1,6 +1,5 @@
 use crate::core::score_data::ScoreData;
 use crate::play::MainController;
-use rubato_types::main_controller_access::MainControllerAccess;
 
 /// Score target
 pub enum TargetProperty {

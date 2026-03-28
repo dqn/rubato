@@ -4,6 +4,7 @@
 // Types
 pub mod clipboard_wrapper;
 pub mod imgui_surrogates;
+pub mod modmenu_outbox;
 pub mod modmenu_skin;
 
 // Re-exports
@@ -17,7 +18,6 @@ pub use rubato_skin::skin_header::{
     SkinHeader, TYPE_LR2SKIN,
 };
 pub use rubato_skin::skin_property::OPTION_RANDOM_VALUE;
-pub use rubato_types::main_controller_access::{MainControllerAccess, NullMainController};
 pub use rubato_types::player_config::PlayerConfig;
 pub use rubato_types::player_config::read_all_player_id;
 pub use rubato_types::skin_config::{
@@ -33,15 +33,15 @@ pub use rubato_skin::json::json_skin_loader::JSONSkinLoader;
 pub use rubato_skin::lr2::lr2_skin_header_loader::LR2SkinHeaderLoader;
 pub use rubato_skin::lua::lua_skin_loader::LuaSkinLoader;
 
-/// Type alias for backward compatibility -- callers use `MainController`.
-/// Accepted trade-off: the modmenu (egui launcher/settings) uses NullMainController,
-/// so controller-backed skin menu actions (e.g., freeze timers) are no-ops.
-/// Wiring a real MainController here requires restructuring the egui integration.
-pub type MainController = NullMainController;
+/// Empty stub for backward compatibility -- callers use `MainController`.
+/// The modmenu (egui launcher/settings) does not need a real MainController;
+/// all side-effects go through ModmenuOutbox.
+pub struct MainController;
 
 // Re-exports for moved types
 pub use clipboard_wrapper::Clipboard;
 pub use imgui_surrogates::{ImBoolean, ImFloat};
+pub use modmenu_outbox::ModmenuOutbox;
 pub use modmenu_skin::{Skin, SkinObject, SkinObjectDestination};
 
 pub mod download_task_menu;

@@ -100,37 +100,6 @@ impl MusicSelector {
         self.ipfs_download_alive = ipfs_download_alive;
     }
 
-    /// Backward-compatible shim for test code that constructs mock MainControllerAccess.
-    /// Extracts fields from the trait into the individual typed fields.
-    #[cfg(test)]
-    pub fn set_main_controller(
-        &mut self,
-        mut main: Box<dyn rubato_types::main_controller_access::MainControllerAccess + Send>,
-    ) {
-        // ranking_data_cache
-        if let Some(cache) = main.ranking_data_cache() {
-            self.ranking_data_cache = Some(cache.clone_box());
-        }
-        // ir_connection (via type-erased Any)
-        if let Some(any) = main.ir_connection_any() {
-            if let Some(arc) = any
-                .downcast_ref::<std::sync::Arc<dyn crate::ir::ir_connection::IRConnection + Send + Sync>>()
-                .cloned()
-            {
-                self.ir_connection = Some(arc);
-            }
-        }
-        // info_database
-        // Note: info_database returns a borrow, so we cannot transfer ownership.
-        // Tests that need info_database should set it directly on the selector.
-        // sound_paths
-        for sound in rubato_types::sound_type::SoundType::values() {
-            if let Some(path) = main.sound_path(sound) {
-                self.sound_paths.insert(*sound, path);
-            }
-        }
-    }
-
     pub(super) fn ensure_local_score_cache(&mut self) {
         if self.ranking.scorecache.is_some() {
             return;

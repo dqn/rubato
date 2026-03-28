@@ -4,7 +4,6 @@
 // Translated from: MainController.initializeStates() + createBMSPlayerState()
 // Java creates states eagerly in initializeStates(); Rust creates them on-demand via factory.
 
-mod queued_access;
 pub(crate) mod shared_selector;
 
 use std::sync::Arc;
@@ -23,12 +22,8 @@ use crate::state::result::PlayerResource as ResultPlayerResource;
 use crate::state::result::course_result::CourseResult;
 use crate::state::result::music_result::MusicResult;
 use crate::state::select::music_selector::MusicSelector;
-use rubato_types::main_controller_access::MainControllerAccess as _;
 use rubato_types::score_data::ScoreData;
 
-#[cfg(test)]
-use queued_access::QueuedControllerAccess;
-pub use queued_access::new_state_main_controller_access;
 use shared_selector::SharedMusicSelectorState;
 
 use crate::game_screen::GameScreen;
@@ -53,7 +48,7 @@ fn extract_ir_statuses(
 }
 
 /// Wire individual dependencies from MainController into a MusicSelector.
-/// Replaces the old `QueuedControllerAccess::from_controller` + `set_main_controller` pattern.
+/// Wires individual dependencies from MainController into MusicSelector.
 pub fn wire_selector_dependencies(selector: &mut MusicSelector, controller: &mut MainController) {
     use crate::ir::ranking_data_cache::RankingDataCache;
     use crate::song::song_information_accessor::SongInformationAccessor;
@@ -209,7 +204,7 @@ impl LauncherStateFactory {
                         MusicSelector::with_config(config.clone())
                     }
                 };
-                // Wire individual dependencies directly (no more QueuedControllerAccess).
+                // Wire individual dependencies directly.
                 wire_selector_dependencies(&mut selector, controller);
                 selector.config = controller.player_config().clone();
                 selector.app_config = config;
@@ -564,13 +559,11 @@ mod tests {
     use crate::song::song_information_accessor::SongInformationAccessor;
     use crate::state::select::preview_music_processor::PreviewMusicProcessor;
     use rubato_audio::audio_system::AudioSystem;
-    use rubato_types::main_controller_access::MainControllerAccess;
     use rubato_types::skin_config::SkinConfig;
     use rubato_types::skin_render_context::SkinRenderContext;
     use rubato_types::skin_type::SkinType;
     use rubato_types::song_data::SongData;
     use rubato_types::song_information::SongInformation;
-    use rubato_types::sound_type::SoundType;
     use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
 
@@ -943,81 +936,6 @@ mod tests {
     }
 
     #[test]
-    fn queued_controller_access_enqueues_side_effect_commands() {
-        let mut controller = make_test_controller();
-        let queue = controller.controller_command_queue();
-        let mut access = QueuedControllerAccess::from_controller(&mut controller, queue.clone());
-
-        access.change_state(MainStateType::Play);
-        access.play_sound(&SoundType::Decide, false);
-        access.stop_sound(&SoundType::ResultClose);
-
-        let commands = queue.drain();
-        assert!(matches!(
-            commands.first(),
-            Some(
-                rubato_types::main_controller_access::MainControllerCommand::ChangeState(
-                    MainStateType::Play
-                )
-            )
-        ));
-        assert!(matches!(
-            commands.get(1),
-            Some(
-                rubato_types::main_controller_access::MainControllerCommand::PlaySound(
-                    SoundType::Decide,
-                    false
-                )
-            )
-        ));
-        assert!(matches!(
-            commands.get(2),
-            Some(
-                rubato_types::main_controller_access::MainControllerCommand::StopSound(
-                    SoundType::ResultClose
-                )
-            )
-        ));
-    }
-
-    #[test]
-    fn queued_controller_access_exposes_song_info_database() {
-        let tempdir = tempfile::tempdir().expect("tempdir should be created");
-        let info_db_path = tempdir.path().join("songinfo.db");
-        let info = SongInformation {
-            sha256: "q".repeat(64),
-            mainbpm: 150.0,
-            ..Default::default()
-        };
-
-        let mut config = Config::default();
-        config.paths.songinfopath = info_db_path.to_string_lossy().to_string();
-        let player = PlayerConfig::default();
-        let mut controller = MainController::new(None, config, player, None, false);
-        controller.set_info_database(Box::new(
-            SongInformationAccessor::new(
-                info_db_path
-                    .to_str()
-                    .expect("song info db path should be valid UTF-8"),
-            )
-            .expect("song info db should open"),
-        ));
-        write_song_info_row(&info_db_path, &info);
-
-        let queue = controller.controller_command_queue();
-        let access = QueuedControllerAccess::from_controller(&mut controller, queue);
-
-        assert_eq!(
-            access
-                .info_database()
-                .and_then(|db| db.information(&info.sha256))
-                .map(|row| row.mainbpm as i32),
-            Some(150),
-            "queued access should preserve the song information database for select loading"
-        );
-    }
-
-    #[test]
     fn standalone_music_select_create_loads_runtime_score_and_info() {
         let tempdir = tempfile::tempdir().expect("tempdir should be created");
         let song_db_path = tempdir.path().join("songdata.db");
@@ -1204,71 +1122,6 @@ mod tests {
         assert_eq!(
             result,
             Some(StateTransition::ChangeTo(MainStateType::SkinConfig))
-        );
-    }
-
-    struct MockHttpDownloadSubmitter {
-        submitted: Arc<Mutex<Vec<(String, String)>>>,
-    }
-
-    impl rubato_types::http_download_submitter::HttpDownloadSubmitter for MockHttpDownloadSubmitter {
-        fn submit_md5_task(&self, md5: &str, task_name: &str) {
-            self.submitted
-                .lock()
-                .unwrap()
-                .push((md5.to_string(), task_name.to_string()));
-        }
-    }
-
-    #[test]
-    fn queued_controller_access_exposes_http_downloader() {
-        let mut controller = make_test_controller();
-        let submitted = Arc::new(Mutex::new(Vec::new()));
-        controller.set_http_download_processor(Box::new(MockHttpDownloadSubmitter {
-            submitted: Arc::clone(&submitted),
-        }));
-        let queue = controller.controller_command_queue();
-        let access = QueuedControllerAccess::from_controller(&mut controller, queue);
-
-        let downloader = access
-            .http_downloader()
-            .expect("queued access should keep the HTTP downloader connected");
-        downloader.submit_md5_task("deadbeef", "Song");
-
-        assert_eq!(
-            &*submitted.lock().unwrap(),
-            &[("deadbeef".to_string(), "Song".to_string())]
-        );
-    }
-
-    #[test]
-    fn queued_controller_access_shares_ranking_cache_with_controller() {
-        let mut controller = make_test_controller();
-        controller.set_ranking_data_cache(Box::new(
-            crate::ir::ranking_data_cache::RankingDataCache::new(),
-        ));
-        let queue = controller.controller_command_queue();
-        let mut access = QueuedControllerAccess::from_controller(&mut controller, queue);
-        let song = SongData::default();
-
-        access
-            .ranking_data_cache_mut()
-            .expect("queued access should expose ranking cache")
-            .put_song_any(
-                &song,
-                0,
-                Box::new(crate::ir::ranking_data::RankingData::new()),
-            );
-
-        let cached = controller
-            .ranking_data_cache()
-            .expect("controller should expose ranking cache")
-            .song_any(&song, 0)
-            .and_then(|any| any.downcast::<crate::ir::ranking_data::RankingData>().ok())
-            .map(|ranking| *ranking);
-        assert!(
-            cached.is_some(),
-            "queued access should write into the controller-backed ranking cache"
         );
     }
 

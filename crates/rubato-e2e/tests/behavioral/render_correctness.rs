@@ -9,7 +9,6 @@ use rubato_e2e::{E2eHarness, MainStateType};
 use rubato_game::core::config::Config;
 use rubato_game::core::main_loader::MainLoader;
 use rubato_game::state_factory::LauncherStateFactory;
-use rubato_types::main_controller_access::MainControllerAccess;
 use rubato_types::player_config::PlayerConfig;
 use rubato_types::skin_config::SkinConfig;
 use rubato_types::skin_type::SkinType;

@@ -6,8 +6,10 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use super::imgui_renderer;
+use std::sync::Arc;
+
 use super::{
-    CustomCategoryItem, CustomFile, CustomOffset, CustomOption, MainController,
+    CustomCategoryItem, CustomFile, CustomOffset, CustomOption, MainController, ModmenuOutbox,
     OPTION_RANDOM_VALUE, PlayerConfig, SkinHeader, SkinType,
 };
 
@@ -15,23 +17,22 @@ use config::{
     dirty, get_file_setting, get_offset_setting, get_option_setting, refresh,
     reset_current_skin_config, switch_current_scene_skin,
 };
-use rubato_types::main_controller_access::MainControllerCommandQueue;
 use rubato_types::sync_utils::lock_or_recover;
 
-/// Combined state for main controller, player config, and command queue.
+/// Combined state for main controller, player config, and modmenu outbox.
 /// Previously player_config was a separate static with potential lock-ordering
 /// concerns when accessed alongside other statics. Merging into a single struct behind
 /// one Mutex eliminates that risk.
 struct SkinMenuState {
     main: Option<MainController>,
     player_config: Option<PlayerConfig>,
-    command_queue: Option<MainControllerCommandQueue>,
+    outbox: Option<Arc<ModmenuOutbox>>,
 }
 
 static SKIN_MENU_STATE: Mutex<SkinMenuState> = Mutex::new(SkinMenuState {
     main: None,
     player_config: None,
-    command_queue: None,
+    outbox: None,
 });
 
 static READY: Mutex<bool> = Mutex::new(false);
@@ -66,15 +67,11 @@ impl OffsetValue {
 pub struct SkinMenu;
 
 impl SkinMenu {
-    pub fn init(
-        main: MainController,
-        player_config: PlayerConfig,
-        command_queue: MainControllerCommandQueue,
-    ) {
+    pub fn init(main: MainController, player_config: PlayerConfig, outbox: Arc<ModmenuOutbox>) {
         let mut state = lock_or_recover(&SKIN_MENU_STATE);
         state.main = Some(main);
         state.player_config = Some(player_config);
-        state.command_queue = Some(command_queue);
+        state.outbox = Some(outbox);
     }
 
     pub fn invalidate() {
@@ -267,9 +264,9 @@ fn menu_header(ui: &mut egui::Ui) {
                 // Wire to TimerManager.frozen via MainController.
                 // TimerManager::frozen controls whether update() advances time.
                 if lock_or_recover(&SKIN_MENU_STATE).main.is_some() {
-                    // NullMainController has no timer; freeze-timers requires a real MainController.
+                    // Modmenu stub has no timer; freeze-timers requires a real MainController.
                     log::warn!(
-                        "Freeze timers toggled but MainController is NullMainController — no-op"
+                        "Freeze timers toggled but modmenu MainController is a stub -- no-op"
                     );
                 }
                 log::info!("Freeze timers: {}", ft);
@@ -790,7 +787,7 @@ mod tests {
                 let mut state = lock_or_recover(&SKIN_MENU_STATE);
                 state.main = None;
                 state.player_config = None;
-                state.command_queue = None;
+                state.outbox = None;
             }
             *lock_or_recover(&CURRENT_SKIN) = None;
             *lock_or_recover(&CURRENT_SKIN_TYPE) = None;
@@ -815,18 +812,15 @@ mod tests {
     #[test]
     fn save_current_config_pushes_update_skin_config_for_same_skin() {
         let _guard = SkinMenuStaticsGuard;
-        use rubato_types::main_controller_access::{
-            MainControllerCommand, MainControllerCommandQueue,
-        };
 
-        let queue = MainControllerCommandQueue::new();
+        let outbox = Arc::new(ModmenuOutbox::new());
         let pc = PlayerConfig::default();
         let skin_type = SkinType::Play7Keys;
 
         {
             let mut state = lock_or_recover(&SKIN_MENU_STATE);
             state.player_config = Some(pc);
-            state.command_queue = Some(queue.clone());
+            state.outbox = Some(outbox.clone());
         }
         *lock_or_recover(&CURRENT_SKIN_TYPE) = Some(skin_type);
 
@@ -836,39 +830,34 @@ mod tests {
         // Call save_current_config with same skin name (triggers UpdateSkinConfig path)
         config::save_current_config(&header);
 
-        let commands = queue.drain();
-        assert_eq!(commands.len(), 1, "expected exactly one command");
-        match &commands[0] {
-            MainControllerCommand::UpdateSkinConfig(id, Some(boxed_config)) => {
-                assert_eq!(*id, skin_type.id() as usize);
-                assert_eq!(
-                    boxed_config.path(),
-                    Some("/skins/test.json"),
-                    "config path should match skin path"
-                );
-            }
-            other => panic!(
-                "expected UpdateSkinConfig, got {:?}",
-                std::mem::discriminant(other)
-            ),
-        }
+        let drained = outbox.drain();
+        assert_eq!(
+            drained.skin_config_updates.len(),
+            1,
+            "expected exactly one skin config update"
+        );
+        let (id, ref config) = drained.skin_config_updates[0];
+        assert_eq!(id, skin_type.id() as usize);
+        let boxed_config = config.as_ref().expect("config should be Some");
+        assert_eq!(
+            boxed_config.path(),
+            Some("/skins/test.json"),
+            "config path should match skin path"
+        );
     }
 
     #[test]
     fn save_current_config_pushes_update_skin_history_for_different_skin() {
         let _guard = SkinMenuStaticsGuard;
-        use rubato_types::main_controller_access::{
-            MainControllerCommand, MainControllerCommandQueue,
-        };
 
-        let queue = MainControllerCommandQueue::new();
+        let outbox = Arc::new(ModmenuOutbox::new());
         let pc = PlayerConfig::default();
         let skin_type = SkinType::Play7Keys;
 
         {
             let mut state = lock_or_recover(&SKIN_MENU_STATE);
             state.player_config = Some(pc);
-            state.command_queue = Some(queue.clone());
+            state.outbox = Some(outbox.clone());
         }
         *lock_or_recover(&CURRENT_SKIN_TYPE) = Some(skin_type);
 
@@ -879,35 +868,32 @@ mod tests {
         // Switching to a different skin name triggers the skin_history path
         config::save_current_config(&next);
 
-        let commands = queue.drain();
-        assert_eq!(commands.len(), 1, "expected exactly one command");
-        match &commands[0] {
-            MainControllerCommand::UpdateSkinHistory(skin_path, boxed_config) => {
-                assert_eq!(skin_path, "/skins/a.json");
-                assert_eq!(boxed_config.path(), Some("/skins/a.json"));
-            }
-            other => panic!(
-                "expected UpdateSkinHistory, got {:?}",
-                std::mem::discriminant(other)
-            ),
-        }
+        let drained = outbox.drain();
+        assert_eq!(
+            drained.skin_history_updates.len(),
+            1,
+            "expected exactly one skin history update"
+        );
+        let (ref skin_path, ref boxed_config) = drained.skin_history_updates[0];
+        assert_eq!(skin_path, "/skins/a.json");
+        assert_eq!(boxed_config.path(), Some("/skins/a.json"));
     }
 
     #[test]
-    fn save_current_config_without_queue_does_not_panic() {
+    fn save_current_config_without_outbox_does_not_panic() {
         let _guard = SkinMenuStaticsGuard;
 
         let pc = PlayerConfig::default();
         let skin_type = SkinType::Play7Keys;
 
         lock_or_recover(&SKIN_MENU_STATE).player_config = Some(pc);
-        // command_queue deliberately left as None
+        // outbox deliberately left as None
         *lock_or_recover(&CURRENT_SKIN_TYPE) = Some(skin_type);
 
         let header = make_test_skin_header("TestSkin", "/skins/test.json", skin_type);
         *lock_or_recover(&CURRENT_SKIN) = Some(header.clone());
 
-        // Should not panic when command_queue is None
+        // Should not panic when outbox is None
         config::save_current_config(&header);
     }
 }

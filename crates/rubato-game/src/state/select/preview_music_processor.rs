@@ -5,7 +5,6 @@ use std::sync::{Arc, Mutex};
 
 use rubato_audio::audio_system::AudioSystem;
 use rubato_types::audio_config::DEFAULT_AUDIO_VOLUME;
-use rubato_types::main_controller_access::MainControllerAccess;
 use rubato_types::sync_utils::lock_or_recover;
 
 use super::*;
@@ -72,32 +71,6 @@ impl PreviewAudioTarget for AudioDriverTarget<'_> {
     }
 }
 
-struct MainControllerTarget<'a> {
-    inner: &'a mut dyn MainControllerAccess,
-}
-
-impl PreviewAudioTarget for MainControllerTarget<'_> {
-    fn play_preview_path(&mut self, path: &str, volume: f32, loop_play: bool) {
-        self.inner.play_audio_path(path, volume, loop_play);
-    }
-
-    fn set_preview_volume(&mut self, path: &str, volume: f32) {
-        self.inner.set_audio_path_volume(path, volume);
-    }
-
-    fn is_preview_playing(&self, path: &str) -> bool {
-        self.inner.is_audio_path_playing(path)
-    }
-
-    fn stop_preview_path(&mut self, path: &str) {
-        self.inner.stop_audio_path(path);
-    }
-
-    fn dispose_preview_path(&mut self, path: &str) {
-        self.inner.dispose_audio_path(path);
-    }
-}
-
 impl PreviewMusicProcessor {
     pub fn new(_config: &Config) -> Self {
         Self {
@@ -147,11 +120,6 @@ impl PreviewMusicProcessor {
 
     pub fn tick_preview(&mut self, audio: &mut AudioSystem, config: &Config) {
         let mut target = AudioDriverTarget { inner: audio };
-        self.tick_with_target(&mut target, config);
-    }
-
-    pub fn tick_preview_with_main(&mut self, main: &mut dyn MainControllerAccess, config: &Config) {
-        let mut target = MainControllerTarget { inner: main };
         self.tick_with_target(&mut target, config);
     }
 

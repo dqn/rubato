@@ -33,7 +33,6 @@ use rubato_input::keys::Keys;
 use rubato_input::winit_input_bridge::SharedKeyState;
 use rubato_render::sprite_batch::CapturedDrawQuad;
 use rubato_types::folder_data::FolderData;
-use rubato_types::main_controller_access::MainControllerAccess;
 use rubato_types::skin_config::SkinConfig;
 use rubato_types::skin_type::SkinType;
 use rubato_types::song_data::SongData;

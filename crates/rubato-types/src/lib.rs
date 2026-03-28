@@ -61,7 +61,6 @@ pub mod screen_type;
 pub mod sound_type;
 
 // Lifecycle trait interfaces
-pub mod main_controller_access;
 pub mod main_state_access;
 pub mod player_resource_access;
 

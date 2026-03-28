@@ -219,23 +219,6 @@ fn test_change_state_to_config() {
 }
 
 #[test]
-fn test_process_queued_change_state_command_transitions_current_state() {
-    let mut mc = make_test_controller();
-    mc.change_state(MainStateType::MusicSelect);
-
-    let queue = mc.controller_command_queue();
-    queue.push(
-        rubato_types::main_controller_access::MainControllerCommand::ChangeState(
-            MainStateType::Config,
-        ),
-    );
-
-    mc.process_queued_controller_commands();
-
-    assert_eq!(mc.current_state_type(), Some(MainStateType::Config));
-}
-
-#[test]
 fn test_change_state_to_skin_config() {
     let mut mc = make_test_controller();
     mc.change_state(MainStateType::SkinConfig);
@@ -1525,7 +1508,12 @@ struct MockReferencesCallback {
 }
 
 impl StateReferencesCallback for MockReferencesCallback {
-    fn update_references(&self, _config: &Config, _player: &PlayerConfig) {
+    fn update_references(
+        &self,
+        _config: &Config,
+        _player: &PlayerConfig,
+        _modmenu_outbox: &std::sync::Arc<crate::state::modmenu::ModmenuOutbox>,
+    ) {
         *self.called.lock().expect("mutex poisoned") = true;
     }
 }
@@ -2200,128 +2188,6 @@ fn test_handoff_update_course_score_not_restored_when_already_false() {
     );
 }
 
-// --- UpdatePlayConfig forwarding to current state ---
-
-/// Test state that captures play config updates via shared Arc for external inspection.
-struct PlayConfigReceiverState {
-    state_data: MainStateData,
-    received: Arc<
-        Mutex<
-            Vec<(
-                bms::model::mode::Mode,
-                rubato_types::play_config::PlayConfig,
-            )>,
-        >,
-    >,
-}
-
-impl PlayConfigReceiverState {
-    fn new(
-        received: Arc<
-            Mutex<
-                Vec<(
-                    bms::model::mode::Mode,
-                    rubato_types::play_config::PlayConfig,
-                )>,
-            >,
-        >,
-    ) -> Self {
-        Self {
-            state_data: MainStateData::new(TimerManager::new()),
-            received,
-        }
-    }
-}
-
-impl MainState for PlayConfigReceiverState {
-    fn state_type(&self) -> Option<MainStateType> {
-        Some(MainStateType::Play)
-    }
-
-    fn main_state_data(&self) -> &MainStateData {
-        &self.state_data
-    }
-
-    fn main_state_data_mut(&mut self) -> &mut MainStateData {
-        &mut self.state_data
-    }
-
-    fn create(&mut self) {}
-    fn render(&mut self) {}
-
-    fn receive_updated_play_config(
-        &mut self,
-        mode: bms::model::mode::Mode,
-        play_config: rubato_types::play_config::PlayConfig,
-    ) {
-        self.received.lock().unwrap().push((mode, play_config));
-    }
-
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
-        self.render();
-        Some(StateTransition::Continue)
-    }
-
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
-        self.input();
-        Some(())
-    }
-}
-
-#[test]
-fn update_play_config_command_forwards_to_current_state() {
-    let mut mc = make_test_controller();
-    let received = Arc::new(Mutex::new(Vec::new()));
-    mc.current = Some(Box::new(PlayConfigReceiverState::new(received.clone())));
-
-    // Set a live hispeed that differs from default (simulating scroll wheel change)
-    let live_hispeed = 7.0;
-    mc.ctx
-        .player
-        .play_config(bms::model::mode::Mode::BEAT_7K)
-        .playconfig
-        .hispeed = live_hispeed;
-
-    // Queue an UpdatePlayConfig command with modmenu-managed fields changed
-    // and a stale hispeed that must NOT overwrite the live value
-    let mut pc = rubato_types::play_config::PlayConfig::default();
-    pc.hispeed = 1.0; // stale -- must NOT overwrite live hispeed
-    pc.enablelift = true;
-    pc.lanecover = 0.42;
-    pc.enablelanecover = true;
-    mc.command_queue.push(
-        rubato_types::main_controller_access::MainControllerCommand::UpdatePlayConfig(
-            bms::model::mode::Mode::BEAT_7K,
-            Box::new(pc),
-        ),
-    );
-
-    mc.process_queued_controller_commands();
-
-    // Verify MainController's authoritative PlayerConfig: non-modmenu fields preserved
-    let mc_pc = &mc
-        .ctx
-        .player
-        .play_config_ref(bms::model::mode::Mode::BEAT_7K)
-        .playconfig;
-    assert!(
-        (mc_pc.hispeed - live_hispeed).abs() < f32::EPSILON,
-        "hispeed should be preserved (live={}), got {}",
-        live_hispeed,
-        mc_pc.hispeed
-    );
-    // Modmenu-managed fields should be updated
-    assert!(mc_pc.enablelift);
-    assert!(mc_pc.enablelanecover);
-    assert!((mc_pc.lanecover - 0.42).abs() < f32::EPSILON);
-
-    // Verify the current state received the forwarded config (raw, unmerged)
-    let updates = received.lock().unwrap();
-    assert_eq!(updates.len(), 1, "state should receive exactly one update");
-    assert_eq!(updates[0].0, bms::model::mode::Mode::BEAT_7K);
-    assert!(updates[0].1.enablelift, "forwarded enablelift should match");
-}
-
 // --- Skin dispose_skin() called before dropping tests ---
 
 /// A SkinDrawable mock that records dispose_skin() calls via shared counter.
@@ -2659,7 +2525,7 @@ fn input_gate_override_is_consumed_after_render() {
 }
 
 // ============================================================
-// Offset unification and MainControllerAccess delegation
+// Offset access via inherent methods
 // ============================================================
 
 #[test]
@@ -2682,21 +2548,13 @@ fn offset_value_returns_skin_offset_from_controller() {
     assert_eq!(o.x, 0.0);
     assert_eq!(o.y, 0.0);
 
-    // MainControllerAccess trait should delegate to the same data
-    let access: &dyn MainControllerAccess = &mc;
-    let trait_offset = access.offset_value(0);
-    assert!(
-        trait_offset.is_some(),
-        "offset_value(0) via trait should return Some"
-    );
-
     // Out-of-range should return None
-    assert!(access.offset_value(-1).is_none());
-    assert!(access.offset_value(999).is_none());
+    assert!(mc.offset(-1).is_none());
+    assert!(mc.offset(999).is_none());
 }
 
 #[test]
-fn offset_mut_updates_are_visible_through_offset_value() {
+fn offset_mut_updates_are_visible_through_offset() {
     let dir = tempfile::tempdir().unwrap();
     let _cwd = CurrentDirGuard::set(dir.path());
 
@@ -2714,130 +2572,10 @@ fn offset_mut_updates_are_visible_through_offset_value() {
         o.y = -7.5;
     }
 
-    // Read it back via offset_value (trait method)
-    let access: &dyn MainControllerAccess = &mc;
-    let o = access
-        .offset_value(5)
-        .expect("offset_value(5) should be Some");
+    // Read it back via offset()
+    let o = mc.offset(5).expect("offset(5) should be Some");
     assert_eq!(o.x, 42.0);
     assert_eq!(o.y, -7.5);
-}
-
-// --- UpdateSkinConfig / UpdateSkinHistory command handling ---
-
-#[test]
-fn update_skin_config_command_updates_player_skin_slot() {
-    let mut mc = make_test_controller();
-    let slot = rubato_types::skin_type::SkinType::Play7Keys.id() as usize;
-
-    // Verify slot starts with default
-    assert!(mc.ctx.player.skin[slot].is_some());
-
-    let config = rubato_types::skin_config::SkinConfig {
-        path: Some("/skins/new_play7.json".to_string()),
-        properties: None,
-    };
-    mc.command_queue.push(
-        rubato_types::main_controller_access::MainControllerCommand::UpdateSkinConfig(
-            slot,
-            Some(Box::new(config)),
-        ),
-    );
-    mc.process_queued_controller_commands();
-
-    assert_eq!(
-        mc.ctx.player.skin[slot].as_ref().and_then(|c| c.path()),
-        Some("/skins/new_play7.json"),
-    );
-}
-
-#[test]
-fn update_skin_config_none_clears_slot() {
-    let mut mc = make_test_controller();
-    let slot = rubato_types::skin_type::SkinType::Play7Keys.id() as usize;
-
-    mc.command_queue.push(
-        rubato_types::main_controller_access::MainControllerCommand::UpdateSkinConfig(slot, None),
-    );
-    mc.process_queued_controller_commands();
-
-    assert!(mc.ctx.player.skin[slot].is_none());
-}
-
-#[test]
-fn update_skin_history_adds_new_entry() {
-    let mut mc = make_test_controller();
-    let path = "/skins/history_test.json".to_string();
-    let config = rubato_types::skin_config::SkinConfig {
-        path: Some(path.clone()),
-        properties: None,
-    };
-
-    mc.command_queue.push(
-        rubato_types::main_controller_access::MainControllerCommand::UpdateSkinHistory(
-            path.clone(),
-            Box::new(config),
-        ),
-    );
-    mc.process_queued_controller_commands();
-
-    assert!(
-        mc.ctx
-            .player
-            .skin_history
-            .iter()
-            .any(|h| h.path() == Some("/skins/history_test.json")),
-        "skin_history should contain the new entry"
-    );
-}
-
-#[test]
-fn update_skin_history_updates_existing_entry() {
-    let mut mc = make_test_controller();
-    let path = "/skins/history_update.json".to_string();
-
-    // Pre-populate skin_history
-    mc.ctx
-        .player
-        .skin_history
-        .push(rubato_types::skin_config::SkinConfig {
-            path: Some(path.clone()),
-            properties: None,
-        });
-    let original_len = mc.ctx.player.skin_history.len();
-
-    // Push an update with properties
-    let property = rubato_types::skin_config::SkinProperty {
-        option: vec![Some(rubato_types::skin_config::SkinOption {
-            name: Some("test_opt".to_string()),
-            value: 42,
-        })],
-        file: vec![],
-        offset: vec![],
-    };
-    let config = rubato_types::skin_config::SkinConfig {
-        path: Some(path.clone()),
-        properties: Some(property),
-    };
-
-    mc.command_queue.push(
-        rubato_types::main_controller_access::MainControllerCommand::UpdateSkinHistory(
-            path,
-            Box::new(config),
-        ),
-    );
-    mc.process_queued_controller_commands();
-
-    // Should update in-place, not add a new entry
-    assert_eq!(mc.ctx.player.skin_history.len(), original_len);
-    let entry = mc
-        .ctx
-        .player
-        .skin_history
-        .iter()
-        .find(|h| h.path() == Some("/skins/history_update.json"))
-        .expect("should find updated entry");
-    assert!(entry.properties().is_some());
 }
 
 // --- BMS resource image registration during state transition ---

@@ -6,14 +6,12 @@ pub(crate) use log::info;
 
 pub(crate) use rubato_audio::audio_system::AudioSystem;
 pub(crate) use rubato_types::imgui_notify::ImGuiNotify;
-pub(crate) use rubato_types::main_controller_access::MainControllerAccess;
 pub(crate) use rubato_types::main_state_access::MainStateAccess;
 pub(crate) use rubato_types::player_resource_access::PlayerResourceAccess;
 pub(crate) use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
 pub(crate) use rubato_types::screen_type::ScreenType;
 pub(crate) use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
 pub(crate) use rubato_types::song_information_db::SongInformationDb;
-pub(crate) use rubato_types::sound_type::SoundType;
 
 pub(crate) use crate::core::app_context::GameContext;
 pub(crate) use crate::core::bms_player_mode::BMSPlayerMode;
@@ -236,9 +234,6 @@ pub struct MainController {
 
     /// Channel-based event senders for external listeners and test harnesses.
     event_senders: Vec<std::sync::mpsc::SyncSender<rubato_types::app_event::AppEvent>>,
-
-    /// Deferred controller commands from state-facing access proxies.
-    command_queue: rubato_types::main_controller_access::MainControllerCommandQueue,
 
     /// Shared music selector.
     /// Java shares the same MusicSelector between StreamController and MusicSelect state.

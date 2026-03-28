@@ -76,55 +76,6 @@ impl rubato_types::song_information_db::SongInformationDb for MockSongInfoDb {
     fn end_update(&self) {}
 }
 
-struct MockMainControllerWithScoreAndInfo {
-    score_sha256: String,
-    score: ScoreData,
-    info_db: MockSongInfoDb,
-}
-
-impl MainControllerAccess for MockMainControllerWithScoreAndInfo {
-    fn config(&self) -> &rubato_types::config::Config {
-        static CFG: std::sync::OnceLock<rubato_types::config::Config> = std::sync::OnceLock::new();
-        CFG.get_or_init(rubato_types::config::Config::default)
-    }
-
-    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
-            std::sync::OnceLock::new();
-        PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
-    }
-
-    fn change_state(&mut self, _state: MainStateType) {}
-
-    fn save_config(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn exit(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn save_last_recording(&self, _reason: &str) {}
-
-    fn update_song(&mut self, _path: Option<&str>) {}
-
-    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        None
-    }
-
-    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        None
-    }
-
-    fn read_score_data_by_hash(&self, hash: &str, _ln: bool, _lnmode: i32) -> Option<ScoreData> {
-        (hash == self.score_sha256).then(|| self.score.clone())
-    }
-
-    fn info_database(&self) -> Option<&dyn rubato_types::song_information_db::SongInformationDb> {
-        Some(&self.info_db)
-    }
-}
-
 #[test]
 fn test_state_type() {
     let selector = MusicSelector::new();
@@ -697,7 +648,7 @@ fn test_render_skin_draws_ecfn_songlist_bitmap_bartext_quads() {
         skin_path.display()
     );
 
-    let (mut selector, _state) = make_selector_with_mock();
+    let mut selector = make_selector();
     selector.config = ecfn_player_config();
     selector.load_skin(SkinType::MusicSelect.id());
     selector
@@ -1039,288 +990,10 @@ fn test_dispatch_open_directory_event() {
     selector.dispatch_input_events(vec![InputEvent::OpenDirectory]);
 }
 
-// ============================================================
-// Mock MainController for read_chart/read_course tests
-// ============================================================
+use std::path::PathBuf;
 
-use rubato_types::main_controller_access::MainControllerAccess;
-use rubato_types::player_resource_access::PlayerResourceAccess;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-
-/// Tracks state changes and resource operations for assertions.
-#[derive(Default)]
-struct MockState {
-    state_changes: Vec<MainStateType>,
-    played_audio_paths: Vec<String>,
-    cleared: bool,
-    bms_file_path: Option<PathBuf>,
-    bms_file_mode_type: Option<i32>,
-    bms_file_mode_id: Option<i32>,
-    bms_file_result: bool,
-    course_files: Option<Vec<PathBuf>>,
-    course_files_result: bool,
-    tablename: Option<String>,
-    tablelevel: Option<String>,
-    rival_score: Option<Option<ScoreData>>,
-    chart_option: Option<Option<rubato_types::replay_data::ReplayData>>,
-    course_data: Option<CourseData>,
-    course_song_data: Vec<SongData>,
-    auto_play_songs: Option<Vec<PathBuf>>,
-    auto_play_loop: Option<bool>,
-    next_song_result: bool,
-}
-
-/// Mock PlayerResource that records operations.
-struct MockPlayerResource {
-    state: Arc<Mutex<MockState>>,
-    course_gauge: Vec<Vec<Vec<f32>>>,
-    course_replay: Vec<rubato_types::replay_data::ReplayData>,
-}
-
-impl rubato_types::player_resource_access::ConfigAccess for MockPlayerResource {
-    fn config(&self) -> &rubato_types::config::Config {
-        static CFG: std::sync::OnceLock<rubato_types::config::Config> = std::sync::OnceLock::new();
-        CFG.get_or_init(rubato_types::config::Config::default)
-    }
-    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
-            std::sync::OnceLock::new();
-        PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
-    }
-}
-
-impl rubato_types::player_resource_access::ScoreAccess for MockPlayerResource {
-    fn score_data(&self) -> Option<&ScoreData> {
-        None
-    }
-    fn rival_score_data(&self) -> Option<&ScoreData> {
-        None
-    }
-    fn target_score_data(&self) -> Option<&ScoreData> {
-        None
-    }
-    fn course_score_data(&self) -> Option<&ScoreData> {
-        None
-    }
-    fn set_course_score_data(&mut self, _score: ScoreData) {}
-    fn score_data_mut(&mut self) -> Option<&mut ScoreData> {
-        None
-    }
-}
-
-impl rubato_types::player_resource_access::SongAccess for MockPlayerResource {
-    fn songdata(&self) -> Option<&SongData> {
-        None
-    }
-    fn songdata_mut(&mut self) -> Option<&mut SongData> {
-        None
-    }
-    fn set_songdata(&mut self, _data: Option<SongData>) {}
-    fn course_song_data(&self) -> Vec<SongData> {
-        self.state
-            .lock()
-            .expect("mutex poisoned")
-            .course_song_data
-            .clone()
-    }
-}
-
-impl rubato_types::player_resource_access::ReplayAccess for MockPlayerResource {
-    fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
-        None
-    }
-    fn replay_data_mut(&mut self) -> Option<&mut rubato_types::replay_data::ReplayData> {
-        None
-    }
-    fn course_replay(&self) -> &[rubato_types::replay_data::ReplayData] {
-        &[]
-    }
-    fn add_course_replay(&mut self, _rd: rubato_types::replay_data::ReplayData) {}
-    fn course_replay_mut(&mut self) -> &mut Vec<rubato_types::replay_data::ReplayData> {
-        &mut self.course_replay
-    }
-}
-
-impl rubato_types::player_resource_access::CourseAccess for MockPlayerResource {
-    fn course_data(&self) -> Option<&CourseData> {
-        None
-    }
-    fn course_index(&self) -> usize {
-        0
-    }
-    fn next_course(&mut self) -> bool {
-        false
-    }
-    fn constraint(&self) -> Vec<rubato_types::course_data::CourseDataConstraint> {
-        vec![]
-    }
-    fn set_course_data(&mut self, data: CourseData) {
-        self.state.lock().expect("mutex poisoned").course_data = Some(data);
-    }
-    fn clear_course_data(&mut self) {
-        self.state.lock().expect("mutex poisoned").course_data = None;
-    }
-}
-
-impl rubato_types::player_resource_access::GaugeAccess for MockPlayerResource {
-    fn gauge(&self) -> Option<&Vec<Vec<f32>>> {
-        None
-    }
-    fn groove_gauge(&self) -> Option<&rubato_types::groove_gauge::GrooveGauge> {
-        None
-    }
-    fn course_gauge(&self) -> &Vec<Vec<Vec<f32>>> {
-        static EMPTY: Vec<Vec<Vec<f32>>> = Vec::new();
-        &EMPTY
-    }
-    fn add_course_gauge(&mut self, _gauge: Vec<Vec<f32>>) {}
-    fn course_gauge_mut(&mut self) -> &mut Vec<Vec<Vec<f32>>> {
-        &mut self.course_gauge
-    }
-}
-
-impl rubato_types::player_resource_access::PlayerStateAccess for MockPlayerResource {
-    fn maxcombo(&self) -> i32 {
-        0
-    }
-    fn org_gauge_option(&self) -> i32 {
-        0
-    }
-    fn set_org_gauge_option(&mut self, _val: i32) {}
-    fn assist(&self) -> i32 {
-        0
-    }
-    fn is_update_score(&self) -> bool {
-        false
-    }
-    fn is_update_course_score(&self) -> bool {
-        false
-    }
-    fn is_force_no_ir_send(&self) -> bool {
-        false
-    }
-    fn is_freq_on(&self) -> bool {
-        false
-    }
-}
-
-impl rubato_types::player_resource_access::SessionMutation for MockPlayerResource {
-    fn clear(&mut self) {
-        self.state.lock().expect("mutex poisoned").cleared = true;
-    }
-    fn set_bms_file(&mut self, path: &Path, mode_type: i32, mode_id: i32) -> bool {
-        let mut s = self.state.lock().expect("mutex poisoned");
-        s.bms_file_path = Some(path.to_path_buf());
-        s.bms_file_mode_type = Some(mode_type);
-        s.bms_file_mode_id = Some(mode_id);
-        s.bms_file_result
-    }
-    fn set_course_bms_files(&mut self, files: &[PathBuf]) -> bool {
-        let mut s = self.state.lock().expect("mutex poisoned");
-        s.course_files = Some(files.to_vec());
-        s.course_files_result
-    }
-    fn set_tablename(&mut self, name: &str) {
-        self.state.lock().expect("mutex poisoned").tablename = Some(name.to_string());
-    }
-    fn set_tablelevel(&mut self, level: &str) {
-        self.state.lock().expect("mutex poisoned").tablelevel = Some(level.to_string());
-    }
-    fn set_rival_score_data_option(&mut self, score: Option<ScoreData>) {
-        self.state.lock().expect("mutex poisoned").rival_score = Some(score);
-    }
-    fn set_chart_option_data(&mut self, option: Option<rubato_types::replay_data::ReplayData>) {
-        self.state.lock().expect("mutex poisoned").chart_option = Some(option);
-    }
-    fn set_auto_play_songs(&mut self, paths: Vec<PathBuf>, loop_play: bool) {
-        let mut s = self.state.lock().expect("mutex poisoned");
-        s.auto_play_songs = Some(paths);
-        s.auto_play_loop = Some(loop_play);
-    }
-    fn next_song(&mut self) -> bool {
-        self.state.lock().expect("mutex poisoned").next_song_result
-    }
-}
-
-impl rubato_types::player_resource_access::MediaAccess for MockPlayerResource {
-    fn reverse_lookup_data(&self) -> Vec<String> {
-        vec![]
-    }
-    fn reverse_lookup_levels(&self) -> Vec<String> {
-        vec![]
-    }
-}
-
-impl PlayerResourceAccess for MockPlayerResource {
-    fn into_any_send(self: Box<Self>) -> Box<dyn std::any::Any + Send> {
-        self
-    }
-}
-
-/// Mock MainController that delegates resource access to MockPlayerResource.
-struct MockMainController {
-    state: Arc<Mutex<MockState>>,
-    resource: MockPlayerResource,
-}
-
-impl MockMainController {
-    fn new(state: Arc<Mutex<MockState>>) -> Self {
-        let resource = MockPlayerResource {
-            state: state.clone(),
-            course_gauge: Vec::new(),
-            course_replay: Vec::new(),
-        };
-        Self { state, resource }
-    }
-}
-
-impl MainControllerAccess for MockMainController {
-    fn config(&self) -> &rubato_types::config::Config {
-        static CFG: std::sync::OnceLock<rubato_types::config::Config> = std::sync::OnceLock::new();
-        CFG.get_or_init(rubato_types::config::Config::default)
-    }
-    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
-            std::sync::OnceLock::new();
-        PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
-    }
-    fn change_state(&mut self, state: MainStateType) {
-        self.state
-            .lock()
-            .expect("mutex poisoned")
-            .state_changes
-            .push(state);
-    }
-    fn save_config(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn exit(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn save_last_recording(&self, _reason: &str) {}
-    fn update_song(&mut self, _path: Option<&str>) {}
-    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        Some(&self.resource)
-    }
-    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        Some(&mut self.resource)
-    }
-    fn play_audio_path(&mut self, path: &str, _volume: f32, _loop_play: bool) {
-        self.state
-            .lock()
-            .unwrap()
-            .played_audio_paths
-            .push(path.to_string());
-    }
-}
-
-fn make_selector_with_mock() -> (MusicSelector, Arc<Mutex<MockState>>) {
-    let state = Arc::new(Mutex::new(MockState::default()));
-    let mock = MockMainController::new(state.clone());
-    let mut selector = MusicSelector::new();
-    selector.set_main_controller(Box::new(mock));
-    (selector, state)
+fn make_selector() -> MusicSelector {
+    MusicSelector::new()
 }
 
 struct ChangeStateSkin;
@@ -1724,89 +1397,6 @@ fn test_internal_read_course_replay_skips_constraints() {
 // _read_course per-song ranking data tests
 // ============================================================
 
-/// Mock MainControllerAccess that provides a real RankingDataCache
-/// for testing per-song ranking data population in _read_course.
-struct MockMainControllerWithCache {
-    state: Arc<Mutex<MockState>>,
-    resource: MockPlayerResource,
-    ranking_cache: crate::ir::ranking_data_cache::RankingDataCache,
-    /// Type-erased IR connection marker for ir_connection_any().
-    /// When Some, _read_course will create new RankingData on cache miss.
-    ir_connection_marker: Option<Box<dyn std::any::Any + Send + Sync>>,
-}
-
-impl MockMainControllerWithCache {
-    fn new(state: Arc<Mutex<MockState>>) -> Self {
-        let resource = MockPlayerResource {
-            state: state.clone(),
-            course_gauge: Vec::new(),
-            course_replay: Vec::new(),
-        };
-        Self {
-            state,
-            resource,
-            ranking_cache: crate::ir::ranking_data_cache::RankingDataCache::new(),
-            ir_connection_marker: None,
-        }
-    }
-
-    fn with_ir(mut self) -> Self {
-        // Store a dummy value as the IR connection marker.
-        // The actual type doesn't matter for _read_course; it only checks is_some().
-        self.ir_connection_marker = Some(Box::new(42_i32));
-        self
-    }
-}
-
-impl MainControllerAccess for MockMainControllerWithCache {
-    fn config(&self) -> &rubato_types::config::Config {
-        static CFG: std::sync::OnceLock<rubato_types::config::Config> = std::sync::OnceLock::new();
-        CFG.get_or_init(rubato_types::config::Config::default)
-    }
-    fn player_config(&self) -> &rubato_types::player_config::PlayerConfig {
-        static PC: std::sync::OnceLock<rubato_types::player_config::PlayerConfig> =
-            std::sync::OnceLock::new();
-        PC.get_or_init(rubato_types::player_config::PlayerConfig::default)
-    }
-    fn change_state(&mut self, state: MainStateType) {
-        self.state
-            .lock()
-            .expect("mutex poisoned")
-            .state_changes
-            .push(state);
-    }
-    fn save_config(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn exit(&self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn save_last_recording(&self, _reason: &str) {}
-    fn update_song(&mut self, _path: Option<&str>) {}
-    fn player_resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        Some(&self.resource)
-    }
-    fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
-        Some(&mut self.resource)
-    }
-    fn ranking_data_cache(
-        &self,
-    ) -> Option<&dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
-        Some(&self.ranking_cache)
-    }
-    fn ranking_data_cache_mut(
-        &mut self,
-    ) -> Option<&mut (dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess + 'static)>
-    {
-        Some(&mut self.ranking_cache)
-    }
-    fn ir_connection_any(&self) -> Option<&dyn std::any::Any> {
-        self.ir_connection_marker
-            .as_ref()
-            .map(|b| b.as_ref() as &dyn std::any::Any)
-    }
-}
-
 #[test]
 fn test_internal_read_course_sets_per_song_ranking_data() {
     // Regression: _read_course must look up or create per-song ranking data
@@ -1819,15 +1409,7 @@ fn test_internal_read_course_sets_per_song_ranking_data() {
     }
     let path_str = bms_path.to_string_lossy().to_string();
 
-    let state = Arc::new(Mutex::new(MockState {
-        course_files_result: true,
-        bms_file_result: true,
-        ..Default::default()
-    }));
-    let _mock = MockMainControllerWithCache::new(state).with_ir();
-
     let mut selector = MusicSelector::new();
-    // Wire dependencies directly instead of through MainControllerAccess.
     // _read_course checks self.ir_connection.is_some() to decide whether to create ranking data.
     // Use a dummy NullIRConnection to simulate IR being active.
     selector.ir_connection = Some(std::sync::Arc::new(
@@ -1866,7 +1448,7 @@ fn test_internal_read_course_sets_per_song_ranking_data() {
 
 #[test]
 fn test_read_random_course_missing_songs_does_not_transition() {
-    let (mut selector, state) = make_selector_with_mock();
+    let mut selector = make_selector();
 
     // RandomCourseBar with no stages — exists_all_songs returns false
     let rcd = RandomCourseData {
@@ -1881,9 +1463,8 @@ fn test_read_random_course_missing_songs_does_not_transition() {
 
     selector.read_random_course(BMSPlayerMode::PLAY);
 
-    let s = state.lock().expect("mutex poisoned");
     assert!(
-        s.state_changes.is_empty(),
+        selector.pending_state_change.is_none(),
         "should NOT transition when random course has no stages"
     );
 }

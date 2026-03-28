@@ -77,6 +77,9 @@ impl MainController {
                     rivals: RivalDataAccessor::new(),
                     ircache: None,
                     ir: Vec::new(),
+                    pending_update_song: None,
+                    pending_update_table: Vec::new(),
+                    pending_load_new_profile: None,
                 },
                 offset,
                 showfps: false,
@@ -85,6 +88,7 @@ impl MainController {
                 lifecycle: LifecycleState::new(),
                 exit_requested: AtomicBool::new(false),
                 resource: None,
+                modmenu_outbox: std::sync::Arc::new(crate::state::modmenu::ModmenuOutbox::new()),
                 transition: None,
             },
             auto,
@@ -96,7 +100,6 @@ impl MainController {
             bmsfile: f,
             state_listener,
             event_senders: Vec::new(),
-            command_queue: rubato_types::main_controller_access::MainControllerCommandQueue::new(),
             shared_music_selector: None,
             state_references_callback: None,
             background_threads: Vec::new(),
@@ -122,6 +125,12 @@ impl MainController {
 
     pub fn player_resource(&self) -> Option<&PlayerResource> {
         self.resource.as_ref()
+    }
+
+    pub fn player_resource_mut(&mut self) -> Option<&mut dyn PlayerResourceAccess> {
+        self.resource
+            .as_mut()
+            .map(|r| r as &mut dyn PlayerResourceAccess)
     }
 
     /// Take the PlayerResource out of MainController (leaving None).
@@ -195,8 +204,7 @@ impl MainController {
 
     /// Get the first IR connection (concrete type).
     ///
-    /// Unlike `ir_connection_any()` on the `MainControllerAccess` trait which returns
-    /// `&dyn Any`, this returns the concrete `Arc` directly, avoiding downcast overhead.
+    /// Returns the concrete `Arc` directly, avoiding downcast overhead.
     pub fn ir_connection(
         &self,
     ) -> Option<&std::sync::Arc<dyn crate::ir::ir_connection::IRConnection + Send + Sync>> {
@@ -207,11 +215,9 @@ impl MainController {
             .and_then(|status| status.connection.as_ref())
     }
 
-    /// Clone the shared controller command queue used by launcher-side state proxies.
-    pub fn controller_command_queue(
-        &self,
-    ) -> rubato_types::main_controller_access::MainControllerCommandQueue {
-        self.command_queue.clone()
+    /// Get the shared modmenu outbox for wiring modmenu callbacks.
+    pub fn modmenu_outbox(&self) -> &std::sync::Arc<crate::state::modmenu::ModmenuOutbox> {
+        &self.ctx.modmenu_outbox
     }
 
     pub fn timer(&self) -> &TimerManager {
