@@ -1435,9 +1435,8 @@ impl crate::core::main_state::MainState for CourseResult {
         };
         self.main_data.timer = timer;
         if let Some(skin) = loaded {
-            self.skin = Some(
-                crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin),
-            );
+            self.skin =
+                Some(crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin));
             self.main_data.skin = Some(Box::new(skin));
         } else {
             self.skin = None;
@@ -1591,10 +1590,7 @@ mod tests {
         let mut cr = make_default();
         // do_prepare sets state to STATE_OFFLINE
         <CourseResult as MainState>::prepare(&mut cr);
-        assert_eq!(
-            cr.data.state,
-            crate::result::abstract_result::STATE_OFFLINE
-        );
+        assert_eq!(cr.data.state, crate::result::abstract_result::STATE_OFFLINE);
     }
 
     #[test]
@@ -2626,10 +2622,8 @@ mod tests {
             notes: 100,
             ..Default::default()
         });
-        let mut resource = PlayerResource::new(
-            mock_to_core(mock),
-            crate::result::BMSPlayerMode::new(mode),
-        );
+        let mut resource =
+            PlayerResource::new(mock_to_core(mock), crate::result::BMSPlayerMode::new(mode));
         // Provide course models so write_score_data_course has data
         resource.course_bms_models = Some(vec![bms::model::bms_model::BMSModel::default()]);
         CourseResult::new(

@@ -11,9 +11,9 @@ use rubato::core::bms_player_mode::BMSPlayerMode;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use crate::e2e_support::{E2eHarness, MainStateType};
 use rubato::state_factory::LauncherStateFactory;
 use rubato_audio::recording_audio_driver::AudioEvent;
-use crate::e2e_support::{E2eHarness, MainStateType};
 use rubato_skin::timer_id::TimerId;
 
 fn test_bms_dir() -> PathBuf {

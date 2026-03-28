@@ -13,8 +13,8 @@ use crate::core::config_pkg::skin_configuration::SkinConfiguration;
 use crate::core::main_controller::{MainController, StateCreateResult, StateCreator};
 use crate::core::main_state::{MainState, MainStateType};
 use crate::core::timer_manager::TimerManager;
-use crate::play::bms_player::BMSPlayer;
 use crate::decide::music_decide::MusicDecide;
+use crate::play::bms_player::BMSPlayer;
 use crate::result::BMSPlayerMode;
 use crate::result::BMSPlayerModeType;
 use crate::result::MainController as ResultMainController;
@@ -29,9 +29,7 @@ use shared_selector::SharedMusicSelectorState;
 use crate::game_screen::GameScreen;
 
 /// Extract result-crate IR statuses from core MainController's IR statuses.
-fn extract_ir_statuses(
-    controller: &MainController,
-) -> Vec<crate::result::ir_status::IRStatus> {
+fn extract_ir_statuses(controller: &MainController) -> Vec<crate::result::ir_status::IRStatus> {
     controller
         .ir_status()
         .iter()
@@ -378,8 +376,7 @@ impl LauncherStateFactory {
                 // BMSPlayer stores freq_on/force_no_ir_send; these flow to PlayerResource
                 // via ScoreHandoff when the play session ends.
                 {
-                    let freq =
-                        crate::modmenu::freq_trainer_menu::FreqTrainerMenu::get_freq();
+                    let freq = crate::modmenu::freq_trainer_menu::FreqTrainerMenu::get_freq();
                     let is_play_mode =
                         player.play_mode().mode == crate::core::bms_player_mode::Mode::Play;
                     let freq_option = controller
@@ -556,8 +553,8 @@ mod tests {
     use crate::core::main_state::StateTransition;
     use crate::core::score_database_accessor::ScoreDatabaseAccessor;
     use crate::core::sprite_batch_helper::SpriteBatchHelper;
-    use crate::song::song_information_accessor::SongInformationAccessor;
     use crate::select::preview_music_processor::PreviewMusicProcessor;
+    use crate::song::song_information_accessor::SongInformationAccessor;
     use rubato_audio::audio_system::AudioSystem;
     use rubato_skin::skin_config::SkinConfig;
     use rubato_skin::skin_render_context::SkinRenderContext;

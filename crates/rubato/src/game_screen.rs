@@ -10,8 +10,8 @@ use crate::core::config_pkg::skin_configuration::SkinConfiguration;
 use crate::core::main_state::{
     MainState, MainStateData, MainStateType, StateCreateEffects, StateTransition,
 };
-use crate::play::bms_player::BMSPlayer;
 use crate::decide::music_decide::MusicDecide;
+use crate::play::bms_player::BMSPlayer;
 use crate::result::course_result::CourseResult;
 use crate::result::music_result::MusicResult;
 use crate::select::music_selector::MusicSelector;

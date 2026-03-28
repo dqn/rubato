@@ -237,9 +237,8 @@ pub struct MainController {
     /// Shared music selector.
     /// Java shares the same MusicSelector between StreamController and MusicSelect state.
     /// The launcher stores this so the StateCreator can reuse it instead of creating a new one.
-    shared_music_selector: Option<
-        std::sync::Arc<std::sync::Mutex<crate::select::music_selector::MusicSelector>>,
-    >,
+    shared_music_selector:
+        Option<std::sync::Arc<std::sync::Mutex<crate::select::music_selector::MusicSelector>>>,
 
     /// Callback for updating cross-state references (modmenu wiring).
     /// Set by the launcher to wire SkinMenu/SongManagerMenu.

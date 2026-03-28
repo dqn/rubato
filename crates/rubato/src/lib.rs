@@ -3,14 +3,14 @@
 
 // Merged application-layer modules
 pub mod core;
+pub mod decide;
 pub mod external;
 pub mod ir;
-pub mod play;
-pub mod song;
-pub mod select;
-pub mod decide;
-pub mod result;
 pub mod modmenu;
+pub mod play;
+pub mod result;
+pub mod select;
+pub mod song;
 pub mod stream;
 
 // Launcher modules (original rubato-launcher)

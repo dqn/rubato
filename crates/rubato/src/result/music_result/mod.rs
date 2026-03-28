@@ -1425,9 +1425,8 @@ impl MainState for MusicResult {
         };
         self.main_data.timer = timer;
         if let Some(skin) = loaded {
-            self.skin = Some(
-                crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin),
-            );
+            self.skin =
+                Some(crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin));
             self.main_data.skin = Some(Box::new(skin));
         } else {
             self.skin = None;
@@ -1467,12 +1466,8 @@ impl Default for MusicResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::result::abstract_result::{
-        STATE_IR_FINISHED, STATE_IR_PROCESSING, STATE_OFFLINE,
-    };
-    use crate::result::music_result::render_context::{
-        ResultMouseContext, ResultRenderContext,
-    };
+    use crate::result::abstract_result::{STATE_IR_FINISHED, STATE_IR_PROCESSING, STATE_OFFLINE};
+    use crate::result::music_result::render_context::{ResultMouseContext, ResultRenderContext};
     use crate::result::test_helpers::{
         ExecuteEventSkin, PlayerConfigMutatingSkin, make_test_config,
     };

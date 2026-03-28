@@ -8,8 +8,8 @@
 //! - Rapid state transitions (quick enter/exit)
 //! - Double-transition edge cases
 
-use rubato::state_factory::LauncherStateFactory;
 use crate::e2e_support::{E2eHarness, E2eScenario, MainStateType, StateEvent};
+use rubato::state_factory::LauncherStateFactory;
 
 fn harness_with_factory() -> E2eHarness {
     E2eHarness::new().with_state_factory(LauncherStateFactory::new().into_creator())

@@ -62,8 +62,7 @@ impl MainState for MusicSelector {
 
                 // Extract bar data before boxing into dyn SkinDrawable
                 if let Some(bar_data) = skin.take_select_bar_data() {
-                    let mut skin_bar =
-                        crate::select::skin_bar::SkinBar::new(bar_data.center_bar);
+                    let mut skin_bar = crate::select::skin_bar::SkinBar::new(bar_data.center_bar);
                     // Pad LR2's 20-element vecs to SkinBar's 60-element vecs
                     for (i, img) in bar_data.barimageon.into_iter().enumerate() {
                         if i < skin_bar.barimageon.len() {
@@ -986,12 +985,11 @@ impl MainState for MusicSelector {
                                 self.app_config.paths.playerpath, player_name
                             );
                             let songinfo_path = self.app_config.paths.songinfopath.to_string();
-                            let cmd_ctx =
-                                crate::select::bar::command_bar::CommandBarContext {
-                                    score_db_path: &score_path,
-                                    scorelog_db_path: &scorelog_path,
-                                    info_db_path: Some(&songinfo_path),
-                                };
+                            let cmd_ctx = crate::select::bar::command_bar::CommandBarContext {
+                                score_db_path: &score_path,
+                                scorelog_db_path: &scorelog_path,
+                                info_db_path: Some(&songinfo_path),
+                            };
                             b.children(songdb, &cmd_ctx)
                         }
                         Bar::Container(b) => b.children().to_vec(),

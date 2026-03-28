@@ -635,9 +635,10 @@ mod tests {
 
     #[test]
     fn test_bar_type_classify_directory() {
-        let bar = Bar::Folder(Box::new(
-            crate::select::bar::folder_bar::FolderBar::new(None, "crc".to_string()),
-        ));
+        let bar = Bar::Folder(Box::new(crate::select::bar::folder_bar::FolderBar::new(
+            None,
+            "crc".to_string(),
+        )));
         assert_eq!(BarType::classify(Some(&bar)), BarType::Directory);
     }
 
@@ -652,9 +653,9 @@ mod tests {
     #[test]
     fn test_bar_type_classify_grade() {
         use rubato_skin::course_data::CourseData;
-        let bar = Bar::Grade(Box::new(
-            crate::select::bar::grade_bar::GradeBar::new(CourseData::default()),
-        ));
+        let bar = Bar::Grade(Box::new(crate::select::bar::grade_bar::GradeBar::new(
+            CourseData::default(),
+        )));
         // GradeBar has selectable data, so it's Selectable (not a pure song/table/hash/function)
         assert_eq!(BarType::classify(Some(&bar)), BarType::Selectable);
     }

@@ -501,9 +501,10 @@ fn test_exists_constraint_with_song_bar() {
 #[test]
 fn test_select_directory_bar() {
     let mut selector = MusicSelector::new();
-    let bar = Bar::Folder(Box::new(
-        crate::select::bar::folder_bar::FolderBar::new(None, "test_crc".to_string()),
-    ));
+    let bar = Bar::Folder(Box::new(crate::select::bar::folder_bar::FolderBar::new(
+        None,
+        "test_crc".to_string(),
+    )));
     // select on a directory bar should try to open it (and set play = None still)
     selector.select(&bar);
     // Play should not be set for directory bars
@@ -1534,8 +1535,7 @@ fn test_directory_autoplay_path_extraction_from_container_bar() {
         make_song_bar("sha_b", Some("/dir/song_b.bms")),
         make_song_bar("sha_c", None), // no path - should be filtered out
     ];
-    let container =
-        crate::select::bar::container_bar::ContainerBar::new(String::new(), children);
+    let container = crate::select::bar::container_bar::ContainerBar::new(String::new(), children);
     let bar = Bar::Container(Box::new(container));
 
     assert!(bar.is_directory_bar());

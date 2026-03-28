@@ -11,9 +11,9 @@ use crate::core::config_pkg::skin_configuration::SkinConfiguration;
 use crate::core::main_controller::{MainController, StateCreateResult};
 use crate::core::main_state::{MainState, MainStateType};
 use crate::core::timer_manager::TimerManager;
+use crate::decide::music_decide::MusicDecide;
 use crate::game_screen::GameScreen;
 use crate::play::bms_player::BMSPlayer;
-use crate::decide::music_decide::MusicDecide;
 use crate::result::BMSPlayerMode;
 use crate::result::BMSPlayerModeType;
 use crate::result::MainController as ResultMainController;
@@ -26,9 +26,7 @@ use crate::state_factory::wire_selector_dependencies;
 use rubato_skin::score_data::ScoreData;
 
 /// Extract result-crate IR statuses from core MainController's IR statuses.
-fn extract_ir_statuses(
-    controller: &MainController,
-) -> Vec<crate::result::ir_status::IRStatus> {
+fn extract_ir_statuses(controller: &MainController) -> Vec<crate::result::ir_status::IRStatus> {
     controller
         .ir_status()
         .iter()
@@ -282,8 +280,7 @@ impl MainController {
                 // BMSPlayer stores freq_on/force_no_ir_send; these flow to PlayerResource
                 // via ScoreHandoff when the play session ends.
                 {
-                    let freq =
-                        crate::modmenu::freq_trainer_menu::FreqTrainerMenu::get_freq();
+                    let freq = crate::modmenu::freq_trainer_menu::FreqTrainerMenu::get_freq();
                     let is_play_mode =
                         player.play_mode().mode == crate::core::bms_player_mode::Mode::Play;
                     let freq_option = self

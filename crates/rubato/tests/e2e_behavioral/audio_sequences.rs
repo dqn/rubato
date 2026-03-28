@@ -5,9 +5,9 @@
 use rubato::core::bms_player_mode::BMSPlayerMode;
 use std::path::PathBuf;
 
+use crate::e2e_support::{AudioEvent, E2eHarness, MainStateType, StateEvent};
 use rubato::state_factory::LauncherStateFactory;
 use rubato_audio::audio_driver::AudioDriver;
-use crate::e2e_support::{AudioEvent, E2eHarness, MainStateType, StateEvent};
 
 fn test_bms_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

@@ -234,9 +234,8 @@ macro_rules! impl_result_main_state {
             };
             self.main_data.timer = timer;
             if let Some(skin) = loaded {
-                self.skin = Some(
-                    crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin),
-                );
+                self.skin =
+                    Some(crate::result::result_skin_data::ResultSkinData::from_loaded_skin(&skin));
                 self.main_data.skin = Some(Box::new(skin));
             } else {
                 self.skin = None;

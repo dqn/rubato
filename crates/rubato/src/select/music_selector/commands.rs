@@ -159,9 +159,7 @@ impl MusicSelector {
                 None
             },
             read_score_by_hash_fn: if has_pda {
-                Some(
-                    &read_score_by_hash as crate::select::bar_manager::ReadScoreByHashFn<'_>,
-                )
+                Some(&read_score_by_hash as crate::select::bar_manager::ReadScoreByHashFn<'_>)
             } else {
                 None
             },

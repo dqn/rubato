@@ -1297,9 +1297,7 @@ mod tests {
             core.set_groove_gauge(gg);
             PlayerResource::new(
                 core,
-                crate::result::BMSPlayerMode::new(
-                    crate::result::BMSPlayerModeType::Play,
-                ),
+                crate::result::BMSPlayerMode::new(crate::result::BMSPlayerModeType::Play),
             )
         }
     }
