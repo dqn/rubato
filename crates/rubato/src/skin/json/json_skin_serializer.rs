@@ -45,8 +45,9 @@ impl JsonSkinSerializer {
     }
 
     /// Set the skin root directory for include path traversal validation.
+    /// The path is canonicalized to prevent symlink-based traversal bypasses.
     pub fn set_skin_root(&mut self, root: PathBuf) {
-        self.skin_root = Some(root);
+        self.skin_root = root.canonicalize().ok().or(Some(root));
     }
 
     /// Test option conditions.
@@ -298,5 +299,35 @@ mod tests {
     fn test_option_null() {
         let serializer = JsonSkinSerializer::new();
         assert!(serializer.test_option(&serde_json::json!(null)));
+    }
+
+    #[test]
+    fn test_set_skin_root_stores_canonical_path() {
+        // Use a real existing directory so canonicalize() succeeds.
+        let dir = std::env::temp_dir();
+        let mut serializer = JsonSkinSerializer::new();
+        serializer.set_skin_root(dir.clone());
+        // The stored path must be the canonical form.
+        let expected = dir.canonicalize().unwrap();
+        assert_eq!(serializer.skin_root.as_ref().unwrap(), &expected);
+    }
+
+    #[test]
+    fn test_set_skin_root_non_canonical_path_is_canonicalized() {
+        // Construct a non-canonical path like /tmp/./
+        let dir = std::env::temp_dir().join(".");
+        let mut serializer = JsonSkinSerializer::new();
+        serializer.set_skin_root(dir);
+        let canonical = std::env::temp_dir().canonicalize().unwrap();
+        assert_eq!(serializer.skin_root.as_ref().unwrap(), &canonical);
+    }
+
+    #[test]
+    fn test_set_skin_root_nonexistent_falls_back_to_original() {
+        let fake = PathBuf::from("/nonexistent_rubato_test_path_12345");
+        let mut serializer = JsonSkinSerializer::new();
+        serializer.set_skin_root(fake.clone());
+        // canonicalize() fails for nonexistent paths; should fall back to original.
+        assert_eq!(serializer.skin_root.as_ref().unwrap(), &fake);
     }
 }

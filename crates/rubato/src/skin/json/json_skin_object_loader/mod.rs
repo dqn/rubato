@@ -116,9 +116,14 @@ fn load_imageset_object(sk: &json_skin::Skin, dst_id: &str) -> Option<SkinObject
                 .images
                 .iter()
                 .filter_map(|name| {
-                    sk.image
+                    let found = sk
+                        .image
                         .iter()
-                        .find(|img| img.id.as_deref().unwrap_or("") == name.as_str())
+                        .find(|img| img.id.as_deref().unwrap_or("") == name.as_str());
+                    if found.is_none() {
+                        log::warn!("ImageSet entry not found: {}", name);
+                    }
+                    found
                 })
                 .map(|img| ResolvedImageEntry {
                     src: img.src.clone(),

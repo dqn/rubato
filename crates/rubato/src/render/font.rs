@@ -124,7 +124,7 @@ fn parse_fnt_field(line: &str, key: &str) -> Option<i32> {
 /// Find the byte offset of `key` in `line` using word-boundary matching.
 /// The key must be at the start of the line or preceded by a space/tab,
 /// so that e.g. "x=" does not match inside "xoffset=".
-fn find_fnt_key(line: &str, key: &str) -> Option<usize> {
+pub(crate) fn find_fnt_key(line: &str, key: &str) -> Option<usize> {
     let mut search_from = 0;
     while search_from < line.len() {
         if let Some(pos) = line[search_from..].find(key) {

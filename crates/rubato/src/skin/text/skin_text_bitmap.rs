@@ -521,15 +521,16 @@ impl SkinTextBitmapSource {
                 }
             });
         if let Ok(content) = content_result {
-            let mut lines = content.lines();
-            // First line: "info ..." — extract size=
-            if let Some(line) = lines.next() {
-                original_size = Self::parse_fnt_value(line, "size=").unwrap_or(0.0);
-            }
-            // Second line: "common ..." — extract scaleW= and scaleH=
-            if let Some(line) = lines.next() {
-                page_width = Self::parse_fnt_value(line, "scaleW=").unwrap_or(0.0);
-                page_height = Self::parse_fnt_value(line, "scaleH=").unwrap_or(0.0);
+            // Match lines by prefix instead of assuming positional order,
+            // since the BMFont spec does not mandate line ordering.
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with("info ") {
+                    original_size = Self::parse_fnt_value(trimmed, "size=").unwrap_or(0.0);
+                } else if trimmed.starts_with("common ") {
+                    page_width = Self::parse_fnt_value(trimmed, "scaleW=").unwrap_or(0.0);
+                    page_height = Self::parse_fnt_value(trimmed, "scaleH=").unwrap_or(0.0);
+                }
             }
         } else {
             log::warn!("Failed to read .fnt file: {:?}", font_path);
@@ -613,9 +614,11 @@ impl SkinTextBitmapSource {
     }
 
     /// Parse a numeric value from a BMFont .fnt line by key prefix.
+    /// Uses word-boundary matching (via `find_fnt_key`) so that e.g. "size="
+    /// does not match inside a longer key like "charset=".
     /// Example: parse_fnt_value("info size=32 bold=0", "size=") → Some(32.0)
     fn parse_fnt_value(line: &str, key: &str) -> Option<f32> {
-        let start = line.find(key)? + key.len();
+        let start = crate::render::font::find_fnt_key(line, key)? + key.len();
         let rest = &line[start..];
         let end = rest.find(' ').unwrap_or(rest.len());
         rest[..end].parse::<i32>().ok().map(|v| v as f32)
@@ -1000,6 +1003,53 @@ mod tests {
             SkinTextBitmapSource::parse_fnt_value(line, "scaleW="),
             Some(128.0)
         );
+    }
+
+    #[test]
+    fn test_parse_fnt_value_word_boundary_rejects_substring() {
+        // "scaleW=" must not match inside a hypothetical "xscaleW=" prefix.
+        // More practically, verify "size=" doesn't match "charset=" or "fontSize=".
+        let line = "info face=\"Arial\" charset=32 size=24 bold=0";
+        // charset= contains "set=" which could match "size=" via naive substring
+        // if keys with overlapping suffixes were present. Verify "size=" extracts 24.
+        assert_eq!(
+            SkinTextBitmapSource::parse_fnt_value(line, "size="),
+            Some(24.0)
+        );
+    }
+
+    #[test]
+    fn test_create_cacheable_font_handles_reordered_lines() {
+        use std::sync::atomic::{AtomicU64, Ordering as AOrdering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        let id = COUNTER.fetch_add(1, AOrdering::Relaxed);
+
+        let dir = std::env::temp_dir().join(format!("rubato_test_fnt_reorder_{id}"));
+        let _ = std::fs::create_dir_all(&dir);
+        let fnt_path = dir.join("reordered.fnt");
+        // Put "common" before "info" to verify we match by prefix, not position.
+        std::fs::write(
+            &fnt_path,
+            "common lineHeight=28 base=22 scaleW=512 scaleH=256 pages=1\ninfo face=\"TestFont\" size=24 bold=0\n",
+        )
+        .unwrap();
+
+        let source = SkinTextBitmapSource::new(fnt_path.clone(), false);
+        let cached = source.create_cacheable_font(&fnt_path, 0);
+        assert_eq!(
+            cached.original_size, 24.0,
+            "size= must be found regardless of line order"
+        );
+        assert_eq!(
+            cached.page_width, 512.0,
+            "scaleW= must be found regardless of line order"
+        );
+        assert_eq!(
+            cached.page_height, 256.0,
+            "scaleH= must be found regardless of line order"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
