@@ -439,9 +439,7 @@ mod tests {
         resource_access: CourseScoreResourceAccess,
         course_models: Vec<bms::model::bms_model::BMSModel>,
     ) -> MusicResult {
-        use rubato_types::player_resource_access::{
-            GaugeAccess, PlayerStateAccess, ReplayAccess, ScoreAccess,
-        };
+        use rubato_types::player_resource_access::{GaugeAccess, ReplayAccess, ScoreAccess};
         let config = resource_access.config.clone();
         let main = MainController::new(
             config.clone(),

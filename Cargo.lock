@@ -4277,18 +4277,9 @@ dependencies = [
  "rubato-game",
  "rubato-input",
  "rubato-render",
- "rubato-skin-model",
  "rubato-types",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "rubato-skin-model"
-version = "0.1.0"
-dependencies = [
- "rubato-types",
- "serde",
 ]
 
 [[package]]

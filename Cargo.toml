@@ -6,7 +6,6 @@ members = [
     "crates/rubato-db",
     "crates/rubato-game",
     "crates/rubato-skin",
-    "crates/rubato-skin-model",
     "crates/rubato-bin",
     "crates/rubato-timing",
     "crates/rubato-types",
@@ -28,7 +27,6 @@ rubato-audio = { path = "crates/rubato-audio" }
 rubato-db = { path = "crates/rubato-db" }
 rubato-game = { path = "crates/rubato-game" }
 rubato-skin = { path = "crates/rubato-skin" }
-rubato-skin-model = { path = "crates/rubato-skin-model" }
 rubato-timing = { path = "crates/rubato-timing" }
 rubato-types = { path = "crates/rubato-types" }
 
