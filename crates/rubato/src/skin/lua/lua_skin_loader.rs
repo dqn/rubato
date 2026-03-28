@@ -257,6 +257,9 @@ fn coerce_value_for_key(key: &str, value: serde_json::Value) -> serde_json::Valu
         && !F32_FIELD_KEYS.contains(&key)
         && let Some(f) = n.as_f64()
     {
+        if !f.is_finite() || f > i64::MAX as f64 || f < i64::MIN as f64 {
+            return serde_json::json!(0i64);
+        }
         return serde_json::json!(f as i64);
     }
     // Recurse into nested structures
@@ -805,6 +808,21 @@ mod tests {
         assert_eq!(coerced["x"], serde_json::json!(960));
         assert_eq!(coerced["y"], serde_json::json!(198));
         assert_eq!(coerced["w"], serde_json::json!(100));
+    }
+
+    #[test]
+    fn test_coerce_extreme_float_to_zero() {
+        // Floats exceeding i64 range must not saturate to i64::MAX/MIN, which would
+        // overflow downstream i32 casts or layout dimension calculations.
+        // Note: serde_json::json!() converts NaN/Infinity to Null (not Number),
+        // so only extreme finite floats can reach the float-to-int branch.
+        let input = serde_json::json!({
+            "x": 1e300_f64,
+            "y": -1e300_f64
+        });
+        let coerced = coerce_json_for_skin(input);
+        assert_eq!(coerced["x"], serde_json::json!(0));
+        assert_eq!(coerced["y"], serde_json::json!(0));
     }
 
     #[test]
