@@ -1102,10 +1102,7 @@ mod tests {
         // Mouse press sets pending_state_change; render_with_game_context drains it
         let mut ctx = make_empty_game_context();
         let result = shared.render_with_game_context(&mut ctx);
-        assert_eq!(
-            result,
-            Some(StateTransition::ChangeTo(MainStateType::Config))
-        );
+        assert_eq!(result, StateTransition::ChangeTo(MainStateType::Config));
     }
 
     #[test]
@@ -1119,10 +1116,7 @@ mod tests {
         // Mouse drag sets pending_state_change; render_with_game_context drains it
         let mut ctx = make_empty_game_context();
         let result = shared.render_with_game_context(&mut ctx);
-        assert_eq!(
-            result,
-            Some(StateTransition::ChangeTo(MainStateType::SkinConfig))
-        );
+        assert_eq!(result, StateTransition::ChangeTo(MainStateType::SkinConfig));
     }
 
     #[test]

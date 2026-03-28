@@ -64,14 +64,13 @@ impl MainState for TestState {
         self.state_data.skin = None;
     }
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -149,14 +148,13 @@ impl MainState for AudioSyncTestState {
         *counter.lock().expect("mutex poisoned") += 1;
     }
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -629,14 +627,13 @@ impl MainState for SkinTestState {
     fn create(&mut self) {}
     fn render(&mut self) {}
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -1223,14 +1220,13 @@ impl MainState for TickBasedPreviewState {
         }
     }
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -1872,14 +1868,13 @@ impl MainState for ModelTestState {
         Some(&self.model)
     }
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -1979,7 +1974,7 @@ impl MainState for HandoffTestState {
 
     fn render(&mut self) {}
 
-    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> StateTransition {
         self.render();
         // Apply handoff directly to ctx.resource (mirrors BMSPlayer pattern)
         if let Some(handoff) = self.handoff.take() {
@@ -1987,12 +1982,11 @@ impl MainState for HandoffTestState {
                 resource.apply_score_handoff(handoff, &ctx.input);
             }
         }
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -2287,14 +2281,13 @@ impl MainState for DisposableSkinState {
     fn create(&mut self) {}
     fn render(&mut self) {}
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -2445,14 +2438,13 @@ impl MainState for InputCountingState {
         *self.input_count.lock().unwrap() += 1;
     }
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }
 
@@ -2670,14 +2662,13 @@ fn test_transition_registers_stagefile_and_banner_into_skin() {
         }
         fn render(&mut self) {}
 
-        fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
             self.render();
-            Some(StateTransition::Continue)
+            StateTransition::Continue
         }
 
-        fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
             self.input();
-            Some(())
         }
     }
 
@@ -2822,14 +2813,13 @@ fn test_transition_without_bms_images_does_not_register() {
         }
         fn render(&mut self) {}
 
-        fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+        fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
             self.render();
-            Some(StateTransition::Continue)
+            StateTransition::Continue
         }
 
-        fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+        fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
             self.input();
-            Some(())
         }
     }
 

@@ -1125,7 +1125,7 @@ impl MainState for MusicSelector {
     fn render_with_game_context(
         &mut self,
         ctx: &mut crate::core::app_context::GameContext,
-    ) -> Option<crate::core::main_state::StateTransition> {
+    ) -> crate::core::main_state::StateTransition {
         // Call existing render logic which populates the outbox.
         self.render();
 
@@ -1187,25 +1187,19 @@ impl MainState for MusicSelector {
         }
         if self.pending_exit {
             self.pending_exit = false;
-            return Some(crate::core::main_state::StateTransition::Exit);
+            return crate::core::main_state::StateTransition::Exit;
         }
 
         // State transition
         if let Some(state_type) = self.pending_state_change.take() {
-            Some(crate::core::main_state::StateTransition::ChangeTo(
-                state_type,
-            ))
+            crate::core::main_state::StateTransition::ChangeTo(state_type)
         } else {
-            Some(crate::core::main_state::StateTransition::Continue)
+            crate::core::main_state::StateTransition::Continue
         }
     }
 
-    fn input_with_game_context(
-        &mut self,
-        _ctx: &mut crate::core::app_context::GameContext,
-    ) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut crate::core::app_context::GameContext) {
         self.input();
-        Some(())
     }
 
     /// Dispose -- clean up bar renderer, search field, skin, and background threads.

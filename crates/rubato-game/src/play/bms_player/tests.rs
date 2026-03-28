@@ -4486,14 +4486,12 @@ fn play_config_update_drained_via_render_with_game_context() {
         lifecycle: Default::default(),
         exit_requested: std::sync::atomic::AtomicBool::new(false),
         resource: None,
+        modmenu_outbox: std::sync::Arc::new(crate::state::modmenu::ModmenuOutbox::new()),
         transition: None,
     };
 
     let result = player.render_with_game_context(&mut ctx);
-    assert_eq!(
-        result,
-        Some(crate::core::main_state::StateTransition::Continue)
-    );
+    assert_eq!(result, crate::core::main_state::StateTransition::Continue);
 
     // After render_with_game_context, the pending update should be consumed
     assert!(

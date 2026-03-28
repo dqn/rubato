@@ -1220,7 +1220,7 @@ impl MainState for BMSPlayer {
             .set_recent_judges(self.judge.recent_judges_index(), self.judge.recent_judges());
     }
 
-    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> StateTransition {
         use crate::core::player_resource::PlayerResource;
 
         // Delegate to the existing render() which populates the outbox.
@@ -1312,15 +1312,14 @@ impl MainState for BMSPlayer {
 
         // State change (last - triggers transition)
         if let Some(state_type) = self.pending.pending_state_change.take() {
-            return Some(StateTransition::ChangeTo(state_type));
+            return StateTransition::ChangeTo(state_type);
         }
 
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input_impl();
-        Some(())
     }
 
     fn input(&mut self) {

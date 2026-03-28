@@ -1084,7 +1084,7 @@ impl MainState for MusicResult {
         self.do_render();
     }
 
-    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> StateTransition {
         // Drain outbox from previous frame (render_skin, prepare, do_render)
         for (sound, loop_sound) in self.pending_sounds.drain(..) {
             ctx.play_sound(&sound, loop_sound);
@@ -1111,7 +1111,7 @@ impl MainState for MusicResult {
 
         // Check for pending state change from skin callbacks / do_render
         if let Some(state) = self.pending_state_change.take() {
-            return Some(StateTransition::ChangeTo(state));
+            return StateTransition::ChangeTo(state);
         }
 
         // Poll for async IR results (non-blocking)
@@ -1176,10 +1176,10 @@ impl MainState for MusicResult {
                                 }
                             }
                             // Failed course result
-                            return Some(StateTransition::ChangeTo(MainStateType::CourseResult));
+                            return StateTransition::ChangeTo(MainStateType::CourseResult);
                         } else {
                             // No course score -- go to music select
-                            return Some(StateTransition::ChangeTo(MainStateType::MusicSelect));
+                            return StateTransition::ChangeTo(MainStateType::MusicSelect);
                         }
                     } else if self.resource.next_course() {
                         // Next course song
@@ -1203,10 +1203,10 @@ impl MainState for MusicResult {
                                 self.resource.ranking_data = songrank;
                             }
                         }
-                        return Some(StateTransition::ChangeTo(MainStateType::Play));
+                        return StateTransition::ChangeTo(MainStateType::Play);
                     } else {
                         // Course pass result
-                        return Some(StateTransition::ChangeTo(MainStateType::CourseResult));
+                        return StateTransition::ChangeTo(MainStateType::CourseResult);
                     }
                 } else {
                     // Non-course mode
@@ -1240,7 +1240,7 @@ impl MainState for MusicResult {
                             rd.randomoptionseed = -1;
                         }
                         self.resource.reload_bms_file();
-                        return Some(StateTransition::ChangeTo(MainStateType::Play));
+                        return StateTransition::ChangeTo(MainStateType::Play);
                     } else if self.resource.play_mode().mode == BMSPlayerModeType::Play
                         && key == Some(ResultKey::ReplaySame)
                     {
@@ -1253,9 +1253,9 @@ impl MainState for MusicResult {
                             }
                         }
                         self.resource.reload_bms_file();
-                        return Some(StateTransition::ChangeTo(MainStateType::Play));
+                        return StateTransition::ChangeTo(MainStateType::Play);
                     } else {
-                        return Some(StateTransition::ChangeTo(MainStateType::MusicSelect));
+                        return StateTransition::ChangeTo(MainStateType::MusicSelect);
                     }
                 }
             }
@@ -1271,7 +1271,7 @@ impl MainState for MusicResult {
             }
         }
 
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
     fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
@@ -1393,9 +1393,8 @@ impl MainState for MusicResult {
         self.do_input();
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.do_input();
-        Some(())
     }
 
     fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {

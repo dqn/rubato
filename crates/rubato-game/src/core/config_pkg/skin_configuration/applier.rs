@@ -955,13 +955,12 @@ impl MainState for SkinConfiguration {
         data.skin = None;
     }
 
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
         self.render();
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.input();
-        Some(())
     }
 }

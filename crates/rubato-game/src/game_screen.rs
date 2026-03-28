@@ -168,24 +168,16 @@ impl MainState for GameScreen {
         delegate!(mut self, render())
     }
 
-    fn render_with_ctx(&mut self, ctx: &mut GameContext) {
-        delegate!(mut self, render_with_ctx(ctx))
-    }
-
     fn input(&mut self) {
         delegate!(mut self, input())
     }
 
-    fn input_with_ctx(&mut self, ctx: &mut GameContext) {
-        delegate!(mut self, input_with_ctx(ctx))
+    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> StateTransition {
+        delegate!(mut self, render_with_game_context(ctx) -> StateTransition)
     }
 
-    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> Option<StateTransition> {
-        delegate!(mut self, render_with_game_context(ctx) -> Option<StateTransition>)
-    }
-
-    fn input_with_game_context(&mut self, ctx: &mut GameContext) -> Option<()> {
-        delegate!(mut self, input_with_game_context(ctx) -> Option<()>)
+    fn input_with_game_context(&mut self, ctx: &mut GameContext) {
+        delegate!(mut self, input_with_game_context(ctx))
     }
 
     fn sync_input_from(

@@ -17,9 +17,8 @@ pub use rubato_types::main_state_type::MainStateType;
 
 /// Result of a state's render cycle, indicating what should happen next.
 ///
-/// Used by the new `render_with_game_context` / `input_with_game_context`
-/// methods on `MainState`. States that adopt the `GameContext` pattern
-/// return this instead of relying on the outbox pattern for state changes.
+/// Returned by `render_with_game_context` on `MainState`. States return
+/// this to signal whether to continue, change state, or exit.
 #[derive(Debug, Clone, PartialEq)]
 pub enum StateTransition {
     /// Continue running the current state.
@@ -75,51 +74,29 @@ pub trait MainState {
         // default empty
     }
 
-    fn render(&mut self);
-
-    /// Render with direct access to the application context.
-    ///
-    /// States that need to interact with audio, config, or other shared
-    /// resources can override this instead of `render()` to avoid the
-    /// command queue proxy round-trip. The default implementation falls
-    /// back to the plain `render()` method.
-    fn render_with_ctx(&mut self, _ctx: &mut GameContext) {
-        self.render();
+    fn render(&mut self) {
+        // default empty -- states use render_with_game_context instead
     }
 
     fn input(&mut self) {
         // default empty
     }
 
+    /// Render with direct access to the application context.
+    ///
+    /// All states implement this method to handle rendering and drain
+    /// outbox fields into GameContext. Returns a `StateTransition` indicating
+    /// whether to continue, change state, or exit.
+    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> StateTransition {
+        StateTransition::Continue
+    }
+
     /// Process input with direct access to the application context.
     ///
-    /// States that need to interact with audio, config, or other shared
-    /// resources can override this instead of `input()` to avoid the
-    /// command queue proxy round-trip. The default implementation falls
-    /// back to the plain `input()` method.
-    fn input_with_ctx(&mut self, _ctx: &mut GameContext) {
-        self.input();
-    }
-
-    /// New-style render with GameContext. Returns `None` to fall back to the
-    /// legacy `render_with_ctx` path, or `Some(StateTransition)` when the
-    /// state has fully adopted the GameContext pattern.
-    ///
-    /// States migrate incrementally by overriding this method and returning
-    /// `Some(StateTransition::Continue)` (or `ChangeTo`/`Exit` as needed).
-    /// The default returns `None` so that unmigrated states keep using the
-    /// existing render pipeline.
-    fn render_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<StateTransition> {
-        None // Default: use legacy render path
-    }
-
-    /// New-style input with GameContext.
-    ///
-    /// Returns `None` to fall back to the legacy `input_with_ctx` path.
-    /// States that adopt the GameContext pattern override this to handle
-    /// input directly and return `Some(())`.
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
-        None // Default: use legacy input path
+    /// All states implement this method to handle input processing
+    /// with access to GameContext for audio, config, and other shared resources.
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
+        // default empty
     }
 
     /// Sync live controller input into a state-local wrapper before `input()`.

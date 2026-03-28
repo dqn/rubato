@@ -1155,7 +1155,7 @@ impl crate::core::main_state::MainState for CourseResult {
         self.do_render();
     }
 
-    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> Option<StateTransition> {
+    fn render_with_game_context(&mut self, ctx: &mut GameContext) -> StateTransition {
         // Drain outbox from previous frame (render_skin, prepare, do_render)
         for (sound, loop_sound) in self.pending_sounds.drain(..) {
             ctx.play_sound(&sound, loop_sound);
@@ -1182,7 +1182,7 @@ impl crate::core::main_state::MainState for CourseResult {
 
         // Check for pending state change from skin callbacks / do_render
         if let Some(state) = self.pending_state_change.take() {
-            return Some(StateTransition::ChangeTo(state));
+            return StateTransition::ChangeTo(state);
         }
 
         // Poll for async IR results (non-blocking)
@@ -1214,7 +1214,7 @@ impl crate::core::main_state::MainState for CourseResult {
             if fadeout_time > skin_fadeout {
                 ctx.stop_all_notes();
 
-                return Some(StateTransition::ChangeTo(MainStateType::MusicSelect));
+                return StateTransition::ChangeTo(MainStateType::MusicSelect);
             }
         } else {
             let skin_scene = self.skin.as_ref().map(|s| s.scene() as i64).unwrap_or(0);
@@ -1246,7 +1246,7 @@ impl crate::core::main_state::MainState for CourseResult {
             }
         }
 
-        Some(StateTransition::Continue)
+        StateTransition::Continue
     }
 
     fn render_skin(&mut self, sprite: &mut rubato_render::sprite_batch::SpriteBatch) {
@@ -1403,9 +1403,8 @@ impl crate::core::main_state::MainState for CourseResult {
         self.do_input();
     }
 
-    fn input_with_game_context(&mut self, _ctx: &mut GameContext) -> Option<()> {
+    fn input_with_game_context(&mut self, _ctx: &mut GameContext) {
         self.do_input();
-        Some(())
     }
 
     fn sync_input_snapshot(&mut self, snapshot: &rubato_input::input_snapshot::InputSnapshot) {

@@ -2769,10 +2769,7 @@ fn render_with_game_context_drains_player_config_update() {
 
     use crate::core::main_state::MainState;
     let result = selector.render_with_game_context(&mut ctx);
-    assert_eq!(
-        result,
-        Some(crate::core::main_state::StateTransition::Continue)
-    );
+    assert_eq!(result, crate::core::main_state::StateTransition::Continue);
 
     // After render_with_game_context, dirty flag should be cleared
     assert!(

@@ -153,26 +153,18 @@ impl MainController {
             // can access it via ctx.resource without a separate accessor.
             self.ctx.resource = self.resource.take();
 
-            // Try new-style render first. If it returns Some, the state has fully
-            // adopted the GameContext pattern and we process the transition result.
-            // If it returns None, fall through to the legacy render_with_ctx path.
-            //
-            // ChangeTo/Exit are stored and applied AFTER the outbox drain so that
-            // sounds, score handoff, and config updates are not lost.
-            if let Some(transition) = current.render_with_game_context(&mut self.ctx) {
-                match transition {
-                    StateTransition::Continue => { /* continue normal frame */ }
-                    StateTransition::ChangeTo(state_type) => {
-                        // Store for processing after outbox drain
-                        self.ctx.transition = Some(StateTransition::ChangeTo(state_type));
-                    }
-                    StateTransition::Exit => {
-                        self.ctx.transition = Some(StateTransition::Exit);
-                    }
+            // Render with GameContext. ChangeTo/Exit are stored and applied
+            // AFTER the outbox drain so that sounds, score handoff, and config
+            // updates are not lost.
+            let transition = current.render_with_game_context(&mut self.ctx);
+            match transition {
+                StateTransition::Continue => { /* continue normal frame */ }
+                StateTransition::ChangeTo(state_type) => {
+                    self.ctx.transition = Some(StateTransition::ChangeTo(state_type));
                 }
-            } else {
-                // Legacy render path
-                current.render_with_ctx(&mut self.ctx);
+                StateTransition::Exit => {
+                    self.ctx.transition = Some(StateTransition::Exit);
+                }
             }
 
             // Restore resource from ctx back to controller.
@@ -281,8 +273,6 @@ impl MainController {
             });
         }
 
-        self.process_queued_controller_commands();
-
         // Drain modmenu outbox (egui callbacks -> MainController)
         {
             let modmenu_actions = self.ctx.modmenu_outbox.drain();
@@ -380,16 +370,10 @@ impl MainController {
             // Take the state out to avoid borrow conflict between
             // `self.current` and `self.ctx`.
             if let Some(mut current) = self.current.take() {
-                // Move PlayerResource into ctx for new-style input handling.
+                // Move PlayerResource into ctx for input handling.
                 self.ctx.resource = self.resource.take();
 
-                // Try new-style input first. If it returns Some, the state has
-                // fully adopted the GameContext pattern. If None, fall through
-                // to the legacy input_with_ctx path.
-                if current.input_with_game_context(&mut self.ctx).is_none() {
-                    // Legacy input path
-                    current.input_with_ctx(&mut self.ctx);
-                }
+                current.input_with_game_context(&mut self.ctx);
 
                 // Restore resource from ctx back to controller.
                 self.resource = self.ctx.resource.take();
