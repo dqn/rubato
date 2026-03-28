@@ -11,7 +11,10 @@ use bms::model::note::Note;
 
 use crate::audio_driver::AudioDriver;
 use crate::recording_audio_driver::{AudioEvent, RecordingAudioDriver};
-use rubato_types::sync_utils::lock_or_recover;
+
+fn lock_or_recover<T: ?Sized>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(|e| e.into_inner())
+}
 
 /// A shared wrapper around `RecordingAudioDriver` that implements `AudioDriver`.
 ///

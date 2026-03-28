@@ -34,6 +34,9 @@ pub mod sources;
 pub mod text;
 pub mod types;
 
+// SkinDrawable trait (moved from rubato-render)
+pub mod skin_drawable;
+
 // Skin loaders
 pub mod json;
 pub mod lr2;

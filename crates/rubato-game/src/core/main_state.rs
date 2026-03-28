@@ -332,8 +332,8 @@ pub trait MainState {
 }
 
 // Re-exported from rubato-render (canonical location)
-pub use rubato_render::skin_drawable::PlaySkinProperties;
-pub use rubato_render::skin_drawable::SkinDrawable;
+pub use rubato_skin::skin_drawable::PlaySkinProperties;
+pub use rubato_skin::skin_drawable::SkinDrawable;
 
 /// Shared data for MainState implementations
 pub struct MainStateData {

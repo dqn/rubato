@@ -272,7 +272,7 @@ SCENETIME,9999\n\
     fn test_apply_to_skin_preserves_option_gated_object_through_prepare() {
         use crate::objects::skin_image::SkinImage;
         use crate::skin_object::DestinationParams;
-        use rubato_render::skin_drawable::SkinDrawable;
+        use crate::skin_drawable::SkinDrawable;
 
         let mut state = make_state();
         state.base.op.insert(30, 1);

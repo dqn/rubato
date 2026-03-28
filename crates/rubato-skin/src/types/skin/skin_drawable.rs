@@ -518,7 +518,7 @@ impl Drop for ImageRegistryGuard {
     }
 }
 
-impl rubato_render::skin_drawable::SkinDrawable for Skin {
+impl crate::skin_drawable::SkinDrawable for Skin {
     fn prepare_skin(&mut self, state_type: Option<rubato_types::main_state_type::MainStateType>) {
         let null_timer = rubato_types::timer_access::NullTimer;
         let adapter = TimerOnlyMainState::from_timer(&null_timer, state_type);
@@ -685,8 +685,8 @@ impl rubato_render::skin_drawable::SkinDrawable for Skin {
         );
     }
 
-    fn play_skin_properties(&self) -> rubato_render::skin_drawable::PlaySkinProperties {
-        rubato_render::skin_drawable::PlaySkinProperties {
+    fn play_skin_properties(&self) -> crate::skin_drawable::PlaySkinProperties {
+        crate::skin_drawable::PlaySkinProperties {
             loadstart: self.play_loadstart,
             loadend: self.play_loadend,
             playstart: self.play_playstart,
@@ -1084,7 +1084,7 @@ mod skin_drawable_delegation_tests {
     fn test_register_image_via_skin_drawable_populates_registry() {
         use crate::skin_property::{IMAGE_BACKBMP, IMAGE_BANNER, IMAGE_STAGEFILE};
         use crate::types::skin_header::SkinHeader;
-        use rubato_render::skin_drawable::SkinDrawable;
+        use crate::skin_drawable::SkinDrawable;
         use rubato_render::pixmap::{Pixmap, PixmapFormat};
         use rubato_render::texture::{Texture, TextureRegion};
 

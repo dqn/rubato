@@ -12,7 +12,6 @@ pub mod pixmap_resource_pool;
 pub mod render_pipeline;
 pub mod resource_pool;
 pub mod shader;
-pub mod skin_drawable;
 pub mod sprite_batch;
 pub mod texture;
 

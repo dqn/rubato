@@ -7,7 +7,6 @@ edition.workspace = true
 anyhow.workspace = true
 log.workspace = true
 bms.workspace = true
-rubato-types.workspace = true
 
 lewton = { workspace = true }
 symphonia = { workspace = true }

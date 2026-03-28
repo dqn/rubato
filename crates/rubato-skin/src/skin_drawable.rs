@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::sprite_batch::SpriteBatch;
+use rubato_render::sprite_batch::SpriteBatch;
 use rubato_types::skin_offset::SkinOffset;
 
 /// Abstracts the beatoraja-skin Skin type so that beatoraja-core can call
@@ -121,7 +121,7 @@ pub trait SkinDrawable: Send {
     /// into the skin's image registry so that SkinSourceReference-backed objects
     /// can render them. In Java, MainState.getImage(id) accesses these directly
     /// from the BMSResource; in Rust, we populate the skin's registry instead.
-    fn register_image(&mut self, _id: i32, _texture: crate::texture::TextureRegion) {
+    fn register_image(&mut self, _id: i32, _texture: rubato_render::texture::TextureRegion) {
         // default no-op
     }
 }

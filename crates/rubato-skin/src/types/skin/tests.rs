@@ -3,7 +3,7 @@ use crate::property::boolean_property::BooleanProperty;
 use crate::property::event_factory;
 use crate::skin_header::SkinHeader;
 use crate::skin_image::SkinImage;
-use rubato_render::skin_drawable::SkinDrawable;
+use crate::skin_drawable::SkinDrawable;
 use rubato_types::main_state_type::MainStateType;
 use rubato_types::skin_render_context::SkinRenderContext;
 use rubato_types::timer_access::TimerAccess;
