@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::bail;
-use rubato_types::ir_rival_provider::{IRRivalProvider, RivalInfo};
+use crate::ir_rival_provider::{IRRivalProvider, RivalInfo};
 use rubato_types::score_data::ScoreData;
 
 use crate::ir::ir_connection::IRConnection;

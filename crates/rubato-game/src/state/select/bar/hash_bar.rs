@@ -79,7 +79,7 @@ impl HashBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     #[test]
     fn hash_bar_get_children_returns_matched_songs() {

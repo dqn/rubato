@@ -14,7 +14,7 @@ use rubato_game::core::main_controller::MainController;
 use rubato_game::core::main_loader::MainLoader;
 use rubato_game::core::player_config::PlayerConfig;
 use rubato_game::core::resolution::Resolution;
-use rubato_types::test_support::TestSongDb;
+use crate::test_support::TestSongDb;
 
 /// Global lock to serialize tests that touch shared static state (illegal songs, songdb).
 static TEST_LOCK: Mutex<()> = Mutex::new(());

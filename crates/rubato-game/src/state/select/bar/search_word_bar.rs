@@ -53,7 +53,7 @@ impl SearchWordBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     #[test]
     fn search_word_bar_get_children_returns_matching_songs() {

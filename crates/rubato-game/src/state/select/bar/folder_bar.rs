@@ -100,7 +100,7 @@ impl FolderBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     #[test]
     fn folder_bar_get_children_returns_song_bars_when_songs_exist() {

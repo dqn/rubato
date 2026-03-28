@@ -6,7 +6,7 @@ use log::warn;
 use sha2::{Digest, Sha256};
 
 use crate::core::course_data::CourseData;
-use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
+use crate::ranking_data_cache_access::RankingDataCacheAccess;
 use rubato_types::song_data::SongData;
 
 use crate::ir::convert_hex_string;

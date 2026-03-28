@@ -659,7 +659,7 @@ impl PlayerResource {
     /// The `input` parameter is needed to append the keylog to replay data.
     pub fn apply_score_handoff(
         &mut self,
-        handoff: rubato_types::score_handoff::ScoreHandoff,
+        handoff: crate::score_handoff::ScoreHandoff,
         input: &Option<rubato_input::bms_player_input_processor::BMSPlayerInputProcessor>,
     ) {
         if let Some(score) = handoff.score_data {

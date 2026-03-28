@@ -276,7 +276,7 @@ impl TableAccessorUpdateSource {
     }
 }
 
-impl rubato_types::table_update_source::TableUpdateSource for TableAccessorUpdateSource {
+impl crate::table_update_source::TableUpdateSource for TableAccessorUpdateSource {
     fn source_name(&self) -> String {
         self.accessor.name().to_string()
     }

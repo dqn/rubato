@@ -48,10 +48,10 @@ pub use crate::core::table_data::{TableData, TableFolder};
 pub use crate::core::table_data_accessor::{TableAccessor, TableDataAccessor};
 pub use crate::song::song_data::SongData;
 pub use bms::model::mode::Mode;
-pub use rubato_types::abstract_result_access::AbstractResultAccess;
-pub use rubato_types::imgui_notify::ImGuiNotify;
+pub use crate::abstract_result_access::AbstractResultAccess;
+pub use crate::imgui_notify::ImGuiNotify;
 pub use rubato_types::screen_type::ScreenType;
-pub use rubato_types::song_database_accessor::SongDatabaseAccessor;
+pub use crate::song_database_accessor::SongDatabaseAccessor;
 
 pub use crate::external::clipboard_helper::ClipboardHelper;
 pub use crate::external::main_state_adapter::MainState;

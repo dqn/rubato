@@ -611,7 +611,10 @@ mod tests {
                     assert!(config.enablelift);
                     assert!((config.lift - 0.5).abs() < 0.001);
                 }
-                other => panic!("expected UpdatePlayConfig, got {:?}", std::mem::discriminant(other)),
+                other => panic!(
+                    "expected UpdatePlayConfig, got {:?}",
+                    std::mem::discriminant(other)
+                ),
             }
         }
 
@@ -853,7 +856,10 @@ mod tests {
 
         // Commands should go to the new queue, not the old one
         flush_play_config();
-        assert!(outbox.lock().unwrap().is_empty(), "old queue should receive no commands");
+        assert!(
+            outbox.lock().unwrap().is_empty(),
+            "old queue should receive no commands"
+        );
         assert!(
             !new_outbox.lock().unwrap().is_empty(),
             "new queue should receive the flush command"

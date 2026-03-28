@@ -176,7 +176,7 @@ impl PlayConfigurationView {
                 false,
                 infodb
                     .as_ref()
-                    .map(|db| db as &dyn rubato_types::song_information_db::SongInformationDb),
+                    .map(|db| db as &dyn crate::song_information_db::SongInformationDb),
                 &listener_clone,
             );
 

@@ -1,6 +1,6 @@
 use super::*;
 use crate::core::audio_config::AudioConfig;
-use rubato_types::song_database_accessor::SongDatabaseAccessor as _;
+use crate::song_database_accessor::SongDatabaseAccessor as _;
 
 /// Helper: create a PlayConfigurationView with initialize() called
 fn initialized_view() -> PlayConfigurationView {

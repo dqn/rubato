@@ -67,7 +67,7 @@ impl CommandBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     #[test]
     fn command_bar_get_children_returns_sql_results() {

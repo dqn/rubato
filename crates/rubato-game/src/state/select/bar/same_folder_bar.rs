@@ -38,7 +38,7 @@ impl SameFolderBar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     #[test]
     fn same_folder_bar_get_children_returns_songs_in_folder() {

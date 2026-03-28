@@ -381,7 +381,7 @@ fn execute_download_task_static(
     });
 }
 
-impl rubato_types::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessor {
+impl crate::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessor {
     fn submit_md5_task(&self, md5: &str, task_name: &str) {
         HttpDownloadProcessor::submit_md5_task(self, md5, task_name);
     }

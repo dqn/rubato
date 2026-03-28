@@ -68,7 +68,11 @@ impl OffsetValue {
 pub struct SkinMenu;
 
 impl SkinMenu {
-    pub fn init(main: MainController, player_config: PlayerConfig, commands: Arc<Mutex<Vec<Command>>>) {
+    pub fn init(
+        main: MainController,
+        player_config: PlayerConfig,
+        commands: Arc<Mutex<Vec<Command>>>,
+    ) {
         let mut state = lock_or_recover(&SKIN_MENU_STATE);
         state.main = Some(main);
         state.player_config = Some(player_config);
@@ -832,11 +836,7 @@ mod tests {
         config::save_current_config(&header);
 
         let drained: Vec<_> = std::mem::take(&mut *queue.lock().unwrap());
-        assert_eq!(
-            drained.len(),
-            1,
-            "expected exactly one skin config update"
-        );
+        assert_eq!(drained.len(), 1, "expected exactly one skin config update");
         match &drained[0] {
             Command::UpdateSkinConfig { id, config } => {
                 assert_eq!(*id, skin_type.id() as usize);
@@ -847,7 +847,10 @@ mod tests {
                     "config path should match skin path"
                 );
             }
-            other => panic!("expected UpdateSkinConfig, got {:?}", std::mem::discriminant(other)),
+            other => panic!(
+                "expected UpdateSkinConfig, got {:?}",
+                std::mem::discriminant(other)
+            ),
         }
     }
 
@@ -874,17 +877,16 @@ mod tests {
         config::save_current_config(&next);
 
         let drained: Vec<_> = std::mem::take(&mut *queue.lock().unwrap());
-        assert_eq!(
-            drained.len(),
-            1,
-            "expected exactly one skin history update"
-        );
+        assert_eq!(drained.len(), 1, "expected exactly one skin history update");
         match &drained[0] {
             Command::UpdateSkinHistory { path, config } => {
                 assert_eq!(path, "/skins/a.json");
                 assert_eq!(config.path(), Some("/skins/a.json"));
             }
-            other => panic!("expected UpdateSkinHistory, got {:?}", std::mem::discriminant(other)),
+            other => panic!(
+                "expected UpdateSkinHistory, got {:?}",
+                std::mem::discriminant(other)
+            ),
         }
     }
 

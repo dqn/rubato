@@ -13,8 +13,8 @@ use super::same_folder_bar::SameFolderBar;
 use super::song_bar::SongBar;
 use super::table_bar::TableBar;
 use crate::core::main_state::MainState;
-use rubato_types::http_download_submitter::HttpDownloadSubmitter;
-use rubato_types::song_database_accessor::SongDatabaseAccessor;
+use crate::http_download_submitter::HttpDownloadSubmitter;
+use crate::song_database_accessor::SongDatabaseAccessor;
 
 use crate::state::select::*;
 

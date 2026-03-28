@@ -9,7 +9,7 @@
 // Mutex wrapper — the Mutex itself can never be replaced or freed.
 
 use rubato_game::core::main_loader::MainLoader;
-use rubato_types::test_support::TestSongDb;
+use crate::test_support::TestSongDb;
 
 // Global lock to serialize tests that touch shared statics.
 // MainLoader uses process-global OnceLock statics, so tests touching them

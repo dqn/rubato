@@ -1103,7 +1103,7 @@ impl rubato_game::song::md_processor::music_database_accessor::MusicDatabaseAcce
     for SongDbMusicDatabaseAdapter
 {
     fn get_music_paths(&self, md5: &[String]) -> Vec<String> {
-        use rubato_types::song_database_accessor::SongDatabaseAccessor;
+        use rubato_game::song_database_accessor::SongDatabaseAccessor;
         let songs = self.songdb.song_datas_by_hashes(md5);
         songs
             .iter()
@@ -1126,7 +1126,7 @@ impl rubato_game::song::md_processor::music_database_accessor::MusicDatabaseAcce
 pub(crate) struct SongDbMainControllerRef {
     pub(crate) songdb: rubato_game::song::sqlite_song_database_accessor::SQLiteSongDatabaseAccessor,
     pub(crate) bmsroot: Vec<String>,
-    pub(crate) info_db: Option<Box<dyn rubato_types::song_information_db::SongInformationDb>>,
+    pub(crate) info_db: Option<Box<dyn rubato_game::song_information_db::SongInformationDb>>,
 }
 
 // SAFETY: SongDbMainControllerRef contains SQLiteSongDatabaseAccessor which wraps
@@ -1157,7 +1157,7 @@ pub(crate) struct HttpDownloadProcessorWrapper(
     pub(crate) Arc<rubato_game::song::md_processor::http_download_processor::HttpDownloadProcessor>,
 );
 
-impl rubato_types::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessorWrapper {
+impl rubato_game::http_download_submitter::HttpDownloadSubmitter for HttpDownloadProcessorWrapper {
     fn submit_md5_task(&self, md5: &str, task_name: &str) {
         self.0.submit_md5_task(md5, task_name);
     }

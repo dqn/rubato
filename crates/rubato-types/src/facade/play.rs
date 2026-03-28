@@ -1,9 +1,9 @@
 //! Play state types facade.
 //!
-//! Re-exports types from groove_gauge, gauge_property, bms_player_rule,
+//! Re-exports types from groove_gauge, gauge_property,
 //! judge_algorithm, key_input_log, long_note_modifier, mine_note_modifier,
 //! pattern_modify_log, scroll_speed_modifier, target_list, target_property_access,
-//! timing_distribution, random_history, and distribution_data modules.
+//! timing_distribution, and distribution_data modules.
 //!
 //! Note: long_note_modifier, mine_note_modifier, and scroll_speed_modifier
 //! each define a `Mode` enum, so they are re-exported as sub-modules
@@ -16,7 +16,6 @@ pub use crate::groove_gauge::*;
 pub use crate::judge_algorithm::*;
 pub use crate::key_input_log::*;
 pub use crate::pattern_modify_log::*;
-pub use crate::random_history::*;
 pub use crate::target_list::*;
 pub use crate::target_property_access::*;
 pub use crate::timing_distribution::*;

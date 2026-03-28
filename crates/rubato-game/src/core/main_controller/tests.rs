@@ -1951,11 +1951,11 @@ fn test_transition_to_play_calls_audio_set_model() {
 /// A test state that applies a ScoreHandoff to ctx.resource during render_with_game_context.
 struct HandoffTestState {
     state_data: MainStateData,
-    handoff: Option<rubato_types::score_handoff::ScoreHandoff>,
+    handoff: Option<crate::score_handoff::ScoreHandoff>,
 }
 
 impl HandoffTestState {
-    fn new(handoff: rubato_types::score_handoff::ScoreHandoff) -> Self {
+    fn new(handoff: crate::score_handoff::ScoreHandoff) -> Self {
         Self {
             state_data: MainStateData::new(TimerManager::new()),
             handoff: Some(handoff),
@@ -2000,8 +2000,8 @@ fn make_handoff(
     assist: i32,
     freq_on: bool,
     force_no_ir_send: bool,
-) -> rubato_types::score_handoff::ScoreHandoff {
-    rubato_types::score_handoff::ScoreHandoff {
+) -> crate::score_handoff::ScoreHandoff {
+    crate::score_handoff::ScoreHandoff {
         score_data: None,
         combo: 0,
         maxcombo: 0,

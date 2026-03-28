@@ -1,5 +1,5 @@
 // Re-exports
-pub use rubato_types::imgui_notify::ImGuiNotify;
+pub use crate::imgui_notify::ImGuiNotify;
 
 // Stream command trait (abstract class)
 pub mod stream_command;

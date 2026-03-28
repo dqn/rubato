@@ -76,7 +76,7 @@ pub fn wire_selector_dependencies(selector: &mut MusicSelector, controller: &mut
     // Song information database
     selector.info_database = controller.info_database().and_then(|_| {
         SongInformationAccessor::new(&config.paths.songinfopath)
-            .map(|db| Box::new(db) as Box<dyn rubato_types::song_information_db::SongInformationDb>)
+            .map(|db| Box::new(db) as Box<dyn crate::song_information_db::SongInformationDb>)
             .map_err(|e| {
                 log::warn!(
                     "Failed to open song information database for MusicSelector: {}",
@@ -967,7 +967,7 @@ mod tests {
             &[],
         )
         .expect("song db should open");
-        rubato_types::song_database_accessor::SongDatabaseAccessor::set_song_datas(
+        crate::song_database_accessor::SongDatabaseAccessor::set_song_datas(
             &song_db,
             &[song.clone()],
         )

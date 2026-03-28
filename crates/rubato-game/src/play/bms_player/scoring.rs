@@ -506,7 +506,7 @@ impl BMSPlayer {
     ///
     /// Callers should perform any path-specific mutations (e.g. gauge-log
     /// padding for the Failed path) **before** calling this method.
-    pub(super) fn build_score_handoff(&mut self) -> rubato_types::score_handoff::ScoreHandoff {
+    pub(super) fn build_score_handoff(&mut self) -> crate::score_handoff::ScoreHandoff {
         // Ensure model notes have judge states before computing score data.
         self.sync_judge_states_to_model();
         let score = if self.play_mode.mode == crate::core::bms_player_mode::Mode::Play
@@ -517,7 +517,7 @@ impl BMSPlayer {
             None
         };
         let replay = self.build_replay_data();
-        rubato_types::score_handoff::ScoreHandoff {
+        crate::score_handoff::ScoreHandoff {
             score_data: score,
             combo: self.judge.course_combo(),
             maxcombo: self.judge.course_maxcombo(),

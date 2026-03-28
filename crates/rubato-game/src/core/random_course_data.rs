@@ -53,7 +53,7 @@ impl RandomCourseData {
     /// Java: RandomCourseData.lotterySongDatas(MainController)
     pub fn lottery_song_datas(
         &mut self,
-        songdb: &dyn rubato_types::song_database_accessor::SongDatabaseAccessor,
+        songdb: &dyn crate::song_database_accessor::SongDatabaseAccessor,
         score_db_path: &str,
         scorelog_db_path: &str,
         info_db_path: Option<&str>,

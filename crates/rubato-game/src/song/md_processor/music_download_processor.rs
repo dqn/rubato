@@ -700,7 +700,7 @@ fn move_path_with_fallback(src: &Path, dest: &Path) -> bool {
     true
 }
 
-impl rubato_types::music_download_access::MusicDownloadAccess for MusicDownloadProcessor {
+impl crate::music_download_access::MusicDownloadAccess for MusicDownloadProcessor {
     fn start_download(&self, song: &rubato_types::song_data::SongData) {
         // SongData implements IpfsInformation, so we can clone and box it.
         let song_clone = song.clone();

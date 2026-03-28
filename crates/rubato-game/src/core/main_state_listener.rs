@@ -6,4 +6,4 @@
 ///
 /// **Deprecated**: Use `AppEvent` channel via `MainController::add_event_sender()` instead.
 #[allow(deprecated)]
-pub use rubato_types::main_state_access::MainStateListener;
+pub use crate::main_state_access::MainStateListener;

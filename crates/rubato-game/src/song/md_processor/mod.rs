@@ -3,7 +3,7 @@ pub mod download_task_state;
 
 // Re-exports
 pub use crate::core::config::Config;
-pub use rubato_types::imgui_notify::ImGuiNotify;
+pub use crate::imgui_notify::ImGuiNotify;
 
 /// Trait for MainController reference in md-processor
 pub trait MainControllerRef: Send + Sync {

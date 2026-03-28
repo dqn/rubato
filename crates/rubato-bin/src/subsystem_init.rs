@@ -9,7 +9,7 @@ use anyhow::Result;
 use log::{info, warn};
 
 use rubato_game::core::main_controller::MainController;
-use rubato_types::ir_resend_service::IrResendService;
+use rubato_game::ir_resend_service::IrResendService;
 
 use crate::{HttpDownloadProcessorWrapper, SongDbMainControllerRef, SongDbMusicDatabaseAdapter};
 
@@ -292,13 +292,13 @@ fn init_http_download_processor(
     ) {
         Ok(songdb) => {
             let bmsroot = config.paths.bmsroot.clone();
-            let info_db: Option<Box<dyn rubato_types::song_information_db::SongInformationDb>> =
+            let info_db: Option<Box<dyn rubato_game::song_information_db::SongInformationDb>> =
                 rubato_game::song::song_information_accessor::SongInformationAccessor::new(
                     &config.paths.songinfopath,
                 )
                 .ok()
                 .map(|db| {
-                    Box::new(db) as Box<dyn rubato_types::song_information_db::SongInformationDb>
+                    Box::new(db) as Box<dyn rubato_game::song_information_db::SongInformationDb>
                 });
             let main_ref: Arc<dyn rubato_game::song::md_processor::MainControllerRef> =
                 Arc::new(SongDbMainControllerRef {

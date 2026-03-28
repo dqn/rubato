@@ -3,7 +3,7 @@
 use crate::core::config::Config;
 use rubato_types::screen_type::ScreenType;
 
-use rubato_types::abstract_result_access::AbstractResultAccess;
+use crate::abstract_result_access::AbstractResultAccess;
 
 use crate::external::player_resource_adapter::PlayerResource;
 
@@ -17,7 +17,7 @@ pub struct MainState {
     pub abstract_result: Option<Box<dyn AbstractResultAccess + Send + Sync>>,
 }
 
-impl rubato_types::main_state_access::MainStateAccess for MainState {
+impl crate::main_state_access::MainStateAccess for MainState {
     fn screen_type(&self) -> ScreenType {
         self.screen_type
     }
@@ -89,7 +89,7 @@ impl rubato_skin::reexports::MainState for MainState {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::main_state_access::MainStateAccess;
+    use crate::main_state_access::MainStateAccess;
 
     #[test]
     fn main_state_default_screen_type_is_other() {

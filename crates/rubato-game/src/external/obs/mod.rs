@@ -1,7 +1,7 @@
 use std::sync::{Mutex, MutexGuard};
 
 // Re-exports
-pub use rubato_types::imgui_notify::ImGuiNotify;
+pub use crate::imgui_notify::ImGuiNotify;
 
 /// Constants from ObsConfigurationView (from beatoraja-launcher, not yet available)
 pub const SCENE_NONE: &str = "(No Change)";

@@ -789,28 +789,28 @@ pub struct MusicSelector {
 
     /// Ranking data cache for IR ranking lookups.
     pub ranking_data_cache:
-        Option<Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>>,
+        Option<Box<dyn crate::ranking_data_cache_access::RankingDataCacheAccess>>,
     /// IR connection for ranking data loading and URL lookup.
     pub ir_connection:
         Option<std::sync::Arc<dyn crate::ir::ir_connection::IRConnection + Send + Sync>>,
     /// Play data accessor for score/replay data.
     pub play_data_accessor: Option<crate::core::play_data_accessor::PlayDataAccessor>,
     /// Song information database.
-    pub info_database: Option<Box<dyn rubato_types::song_information_db::SongInformationDb>>,
+    pub info_database: Option<Box<dyn crate::song_information_db::SongInformationDb>>,
     /// Rival player information.
     pub rivals: Vec<rubato_types::player_information::PlayerInformation>,
     /// Sound paths (SoundType -> path).
     pub sound_paths: std::collections::HashMap<rubato_types::sound_type::SoundType, String>,
     /// HTTP download submitter for chart download tasks.
     pub http_downloader:
-        Option<std::sync::Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>,
+        Option<std::sync::Arc<dyn crate::http_download_submitter::HttpDownloadSubmitter>>,
     /// Whether IPFS download daemon is alive.
     pub ipfs_download_alive: bool,
 
     /// Outbox: pending update_song request (Some(Some(path)) or Some(None) for full).
     pending_update_song: Option<Option<String>>,
     /// Outbox: pending update_table requests.
-    pending_update_table: Vec<Box<dyn rubato_types::table_update_source::TableUpdateSource>>,
+    pending_update_table: Vec<Box<dyn crate::table_update_source::TableUpdateSource>>,
     /// Outbox: pending shuffle sounds request.
     pending_shuffle_sounds: bool,
     /// Outbox: pending IPFS download requests.

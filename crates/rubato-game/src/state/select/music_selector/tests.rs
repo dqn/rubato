@@ -10,7 +10,7 @@ use rubato_skin::skin_text::SkinTextEnum;
 use rubato_types::skin_config::SkinConfig;
 use rubato_types::skin_render_context::SkinRenderContext;
 use rubato_types::skin_type::SkinType;
-use rubato_types::test_support::TestSongDb;
+use crate::test_support::TestSongDb;
 
 fn make_song_data(sha256: &str, path: Option<&str>) -> SongData {
     let mut sd = SongData::default();
@@ -47,7 +47,7 @@ struct MockSongInfoDb {
     info: Option<rubato_types::song_information::SongInformation>,
 }
 
-impl rubato_types::song_information_db::SongInformationDb for MockSongInfoDb {
+impl crate::song_information_db::SongInformationDb for MockSongInfoDb {
     fn informations(&self, _sql: &str) -> Vec<rubato_types::song_information::SongInformation> {
         self.info.clone().into_iter().collect()
     }
@@ -359,7 +359,7 @@ fn test_create_loads_selected_song_score_and_info_from_main_access() {
     let mut selector = MusicSelector::with_song_database(Box::new(song_db));
     // Wire info_database directly (trait borrow cannot be extracted by set_main_controller shim).
     selector.info_database = Some(Box::new(MockSongInfoDb { info: Some(info) })
-        as Box<dyn rubato_types::song_information_db::SongInformationDb>);
+        as Box<dyn crate::song_information_db::SongInformationDb>);
 
     selector.create();
 

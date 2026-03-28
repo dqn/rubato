@@ -229,7 +229,7 @@ impl MainController {
         self.ctx.integration.obs_client.is_some()
     }
 
-    pub fn set_obs_client(&mut self, client: Box<dyn rubato_types::obs_access::ObsAccess>) {
+    pub fn set_obs_client(&mut self, client: Box<dyn crate::obs_access::ObsAccess>) {
         self.ctx.integration.obs_client = Some(client);
     }
 

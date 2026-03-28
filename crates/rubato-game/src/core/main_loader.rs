@@ -4,7 +4,7 @@ use std::sync::{Mutex, OnceLock};
 
 use log::{error, info};
 
-use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
+use crate::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
 use rubato_types::sync_utils::lock_or_recover;
 use rubato_types::validatable::Validatable;
 

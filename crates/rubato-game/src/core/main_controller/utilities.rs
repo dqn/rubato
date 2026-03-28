@@ -97,7 +97,7 @@ impl MainController {
 
     pub fn http_download_processor(
         &self,
-    ) -> Option<&dyn rubato_types::http_download_submitter::HttpDownloadSubmitter> {
+    ) -> Option<&dyn crate::http_download_submitter::HttpDownloadSubmitter> {
         self.ctx
             .integration
             .http_download_processor
@@ -107,14 +107,14 @@ impl MainController {
 
     pub fn clone_http_download_processor(
         &self,
-    ) -> Option<std::sync::Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>
+    ) -> Option<std::sync::Arc<dyn crate::http_download_submitter::HttpDownloadSubmitter>>
     {
         self.ctx.integration.http_download_processor.clone()
     }
 
     pub fn set_http_download_processor(
         &mut self,
-        processor: Box<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>,
+        processor: Box<dyn crate::http_download_submitter::HttpDownloadSubmitter>,
     ) {
         self.ctx.integration.http_download_processor = Some(std::sync::Arc::from(processor));
     }
@@ -276,26 +276,26 @@ impl MainController {
 
     pub fn music_download_processor(
         &self,
-    ) -> Option<&dyn rubato_types::music_download_access::MusicDownloadAccess> {
+    ) -> Option<&dyn crate::music_download_access::MusicDownloadAccess> {
         self.ctx.integration.download.as_deref()
     }
 
     pub fn set_music_download_processor(
         &mut self,
-        processor: Box<dyn rubato_types::music_download_access::MusicDownloadAccess>,
+        processor: Box<dyn crate::music_download_access::MusicDownloadAccess>,
     ) {
         self.ctx.integration.download = Some(processor);
     }
 
     pub fn stream_controller(
         &self,
-    ) -> Option<&dyn rubato_types::stream_controller_access::StreamControllerAccess> {
+    ) -> Option<&dyn crate::stream_controller_access::StreamControllerAccess> {
         self.ctx.integration.stream_controller.as_deref()
     }
 
     pub fn set_stream_controller(
         &mut self,
-        controller: Box<dyn rubato_types::stream_controller_access::StreamControllerAccess>,
+        controller: Box<dyn crate::stream_controller_access::StreamControllerAccess>,
     ) {
         self.ctx.integration.stream_controller = Some(controller);
     }
@@ -322,18 +322,18 @@ impl MainController {
 
     pub fn ir_resend_service(
         &self,
-    ) -> Option<&dyn rubato_types::ir_resend_service::IrResendService> {
+    ) -> Option<&dyn crate::ir_resend_service::IrResendService> {
         self.ctx.integration.ir_resend_service.as_deref()
     }
 
     pub fn set_ir_resend_service(
         &mut self,
-        service: Box<dyn rubato_types::ir_resend_service::IrResendService>,
+        service: Box<dyn crate::ir_resend_service::IrResendService>,
     ) {
         self.ctx.integration.ir_resend_service = Some(service);
     }
 
-    pub fn set_imgui(&mut self, imgui: Box<dyn rubato_types::imgui_access::ImGuiAccess>) {
+    pub fn set_imgui(&mut self, imgui: Box<dyn crate::imgui_access::ImGuiAccess>) {
         self.ctx.integration.imgui = Some(imgui);
     }
 
@@ -560,10 +560,10 @@ impl MainController {
     /// Translated from: MainController.updateTable(TableBar)
     pub fn update_table(
         &mut self,
-        source: Box<dyn rubato_types::table_update_source::TableUpdateSource>,
+        source: Box<dyn crate::table_update_source::TableUpdateSource>,
     ) {
         let name = source.source_name();
-        rubato_types::imgui_notify::ImGuiNotify::info(&format!("updating table : {name}"));
+        crate::imgui_notify::ImGuiNotify::info(&format!("updating table : {name}"));
         let handle = std::thread::spawn(move || {
             source.refresh();
         });
@@ -581,17 +581,17 @@ impl MainController {
         {
             let msg = dl.message();
             if !msg.is_empty() {
-                rubato_types::imgui_notify::ImGuiNotify::info(&msg);
+                crate::imgui_notify::ImGuiNotify::info(&msg);
                 return;
             }
         }
-        rubato_types::imgui_notify::ImGuiNotify::info(message);
+        crate::imgui_notify::ImGuiNotify::info(message);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use rubato_types::table_update_source::TableUpdateSource;
+    use crate::table_update_source::TableUpdateSource;
     use std::sync::{
         Arc,
         atomic::{AtomicBool, Ordering},

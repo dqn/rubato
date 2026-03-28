@@ -253,7 +253,7 @@ impl GameContext {
 
     pub fn queue_update_table(
         &mut self,
-        source: Box<dyn rubato_types::table_update_source::TableUpdateSource>,
+        source: Box<dyn crate::table_update_source::TableUpdateSource>,
     ) {
         self.commands
             .lock()

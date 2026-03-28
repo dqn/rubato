@@ -16,7 +16,7 @@ pub struct MainController {
     ir_statuses: Vec<IRStatus>,
     ir_send_statuses: std::sync::Arc<std::sync::Mutex<Vec<IRSendStatusMain>>>,
     pub play_data_accessor: PlayDataAccessor,
-    ranking_data_cache: Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess>,
+    ranking_data_cache: Box<dyn crate::ranking_data_cache_access::RankingDataCacheAccess>,
     /// Pre-resolved sound paths for `has_sound` / `select_course_sound` lookups.
     sound_paths: std::collections::HashMap<SoundType, String>,
 }
@@ -25,7 +25,7 @@ impl MainController {
     pub fn new(
         config: Config,
         ranking_data_cache: Box<
-            dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess,
+            dyn crate::ranking_data_cache_access::RankingDataCacheAccess,
         >,
     ) -> Self {
         let play_data_accessor = PlayDataAccessor::new(&config);
@@ -42,7 +42,7 @@ impl MainController {
     pub fn with_ir_statuses(
         config: Config,
         ranking_data_cache: Box<
-            dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess,
+            dyn crate::ranking_data_cache_access::RankingDataCacheAccess,
         >,
         ir_statuses: Vec<IRStatus>,
     ) -> Self {
@@ -93,13 +93,13 @@ impl MainController {
 
     pub fn ranking_data_cache(
         &self,
-    ) -> &dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess {
+    ) -> &dyn crate::ranking_data_cache_access::RankingDataCacheAccess {
         &*self.ranking_data_cache
     }
 
     pub fn ranking_data_cache_mut(
         &mut self,
-    ) -> &mut dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess {
+    ) -> &mut dyn crate::ranking_data_cache_access::RankingDataCacheAccess {
         &mut *self.ranking_data_cache
     }
 }
@@ -111,7 +111,7 @@ mod tests {
     use rubato_types::song_data::SongData;
 
     fn make_ranking_cache()
-    -> Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
+    -> Box<dyn crate::ranking_data_cache_access::RankingDataCacheAccess> {
         Box::new(crate::ir::ranking_data_cache::RankingDataCache::new())
     }
 

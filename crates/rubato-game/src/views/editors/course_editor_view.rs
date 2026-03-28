@@ -3,7 +3,7 @@
 use crate::core::course_data::{CourseData, CourseDataConstraint, TrophyData};
 use egui;
 use rubato_types::song_data::SongData;
-use rubato_types::song_database_accessor::SongDatabaseAccessor;
+use crate::song_database_accessor::SongDatabaseAccessor;
 
 use crate::views::editors::folder_editor_view::SongDataView;
 use crate::views::editors::table_editor_view::TableEditorView;
@@ -674,7 +674,7 @@ impl Default for CourseEditorView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     fn make_song(title: &str, sha256: &str) -> SongData {
         let mut sd = SongData::new();

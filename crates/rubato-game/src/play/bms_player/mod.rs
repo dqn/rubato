@@ -174,7 +174,7 @@ pub struct PendingActions {
     /// Pending system sound requests.
     pub pending_sounds: Vec<(rubato_types::sound_type::SoundType, bool)>,
     /// Pending score handoff for Result state.
-    pub pending_score_handoff: Option<rubato_types::score_handoff::ScoreHandoff>,
+    pub pending_score_handoff: Option<crate::score_handoff::ScoreHandoff>,
     /// Pending BMS file reload request (for quick retry).
     pub pending_reload_bms: bool,
     /// Pending global pitch to apply to the audio driver.

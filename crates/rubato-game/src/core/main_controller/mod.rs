@@ -5,12 +5,12 @@ pub(crate) use std::time::Instant;
 pub(crate) use log::info;
 
 pub(crate) use rubato_audio::audio_system::AudioSystem;
-pub(crate) use rubato_types::imgui_notify::ImGuiNotify;
-pub(crate) use rubato_types::main_state_access::MainStateAccess;
-pub(crate) use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
+pub(crate) use crate::imgui_notify::ImGuiNotify;
+pub(crate) use crate::main_state_access::MainStateAccess;
+pub(crate) use crate::ranking_data_cache_access::RankingDataCacheAccess;
 pub(crate) use rubato_types::screen_type::ScreenType;
-pub(crate) use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
-pub(crate) use rubato_types::song_information_db::SongInformationDb;
+pub(crate) use crate::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
+pub(crate) use crate::song_information_db::SongInformationDb;
 
 pub(crate) use crate::core::app_context::GameContext;
 pub(crate) use crate::core::bms_player_mode::BMSPlayerMode;
@@ -87,7 +87,7 @@ pub const OFFSET_MAX: usize = 255;
 pub struct IRStatus {
     pub config: IRConfig,
     /// IR rival provider (trait bridge for core→ir rival/score operations)
-    pub rival_provider: Option<Box<dyn rubato_types::ir_rival_provider::IRRivalProvider>>,
+    pub rival_provider: Option<Box<dyn crate::ir_rival_provider::IRRivalProvider>>,
     /// IR connection. Java: IRStatus.connection
     pub connection:
         Option<std::sync::Arc<dyn crate::ir::ir_connection::IRConnection + Send + Sync>>,
@@ -191,14 +191,14 @@ pub struct DatabaseState {
 /// External integration state (ImGui, OBS, IR, downloads, streaming).
 #[derive(Default)]
 pub struct IntegrationState {
-    pub imgui: Option<Box<dyn rubato_types::imgui_access::ImGuiAccess>>,
-    pub ir_resend_service: Option<Box<dyn rubato_types::ir_resend_service::IrResendService>>,
-    pub obs_client: Option<Box<dyn rubato_types::obs_access::ObsAccess>>,
-    pub download: Option<Box<dyn rubato_types::music_download_access::MusicDownloadAccess>>,
+    pub imgui: Option<Box<dyn crate::imgui_access::ImGuiAccess>>,
+    pub ir_resend_service: Option<Box<dyn crate::ir_resend_service::IrResendService>>,
+    pub obs_client: Option<Box<dyn crate::obs_access::ObsAccess>>,
+    pub download: Option<Box<dyn crate::music_download_access::MusicDownloadAccess>>,
     pub http_download_processor:
-        Option<std::sync::Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>>,
+        Option<std::sync::Arc<dyn crate::http_download_submitter::HttpDownloadSubmitter>>,
     pub stream_controller:
-        Option<Box<dyn rubato_types::stream_controller_access::StreamControllerAccess>>,
+        Option<Box<dyn crate::stream_controller_access::StreamControllerAccess>>,
 }
 
 /// MainController - root class of the application

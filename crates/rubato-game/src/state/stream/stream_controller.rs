@@ -174,7 +174,7 @@ impl StreamController {
     }
 }
 
-impl rubato_types::stream_controller_access::StreamControllerAccess for StreamController {
+impl crate::stream_controller_access::StreamControllerAccess for StreamController {
     fn run(&mut self) {
         StreamController::run(self);
     }

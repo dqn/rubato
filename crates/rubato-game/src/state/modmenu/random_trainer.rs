@@ -3,8 +3,8 @@ use std::sync::Mutex;
 
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-use rubato_types::random_history;
-pub use rubato_types::random_history::RandomHistoryEntry;
+use crate::random_history;
+pub use crate::random_history::RandomHistoryEntry;
 use rubato_types::sync_utils::lock_or_recover;
 
 struct RandomTrainerState {

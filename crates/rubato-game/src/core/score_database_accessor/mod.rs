@@ -123,7 +123,7 @@ impl ScoreDatabaseAccessor {
     }
 }
 
-impl rubato_types::score_database_access::ScoreDatabaseAccess for ScoreDatabaseAccessor {
+impl crate::score_database_access::ScoreDatabaseAccess for ScoreDatabaseAccessor {
     fn create_table(&self) -> anyhow::Result<()> {
         ScoreDatabaseAccessor::create_table(self)
     }

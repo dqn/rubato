@@ -18,7 +18,7 @@ use tokio_tungstenite::tungstenite::Message;
 
 use crate::core::config::Config;
 
-use rubato_types::imgui_notify::ImGuiNotify;
+use crate::imgui_notify::ImGuiNotify;
 
 use super::lock_or_recover;
 
@@ -1089,7 +1089,7 @@ impl Drop for ObsWsClient {
     }
 }
 
-impl rubato_types::obs_access::ObsAccess for ObsWsClient {
+impl crate::obs_access::ObsAccess for ObsWsClient {
     fn save_last_recording(&self, reason: &str) {
         ObsWsClient::save_last_recording(self, reason);
     }

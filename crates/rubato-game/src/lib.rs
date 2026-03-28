@@ -20,6 +20,31 @@ pub mod util;
 pub mod version_checker;
 pub mod views;
 
+// Trait bridges and shared types (moved from rubato-types)
+pub mod abstract_result_access;
+pub mod event_type;
+pub mod http_download_submitter;
+pub mod imgui_access;
+pub mod imgui_notify;
+pub mod ir_resend_service;
+pub mod ir_rival_provider;
+pub mod main_state_access;
+pub mod music_download_access;
+pub mod obs_access;
+pub mod random_history;
+pub mod ranking_data_cache_access;
+pub mod score_data_cache;
+pub mod score_database_access;
+pub mod score_handoff;
+pub mod song_database_accessor;
+pub mod song_information_db;
+pub mod stream_controller_access;
+pub mod table_update_source;
+
+// Test support (moved from rubato-types)
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
+
 pub use launcher_ui::LauncherUi;
 pub use launcher_ui::{LauncherResult, run_launcher};
 pub use state_factory::LauncherStateFactory;

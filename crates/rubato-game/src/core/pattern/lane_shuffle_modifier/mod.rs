@@ -3,7 +3,7 @@ use crate::core::pattern::pattern_modifier::{AssistLevel, PatternModifier, Patte
 use bms::model::bms_model::BMSModel;
 use bms::model::mode::Mode;
 use bms::model::note::Note;
-use rubato_types::random_history::{RandomHistoryEntry, add_random_history};
+use crate::random_history::{RandomHistoryEntry, add_random_history};
 
 fn get_random_pattern_impl(
     random: &[i32],

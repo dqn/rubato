@@ -76,17 +76,17 @@ impl MusicSelector {
     pub fn set_dependencies(
         &mut self,
         ranking_data_cache: Box<
-            dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess,
+            dyn crate::ranking_data_cache_access::RankingDataCacheAccess,
         >,
         ir_connection: Option<
             std::sync::Arc<dyn crate::ir::ir_connection::IRConnection + Send + Sync>,
         >,
         play_data_accessor: crate::core::play_data_accessor::PlayDataAccessor,
-        info_database: Option<Box<dyn rubato_types::song_information_db::SongInformationDb>>,
+        info_database: Option<Box<dyn crate::song_information_db::SongInformationDb>>,
         rivals: Vec<rubato_types::player_information::PlayerInformation>,
         sound_paths: std::collections::HashMap<rubato_types::sound_type::SoundType, String>,
         http_downloader: Option<
-            std::sync::Arc<dyn rubato_types::http_download_submitter::HttpDownloadSubmitter>,
+            std::sync::Arc<dyn crate::http_download_submitter::HttpDownloadSubmitter>,
         >,
         ipfs_download_alive: bool,
     ) {

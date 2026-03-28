@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 
-use rubato_types::ir_resend_service::IrResendService;
+use crate::ir_resend_service::IrResendService;
 
 use super::ir_send_status::IRSendStatusMain;
 

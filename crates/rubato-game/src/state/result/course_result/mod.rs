@@ -1471,7 +1471,7 @@ mod tests {
     use rubato_types::skin_render_context::SkinRenderContext;
 
     fn make_ranking_cache()
-    -> Box<dyn rubato_types::ranking_data_cache_access::RankingDataCacheAccess> {
+    -> Box<dyn crate::ranking_data_cache_access::RankingDataCacheAccess> {
         Box::new(crate::ir::ranking_data_cache::RankingDataCache::new())
     }
 

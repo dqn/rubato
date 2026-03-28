@@ -28,7 +28,7 @@ pub use rubato_types::song_data::{
 pub use rubato_types::folder_data::FolderData;
 
 // SongDatabaseAccessor
-pub use rubato_types::song_database_accessor::SongDatabaseAccessor;
+pub use crate::song_database_accessor::SongDatabaseAccessor;
 
 // MainState
 pub use rubato_skin::reexports::MainState;
@@ -61,7 +61,7 @@ pub use crate::core::course_data_accessor::CourseDataAccessor;
 // RankingData / RankingDataCache
 pub use crate::ir::ranking_data::RankingData;
 pub use crate::ir::ranking_data_cache::RankingDataCache;
-pub use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
+pub use crate::ranking_data_cache_access::RankingDataCacheAccess;
 
 // beatoraja.input types
 pub use rubato_input::bms_player_input_processor::BMSPlayerInputProcessor;
@@ -87,13 +87,13 @@ pub type SkinRegion = Rectangle;
 
 // beatoraja.skin.property types
 pub use rubato_skin::skin_property;
-pub use rubato_types::event_type::EventType;
+pub use crate::event_type::EventType;
 
 // SoundType
 pub use crate::core::system_sound_manager::SoundType;
 
 // beatoraja.modmenu types
-pub use rubato_types::imgui_notify::ImGuiNotify;
+pub use crate::imgui_notify::ImGuiNotify;
 
 // bms.model.Mode
 pub use ::bms::model::mode as bms_model;

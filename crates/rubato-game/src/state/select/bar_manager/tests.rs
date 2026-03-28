@@ -1655,7 +1655,7 @@ impl MockSongInfoDb {
     }
 }
 
-impl rubato_types::song_information_db::SongInformationDb for MockSongInfoDb {
+impl crate::song_information_db::SongInformationDb for MockSongInfoDb {
     fn informations(&self, _sql: &str) -> Vec<rubato_types::song_information::SongInformation> {
         Vec::new()
     }

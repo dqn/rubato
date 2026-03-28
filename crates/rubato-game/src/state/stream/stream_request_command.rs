@@ -227,7 +227,7 @@ impl UpdateBar {
 mod tests {
     use super::*;
     use rubato_types::song_data::SongData;
-    use rubato_types::test_support::TestSongDb;
+    use crate::test_support::TestSongDb;
 
     /// Helper: create a SongData with a given sha256 hash.
     fn make_song(sha256: &str) -> SongData {
