@@ -1107,6 +1107,10 @@ impl MainState for MusicSelector {
         self.input_processor = Some(input_processor);
     }
 
+    fn sync_input_snapshot(&mut self, snapshot: &crate::input::input_snapshot::InputSnapshot) {
+        self.input_snapshot = Some(snapshot.clone());
+    }
+
     /// Shutdown — stop preview, unfocus search.
     /// Corresponds to Java MusicSelector.shutdown()
     fn shutdown(&mut self) {

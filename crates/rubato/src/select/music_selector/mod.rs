@@ -825,6 +825,9 @@ pub struct MusicSelector {
     /// Input processor for keyboard/controller input (created from config)
     input_processor: Option<BMSPlayerInputProcessor>,
 
+    /// Read-only input snapshot for the current frame (mouse position for skin rendering).
+    input_snapshot: Option<crate::input::input_snapshot::InputSnapshot>,
+
     /// Pending state change request (outbox pattern).
     /// MainController polls this via take_pending_state_change() each frame.
     pending_state_change: Option<MainStateType>,

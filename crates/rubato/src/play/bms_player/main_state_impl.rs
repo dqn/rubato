@@ -1334,6 +1334,10 @@ impl MainState for BMSPlayer {
         self.sync_input_back_to_impl(input);
     }
 
+    fn sync_input_snapshot(&mut self, snapshot: &crate::input::input_snapshot::InputSnapshot) {
+        self.input_snapshot = Some(snapshot.clone());
+    }
+
     fn sync_audio(&mut self, audio: &mut crate::audio::audio_system::AudioSystem) {
         self.sync_audio_impl(audio);
     }

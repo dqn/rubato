@@ -1045,6 +1045,12 @@ impl CourseResult {
         // Offsets
         s.offsets = self.main_data.offsets.clone();
 
+        // Mouse position
+        if let Some(ref input) = self.input_snapshot {
+            s.mouse_x = input.mouse_x as f32;
+            s.mouse_y = input.mouse_y as f32;
+        }
+
         s
     }
 

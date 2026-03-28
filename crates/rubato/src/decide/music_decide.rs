@@ -1240,6 +1240,12 @@ impl MusicDecide {
         // Offsets
         s.offsets = self.data.offsets.clone();
 
+        // Mouse position
+        if let Some(ref input) = self.input_snapshot {
+            s.mouse_x = input.mouse_x as f32;
+            s.mouse_y = input.mouse_y as f32;
+        }
+
         s
     }
 
@@ -1294,6 +1300,22 @@ impl MusicDecide {
         // Player config mutations: copy back from snapshot if modified
         // (handled at call site since we need snapshot access)
     }
+
+    /// Copy player_config back from the snapshot to the resource if it was modified.
+    fn propagate_player_config(&mut self, snapshot: &PropertySnapshot) {
+        if let Some(ref pc) = snapshot.player_config
+            && let Some(target) = self.resource.player_config_mut()
+        {
+            *target = (**pc).clone();
+        }
+    }
+
+    /// Copy app config back from the snapshot if it was modified.
+    fn propagate_app_config(&mut self, snapshot: &PropertySnapshot) {
+        if let Some(ref config) = snapshot.config {
+            self.config = (**config).clone();
+        }
+    }
 }
 
 impl MainState for MusicDecide {
@@ -1341,6 +1363,8 @@ impl MainState for MusicDecide {
 
         // Drain non-event actions (timers, audio, state changes)
         self.drain_actions(&mut snapshot.actions, &mut timer);
+        self.propagate_player_config(&snapshot);
+        self.propagate_app_config(&snapshot);
 
         // Replay queued custom events now that the skin is available again.
         let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
@@ -1351,6 +1375,8 @@ impl MainState for MusicDecide {
                 skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
             }
             self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+            self.propagate_player_config(&replay_snapshot);
+            self.propagate_app_config(&replay_snapshot);
             pending_events = replay_snapshot.actions.custom_events;
             depth += 1;
         }
@@ -1372,6 +1398,8 @@ impl MainState for MusicDecide {
         let mut snapshot = self.build_snapshot(&timer);
         skin.mouse_pressed_at(&mut snapshot, button, x, y);
         self.drain_actions(&mut snapshot.actions, &mut timer);
+        self.propagate_player_config(&snapshot);
+        self.propagate_app_config(&snapshot);
 
         // Replay queued custom events.
         let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
@@ -1382,6 +1410,8 @@ impl MainState for MusicDecide {
                 skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
             }
             self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+            self.propagate_player_config(&replay_snapshot);
+            self.propagate_app_config(&replay_snapshot);
             pending_events = replay_snapshot.actions.custom_events;
             depth += 1;
         }
@@ -1403,6 +1433,8 @@ impl MainState for MusicDecide {
         let mut snapshot = self.build_snapshot(&timer);
         skin.mouse_dragged_at(&mut snapshot, button, x, y);
         self.drain_actions(&mut snapshot.actions, &mut timer);
+        self.propagate_player_config(&snapshot);
+        self.propagate_app_config(&snapshot);
 
         // Replay queued custom events.
         let mut pending_events = std::mem::take(&mut snapshot.actions.custom_events);
@@ -1413,6 +1445,8 @@ impl MainState for MusicDecide {
                 skin.execute_custom_event(&mut replay_snapshot, id, arg1, arg2);
             }
             self.drain_actions(&mut replay_snapshot.actions, &mut timer);
+            self.propagate_player_config(&replay_snapshot);
+            self.propagate_app_config(&replay_snapshot);
             pending_events = replay_snapshot.actions.custom_events;
             depth += 1;
         }
@@ -4160,6 +4194,200 @@ mod tests {
             ctx.integer_value(400),
             77,
             "DecideMouseContext::integer_value(400) must return chart judge rank, not judgetiming"
+        );
+    }
+
+    // ============================================================
+    // Finding 1: Config propagation from PropertySnapshot
+    // ============================================================
+
+    /// A skin that mutates player_config via the SkinRenderContext during mouse_pressed.
+    struct ConfigMutatingSkin;
+
+    impl SkinDrawable for ConfigMutatingSkin {
+        fn draw_all_objects_timed(
+            &mut self,
+            _ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn update_custom_objects_timed(
+            &mut self,
+            _ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+        ) {
+        }
+        fn mouse_pressed_at(
+            &mut self,
+            ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+            _button: i32,
+            _x: i32,
+            _y: i32,
+        ) {
+            // Mutate the player config's target gauge value via the snapshot
+            if let Some(pc) = ctx.player_config_mut() {
+                pc.play_settings.gauge = 3;
+            }
+        }
+        fn mouse_dragged_at(
+            &mut self,
+            _ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+            _button: i32,
+            _x: i32,
+            _y: i32,
+        ) {
+        }
+        fn prepare_skin(
+            &mut self,
+            _state_type: Option<crate::skin::main_state_type::MainStateType>,
+        ) {
+        }
+        fn dispose_skin(&mut self) {}
+        fn fadeout(&self) -> i32 {
+            0
+        }
+        fn input(&self) -> i32 {
+            0
+        }
+        fn scene(&self) -> i32 {
+            0
+        }
+        fn get_width(&self) -> f32 {
+            0.0
+        }
+        fn get_height(&self) -> f32 {
+            0.0
+        }
+        fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+    }
+
+    #[test]
+    fn propagate_player_config_after_mouse_pressed() {
+        let mut decide = make_decide();
+        decide.data.skin = Some(Box::new(ConfigMutatingSkin));
+        // Initial gauge should be 0 (default)
+        assert_eq!(decide.resource.player_config().play_settings.gauge, 0);
+
+        decide.handle_skin_mouse_pressed(0, 0, 0);
+
+        // After mouse_pressed, the skin mutated gauge to 3; propagation should copy it back
+        assert_eq!(
+            decide.resource.player_config().play_settings.gauge,
+            3,
+            "player_config mutation from skin mouse_pressed must be propagated back to resource"
+        );
+    }
+
+    #[test]
+    fn propagate_app_config_after_mouse_pressed() {
+        let mut decide = make_decide();
+
+        // A skin that mutates the app config via float write (volume slider)
+        struct VolumeChangeSkin;
+        impl SkinDrawable for VolumeChangeSkin {
+            fn draw_all_objects_timed(
+                &mut self,
+                _ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+            ) {
+            }
+            fn update_custom_objects_timed(
+                &mut self,
+                _ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+            ) {
+            }
+            fn mouse_pressed_at(
+                &mut self,
+                ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+                _button: i32,
+                _x: i32,
+                _y: i32,
+            ) {
+                // Mutate the app config's audio section via mutable config access
+                if let Some(config) = ctx.config_mut() {
+                    let mut audio = config.audio.clone().unwrap_or_default();
+                    audio.systemvolume = 0.42;
+                    config.audio = Some(audio);
+                }
+            }
+            fn mouse_dragged_at(
+                &mut self,
+                _ctx: &mut dyn crate::skin::skin_render_context::SkinRenderContext,
+                _button: i32,
+                _x: i32,
+                _y: i32,
+            ) {
+            }
+            fn prepare_skin(
+                &mut self,
+                _state_type: Option<crate::skin::main_state_type::MainStateType>,
+            ) {
+            }
+            fn dispose_skin(&mut self) {}
+            fn fadeout(&self) -> i32 {
+                0
+            }
+            fn input(&self) -> i32 {
+                0
+            }
+            fn scene(&self) -> i32 {
+                0
+            }
+            fn get_width(&self) -> f32 {
+                0.0
+            }
+            fn get_height(&self) -> f32 {
+                0.0
+            }
+            fn swap_sprite_batch(&mut self, _batch: &mut SpriteBatch) {}
+        }
+
+        decide.data.skin = Some(Box::new(VolumeChangeSkin));
+        decide.handle_skin_mouse_pressed(0, 0, 0);
+
+        // After propagation, the app config should have the mutated audio volume
+        assert_eq!(
+            decide.config.audio.as_ref().map(|a| a.systemvolume),
+            Some(0.42),
+            "app_config mutation from skin mouse_pressed must be propagated back to decide.config"
+        );
+    }
+
+    // ============================================================
+    // Finding 2: mouse_x/mouse_y in build_snapshot
+    // ============================================================
+
+    #[test]
+    fn build_snapshot_populates_mouse_position() {
+        let mut decide = make_decide();
+        let mut snapshot = crate::input::input_snapshot::InputSnapshot::default();
+        snapshot.mouse_x = 123;
+        snapshot.mouse_y = 456;
+        decide.input_snapshot = Some(snapshot);
+
+        let timer = TimerManager::new();
+        let ps = decide.build_snapshot(&timer);
+
+        assert_eq!(
+            ps.mouse_x, 123.0,
+            "mouse_x must be populated from input_snapshot"
+        );
+        assert_eq!(
+            ps.mouse_y, 456.0,
+            "mouse_y must be populated from input_snapshot"
+        );
+    }
+
+    #[test]
+    fn build_snapshot_mouse_defaults_to_zero_without_input() {
+        let decide = make_decide();
+        let timer = TimerManager::new();
+        let ps = decide.build_snapshot(&timer);
+
+        assert_eq!(
+            ps.mouse_x, 0.0,
+            "mouse_x defaults to 0.0 without input_snapshot"
+        );
+        assert_eq!(
+            ps.mouse_y, 0.0,
+            "mouse_y defaults to 0.0 without input_snapshot"
         );
     }
 }

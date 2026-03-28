@@ -2782,3 +2782,60 @@ fn render_with_game_context_drains_player_config_update() {
         "ctx.player should have the updated config after render_with_game_context"
     );
 }
+
+// ============================================================
+// Finding 2: mouse_x/mouse_y in build_snapshot
+// ============================================================
+
+#[test]
+fn build_snapshot_populates_mouse_position_from_input_snapshot() {
+    let mut selector = MusicSelector::new();
+    let mut input_snap = crate::input::input_snapshot::InputSnapshot::default();
+    input_snap.mouse_x = 200;
+    input_snap.mouse_y = 300;
+    selector.input_snapshot = Some(input_snap);
+
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let ps = selector.build_snapshot(&timer);
+
+    assert_eq!(
+        ps.mouse_x, 200.0,
+        "mouse_x must be populated from input_snapshot"
+    );
+    assert_eq!(
+        ps.mouse_y, 300.0,
+        "mouse_y must be populated from input_snapshot"
+    );
+}
+
+#[test]
+fn build_snapshot_mouse_defaults_to_zero_without_input_snapshot() {
+    let selector = MusicSelector::new();
+    let timer = crate::core::timer_manager::TimerManager::new();
+    let ps = selector.build_snapshot(&timer);
+
+    assert_eq!(
+        ps.mouse_x, 0.0,
+        "mouse_x defaults to 0.0 without input_snapshot"
+    );
+    assert_eq!(
+        ps.mouse_y, 0.0,
+        "mouse_y defaults to 0.0 without input_snapshot"
+    );
+}
+
+#[test]
+fn sync_input_snapshot_stores_snapshot() {
+    let mut selector = MusicSelector::new();
+    assert!(selector.input_snapshot.is_none());
+
+    let mut snap = crate::input::input_snapshot::InputSnapshot::default();
+    snap.mouse_x = 42;
+    snap.mouse_y = 99;
+    selector.sync_input_snapshot(&snap);
+
+    assert!(selector.input_snapshot.is_some());
+    let stored = selector.input_snapshot.as_ref().unwrap();
+    assert_eq!(stored.mouse_x, 42);
+    assert_eq!(stored.mouse_y, 99);
+}

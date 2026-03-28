@@ -71,6 +71,7 @@ impl BMSPlayer {
             offset_snapshot: Vec::new(),
             cumulative_playtime_seconds: 0,
             replay_key_state: ReplayKeyState::default(),
+            input_snapshot: None,
         }
     }
 

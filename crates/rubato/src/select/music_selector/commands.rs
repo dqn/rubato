@@ -42,6 +42,7 @@ impl MusicSelector {
             pending_save_config: false,
             pending_exit: false,
             input_processor: None,
+            input_snapshot: None,
             pending_state_change: None,
             pending_sounds: Vec::new(),
             pending_sound_stops: Vec::new(),

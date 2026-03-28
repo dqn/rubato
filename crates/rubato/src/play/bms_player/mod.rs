@@ -498,6 +498,8 @@ pub struct BMSPlayer {
     /// Set by the caller via `set_replay_key_state()` before `prepare_pattern_pipeline()`.
     /// Used by `restore_replay_data` to determine replay pattern/option/HS mode.
     replay_key_state: ReplayKeyState,
+    /// Read-only input snapshot for the current frame (mouse position for skin rendering).
+    input_snapshot: Option<crate::input::input_snapshot::InputSnapshot>,
 }
 
 mod accessors;
