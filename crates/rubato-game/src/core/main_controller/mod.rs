@@ -7,7 +7,6 @@ pub(crate) use log::info;
 pub(crate) use rubato_audio::audio_system::AudioSystem;
 pub(crate) use rubato_types::imgui_notify::ImGuiNotify;
 pub(crate) use rubato_types::main_state_access::MainStateAccess;
-pub(crate) use rubato_types::player_resource_access::PlayerResourceAccess;
 pub(crate) use rubato_types::ranking_data_cache_access::RankingDataCacheAccess;
 pub(crate) use rubato_types::screen_type::ScreenType;
 pub(crate) use rubato_types::song_database_accessor::SongDatabaseAccessor as SongDatabaseAccessorTrait;
@@ -120,7 +119,7 @@ pub(crate) use rubato_input::key_command::KeyCommand;
 /// beatoraja-core's internal `MainState` trait.
 struct StateAccessAdapter<'a> {
     screen_type: ScreenType,
-    resource: Option<&'a dyn PlayerResourceAccess>,
+    resource: Option<&'a PlayerResource>,
     config: &'a Config,
 }
 
@@ -129,12 +128,20 @@ impl MainStateAccess for StateAccessAdapter<'_> {
         self.screen_type
     }
 
-    fn resource(&self) -> Option<&dyn PlayerResourceAccess> {
-        self.resource
-    }
-
     fn config(&self) -> &Config {
         self.config
+    }
+
+    fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.resource.and_then(|r| r.songdata())
+    }
+
+    fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        self.resource.and_then(|r| r.replay_data())
+    }
+
+    fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
+        self.resource.and_then(|r| r.course_data())
     }
 }
 

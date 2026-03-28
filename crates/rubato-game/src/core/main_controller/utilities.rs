@@ -21,13 +21,9 @@ impl MainController {
                 .state_type()
                 .map(ScreenType::from_state_type)
                 .unwrap_or(ScreenType::Other);
-            let resource = self
-                .resource
-                .as_ref()
-                .map(|r| r as &dyn rubato_types::player_resource_access::PlayerResourceAccess);
             let adapter = StateAccessAdapter {
                 screen_type,
-                resource,
+                resource: self.resource.as_ref(),
                 config: &self.ctx.config,
             };
 

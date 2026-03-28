@@ -226,8 +226,8 @@ pub trait MediaAccess {
 
 /// Trait interface for PlayerResource access.
 ///
-/// Downstream crates use `&dyn PlayerResourceAccess` instead of concrete PlayerResource stubs.
-/// The real implementation in beatoraja-core implements this trait.
+/// Bundles all sub-trait bounds (ConfigAccess, ScoreAccess, SongAccess, etc.) into a single
+/// super-trait for convenience. The real implementation in beatoraja-core implements this trait.
 ///
 /// Methods that return types not available in beatoraja-types (e.g., BMSModel, RankingData,
 /// BMSPlayerMode) are NOT included here. Downstream crates that need those methods should

@@ -22,12 +22,20 @@ impl rubato_types::main_state_access::MainStateAccess for MainState {
         self.screen_type
     }
 
-    fn resource(&self) -> Option<&dyn rubato_types::player_resource_access::PlayerResourceAccess> {
-        Some(&self.resource.inner)
-    }
-
     fn config(&self) -> &Config {
         self.resource.config()
+    }
+
+    fn songdata(&self) -> Option<&rubato_types::song_data::SongData> {
+        self.resource.songdata()
+    }
+
+    fn replay_data(&self) -> Option<&rubato_types::replay_data::ReplayData> {
+        self.resource.replay_data()
+    }
+
+    fn course_data(&self) -> Option<&rubato_types::course_data::CourseData> {
+        self.resource.inner.course_data()
     }
 
     fn abstract_result(&self) -> Option<&dyn AbstractResultAccess> {
