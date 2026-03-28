@@ -3,11 +3,9 @@ members = [
     "crates/bms",
     "crates/rubato-input",
     "crates/rubato-audio",
-    "crates/rubato-db",
     "crates/rubato-game",
     "crates/rubato-skin",
     "crates/rubato-bin",
-    "crates/rubato-timing",
     "crates/rubato-types",
     "crates/rubato-render",
     "crates/rubato-e2e",
@@ -24,10 +22,8 @@ edition = "2024"
 bms = { path = "crates/bms" }
 rubato-input = { path = "crates/rubato-input" }
 rubato-audio = { path = "crates/rubato-audio" }
-rubato-db = { path = "crates/rubato-db" }
 rubato-game = { path = "crates/rubato-game" }
 rubato-skin = { path = "crates/rubato-skin" }
-rubato-timing = { path = "crates/rubato-timing" }
 rubato-types = { path = "crates/rubato-types" }
 
 # Error handling

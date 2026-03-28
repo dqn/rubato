@@ -4146,21 +4146,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rubato-db"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bms",
- "chrono",
- "log",
- "rubato-types",
- "rusqlite",
- "serde_json",
- "sha2",
- "tempfile",
-]
-
-[[package]]
 name = "rubato-e2e"
 version = "0.1.0"
 dependencies = [
@@ -4205,11 +4190,9 @@ dependencies = [
  "reqwest",
  "rfd",
  "rubato-audio",
- "rubato-db",
  "rubato-input",
  "rubato-render",
  "rubato-skin",
- "rubato-timing",
  "rubato-types",
  "rusqlite",
  "serde",
@@ -4280,15 +4263,6 @@ dependencies = [
  "rubato-types",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "rubato-timing"
-version = "0.1.0"
-dependencies = [
- "log",
- "proptest",
- "rubato-types",
 ]
 
 [[package]]
