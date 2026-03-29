@@ -264,6 +264,10 @@ pub struct MainController {
         i32,
         std::thread::JoinHandle<Option<crate::skin::types::skin::Skin>>,
     )>,
+
+    /// Background thread pre-loading the decide skin during the select screen.
+    /// Started when MusicSelect is created; consumed on the first Decide transition.
+    preloaded_decide_skin: Option<std::thread::JoinHandle<Option<crate::skin::types::skin::Skin>>>,
 }
 
 /// Offset count (SkinProperty.OFFSET_MAX + 1)

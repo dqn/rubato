@@ -103,6 +103,7 @@ impl MainController {
             state_event_log: None,
             decide_skin_cache: None,
             preloaded_play_skin: None,
+            preloaded_decide_skin: None,
         }
     }
 

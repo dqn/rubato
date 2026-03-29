@@ -85,6 +85,21 @@ impl MainController {
     ) -> Option<StateCreateResult> {
         match state_type {
             MainStateType::MusicSelect => {
+                // Pre-load the decide skin in the background while the user browses
+                // songs. By the first Select -> Decide transition the skin is ready.
+                if self.decide_skin_cache.is_none() && self.preloaded_decide_skin.is_none() {
+                    let config = self.config().clone();
+                    let player_config = self.player_config().clone();
+                    let skin_type_id = crate::skin::skin_type::SkinType::Decide.id();
+                    self.preloaded_decide_skin = Some(std::thread::spawn(move || {
+                        crate::skin::skin_loader::load_skin_from_config(
+                            &config,
+                            &player_config,
+                            skin_type_id,
+                        )
+                    }));
+                }
+
                 // Java: selector = new MusicSelector(this, songUpdated);
                 // If a shared selector exists (created for StreamController), use it
                 // so stream request bars appear in the select screen.

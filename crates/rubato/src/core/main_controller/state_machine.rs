@@ -225,7 +225,7 @@ impl MainController {
         // Drop the old state now that it has been shut down
         self.current = None;
 
-        // Invalidate decide skin cache when entering skin/key config screens
+        // Invalidate decide skin cache and pre-load when entering config screens
         // (user may change the decide skin path).
         if matches!(
             new_state.state_type(),
@@ -235,15 +235,26 @@ impl MainController {
                 cached.dispose_skin();
             }
             self.decide_skin_cache = None;
+            // Drop the pre-loaded skin (thread finishes on its own).
+            self.preloaded_decide_skin = None;
         }
 
-        // Inject cached decide skin before create() to skip expensive reload.
-        // The cached skin is already prepared from its first use; skin objects
-        // read dynamic data (song title, score, etc.) from MainState at render time.
+        // Inject cached or pre-loaded decide skin before create() to skip expensive reload.
+        // - Cached skin: already prepared from first use, skip prepare_skin().
+        // - Pre-loaded skin: freshly loaded on background thread, needs prepare_skin().
         let decide_skin_cached = if new_state.state_type() == Some(MainStateType::Decide) {
             if let Some(cached_skin) = self.decide_skin_cache.take() {
                 new_state.main_state_data_mut().skin = Some(cached_skin);
                 true
+            } else if let Some(handle) = self.preloaded_decide_skin.take() {
+                match handle.join() {
+                    Ok(Some(skin)) => {
+                        new_state.main_state_data_mut().skin =
+                            Some(Box::new(skin) as Box<dyn crate::core::main_state::SkinDrawable>);
+                        false // fresh skin still needs prepare_skin()
+                    }
+                    _ => false,
+                }
             } else {
                 false
             }
