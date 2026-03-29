@@ -203,6 +203,22 @@ impl DeferredPathLoader {
         results
     }
 
+    /// Returns true if the given path has a pending play request (i.e., a
+    /// background load is in progress or completed but not yet polled, and a
+    /// play was requested for it). This allows callers like `is_playing_path()`
+    /// to treat deferred loads as "playing" so the preview processor doesn't
+    /// mistakenly think playback finished.
+    pub fn has_pending_play(&self, path: &str) -> bool {
+        self.pending_plays.iter().any(|(p, _, _)| p == path)
+    }
+
+    /// Remove all pending play requests for the given path. The background
+    /// load (if still in progress) is NOT cancelled -- it will complete and
+    /// be cached for future use, but no playback will be triggered.
+    pub fn cancel_pending_plays(&mut self, path: &str) {
+        self.pending_plays.retain(|(p, _, _)| p != path);
+    }
+
     /// Drain all pending state (e.g., on dispose).
     ///
     /// Joins already-finished handles to log panics; drops in-flight handles
@@ -420,5 +436,75 @@ mod tests {
             1,
             "request_preload should not add another pending play"
         );
+    }
+
+    #[test]
+    fn has_pending_play_returns_true_for_pending_path() {
+        let mut loader = DeferredPathLoader::new();
+        loader.loading.insert("my_path".to_string());
+        loader
+            .pending_plays
+            .push(("my_path".to_string(), 0.5, false));
+
+        assert!(
+            loader.has_pending_play("my_path"),
+            "should return true when pending_plays has an entry for the path"
+        );
+    }
+
+    #[test]
+    fn has_pending_play_returns_false_for_preload_only() {
+        let mut loader = DeferredPathLoader::new();
+        loader.loading.insert("preload_path".to_string());
+        // No pending_plays entry (preload only)
+
+        assert!(
+            !loader.has_pending_play("preload_path"),
+            "should return false when path is loading but has no pending play"
+        );
+    }
+
+    #[test]
+    fn has_pending_play_returns_false_for_unknown_path() {
+        let loader = DeferredPathLoader::new();
+
+        assert!(
+            !loader.has_pending_play("unknown"),
+            "should return false for unknown path"
+        );
+    }
+
+    #[test]
+    fn cancel_pending_plays_removes_entries() {
+        let mut loader = DeferredPathLoader::new();
+        loader
+            .pending_plays
+            .push(("path_a".to_string(), 0.5, false));
+        loader.pending_plays.push(("path_b".to_string(), 0.8, true));
+        loader
+            .pending_plays
+            .push(("path_a".to_string(), 0.6, false));
+
+        loader.cancel_pending_plays("path_a");
+
+        assert_eq!(loader.pending_plays.len(), 1);
+        assert_eq!(loader.pending_plays[0].0, "path_b");
+    }
+
+    #[test]
+    fn cancel_pending_plays_does_not_affect_loading_set() {
+        let mut loader = DeferredPathLoader::new();
+        loader.loading.insert("my_path".to_string());
+        loader
+            .pending_plays
+            .push(("my_path".to_string(), 0.5, false));
+
+        loader.cancel_pending_plays("my_path");
+
+        assert!(
+            loader.loading.contains("my_path"),
+            "loading set should not be affected by cancel_pending_plays"
+        );
+        assert!(loader.pending_plays.is_empty());
     }
 }

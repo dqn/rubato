@@ -156,7 +156,7 @@ impl AudioDriver for GdxAudioDeviceDriver {
         if let Some(handle) = self.path_sounds.get(path) {
             handle.state() == PlaybackState::Playing
         } else {
-            false
+            self.deferred_path_loader.has_pending_play(path)
         }
     }
 
@@ -168,6 +168,7 @@ impl AudioDriver for GdxAudioDeviceDriver {
 
     fn dispose_path(&mut self, path: &str) {
         self.stop_path(path);
+        self.deferred_path_loader.cancel_pending_plays(path);
     }
 
     fn set_model(&mut self, model: &BMSModel) {

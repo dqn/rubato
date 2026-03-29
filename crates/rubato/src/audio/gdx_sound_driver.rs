@@ -184,7 +184,7 @@ impl AudioDriver for GdxSoundDriver {
         if let Some(handle) = self.path_sounds.get(path) {
             handle.state() == PlaybackState::Playing
         } else {
-            false
+            self.deferred_path_loader.has_pending_play(path)
         }
     }
 
@@ -195,9 +195,8 @@ impl AudioDriver for GdxSoundDriver {
     }
 
     fn dispose_path(&mut self, path: &str) {
-        // Known limitation: stops playback but does not cancel pending background loads.
-        // A stale preview may start briefly after rapid song browsing.
         self.stop_path(path);
+        self.deferred_path_loader.cancel_pending_plays(path);
     }
 
     fn set_model(&mut self, model: &BMSModel) {
