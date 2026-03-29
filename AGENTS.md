@@ -118,6 +118,7 @@ rubato/              # Cargo workspace (15 crates) at repo root
 
 ### State Lifecycle & Wiring
 
+- **Global shared state capture-at-construction:** Subsystems that capture global shared state (e.g., `BMSPlayerInputProcessor` captures `SharedKeyState` via `get_shared_key_state()`) must have that global initialized BEFORE the subsystem is constructed. Late initialization creates a silent, undetectable split: the writer (winit) and reader (input processor) hold different instances, causing input to be silently dropped with no error. When adding new global-capture patterns, document the required initialization order and add a startup assertion.
 - **Wiring-first debugging:** Black screens, no-op interactions, broken transitions are almost always wiring/lifecycle faults, not algorithm mistakes.
 - **Controller wiring across crates:** States that cannot own `&mut MainController` use a queued `MainControllerAccess` proxy + MainController-side drain step. `Arc<Mutex<State>>` wrappers must sync `MainStateData` bidirectionally.
 - **Skin event wiring:** `SkinDrawable` mouse/custom-event paths need a state-aware `SkinRenderContext`, not a timer-only adapter. Interactive states build their own context for mouse/render passes.
