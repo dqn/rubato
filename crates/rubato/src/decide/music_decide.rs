@@ -1335,7 +1335,10 @@ impl MainState for MusicDecide {
         self.cancel = false;
 
         // loadSkin(SkinType.DECIDE)
-        self.load_skin(SkinType::Decide.id());
+        // Skip loading if a cached skin was injected by MainController.
+        if self.data.skin.is_none() {
+            self.load_skin(SkinType::Decide.id());
+        }
 
         // resource.setOrgGaugeOption(resource.getPlayerConfig().getGauge())
         let gauge = self.resource.player_config().play_settings.gauge;

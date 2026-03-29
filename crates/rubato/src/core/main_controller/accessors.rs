@@ -101,6 +101,8 @@ impl MainController {
             state_references_callback: None,
             background_threads: Vec::new(),
             state_event_log: None,
+            decide_skin_cache: None,
+            preloaded_play_skin: None,
         }
     }
 

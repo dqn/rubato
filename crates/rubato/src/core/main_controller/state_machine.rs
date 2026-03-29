@@ -206,6 +206,16 @@ impl MainController {
             if let Some(ref mut audio) = self.ctx.audio {
                 old_state.sync_audio(audio);
             }
+            // Cache the decide skin for reuse instead of disposing it.
+            // The decide skin is expensive to load (3+ seconds for complex skins)
+            // but doesn't change between songs, so we keep it alive.
+            if old_state.state_type() == Some(MainStateType::Decide) {
+                // Dispose any previously cached skin before replacing
+                if let Some(ref mut prev_cached) = self.decide_skin_cache {
+                    prev_cached.dispose_skin();
+                }
+                self.decide_skin_cache = old_state.main_state_data_mut().skin.take();
+            }
             // setSkin(null) equivalent -- Java's setSkin(null) calls skin.dispose() first
             if let Some(ref mut skin) = old_state.main_state_data_mut().skin {
                 skin.dispose_skin();
@@ -214,6 +224,32 @@ impl MainController {
         }
         // Drop the old state now that it has been shut down
         self.current = None;
+
+        // Invalidate decide skin cache when entering skin/key config screens
+        // (user may change the decide skin path).
+        if matches!(
+            new_state.state_type(),
+            Some(MainStateType::Config) | Some(MainStateType::SkinConfig)
+        ) {
+            if let Some(ref mut cached) = self.decide_skin_cache {
+                cached.dispose_skin();
+            }
+            self.decide_skin_cache = None;
+        }
+
+        // Inject cached decide skin before create() to skip expensive reload.
+        // The cached skin is already prepared from its first use; skin objects
+        // read dynamic data (song title, score, etc.) from MainState at render time.
+        let decide_skin_cached = if new_state.state_type() == Some(MainStateType::Decide) {
+            if let Some(cached_skin) = self.decide_skin_cache.take() {
+                new_state.main_state_data_mut().skin = Some(cached_skin);
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         // Create the new state
         new_state.create();
@@ -325,8 +361,11 @@ impl MainController {
             .set_boot_time_millis(self.play_time());
 
         // In Java: if(newState.getSkin() != null) { newState.getSkin().prepare(newState); }
+        // Skip prepare for cached decide skins -- already prepared from first use.
+        // prepare() is destructive (removes option-gated objects, clears option map),
+        // so calling it again would incorrectly remove all option-gated objects.
         let st = new_state.state_type();
-        if let Some(ref mut skin) = new_state.main_state_data_mut().skin {
+        if !decide_skin_cached && let Some(ref mut skin) = new_state.main_state_data_mut().skin {
             skin.prepare_skin(st);
         }
 

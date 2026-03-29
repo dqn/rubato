@@ -122,6 +122,32 @@ impl MainController {
                 // Java: decide = new MusicDecide(this);
                 match self.take_player_resource() {
                     Some(resource) => {
+                        // Pre-load the play skin on a background thread while the decide
+                        // screen is displayed. By the time the user finishes viewing decide
+                        // (typically 3+ seconds), the play skin is already loaded.
+                        let model_mode = resource
+                            .bms_model()
+                            .and_then(|m| m.mode().copied())
+                            .unwrap_or(bms::model::mode::Mode::BEAT_7K);
+                        if let Some(skin_type) = crate::skin::skin_type::SkinType::values()
+                            .into_iter()
+                            .find(|&st| st.mode() == Some(model_mode))
+                        {
+                            let config = self.config().clone();
+                            let player_config = self.player_config().clone();
+                            let skin_type_id = skin_type.id();
+                            self.preloaded_play_skin = Some((
+                                skin_type_id,
+                                std::thread::spawn(move || {
+                                    crate::skin::skin_loader::load_skin_from_config(
+                                        &config,
+                                        &player_config,
+                                        skin_type_id,
+                                    )
+                                }),
+                            ));
+                        }
+
                         let decide =
                             MusicDecide::new(self.config().clone(), resource, TimerManager::new());
                         Some(StateCreateResult {
@@ -327,11 +353,29 @@ impl MainController {
                         skin_type,
                         skin_type.id()
                     );
-                    if let Some(skin) = crate::skin::skin_loader::load_skin_from_config(
-                        self.config(),
-                        self.player_config(),
-                        skin_type.id(),
-                    ) {
+                    // Try to use the play skin pre-loaded during the decide screen.
+                    let preloaded = self.preloaded_play_skin.take().and_then(
+                        |(preloaded_type_id, handle)| {
+                            if preloaded_type_id == skin_type.id() {
+                                handle.join().ok().flatten()
+                            } else {
+                                log::info!(
+                                    "Preloaded skin type {} != requested {}; loading synchronously",
+                                    preloaded_type_id,
+                                    skin_type.id()
+                                );
+                                None
+                            }
+                        },
+                    );
+                    let skin = preloaded.or_else(|| {
+                        crate::skin::skin_loader::load_skin_from_config(
+                            self.config(),
+                            self.player_config(),
+                            skin_type.id(),
+                        )
+                    });
+                    if let Some(skin) = skin {
                         log::info!("Play skin loaded: {} objects", skin.objects().len());
                         player.set_skin_name(skin.header.name().map(str::to_string));
                         player.main_state_data_mut().skin = Some(Box::new(skin));

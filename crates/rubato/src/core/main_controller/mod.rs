@@ -252,6 +252,18 @@ pub struct MainController {
     /// When set, state transition / lifecycle / handoff events are pushed here.
     state_event_log:
         Option<std::sync::Arc<std::sync::Mutex<Vec<crate::skin::state_event::StateEvent>>>>,
+
+    /// Cached decide skin to avoid reloading on every Select -> Decide transition.
+    /// The decide skin is large (3+ seconds to load) but doesn't change between songs,
+    /// so we cache it after the first load and reuse on subsequent transitions.
+    decide_skin_cache: Option<Box<dyn crate::core::main_state::SkinDrawable>>,
+
+    /// Background thread pre-loading the play skin during the decide screen.
+    /// Tuple: (skin_type_id, join_handle). Consumed when creating the Play state.
+    preloaded_play_skin: Option<(
+        i32,
+        std::thread::JoinHandle<Option<crate::skin::types::skin::Skin>>,
+    )>,
 }
 
 /// Offset count (SkinProperty.OFFSET_MAX + 1)

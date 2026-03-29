@@ -469,6 +469,12 @@ impl MainController {
             input.dispose();
         }
 
+        // Dispose cached decide skin
+        if let Some(ref mut cached) = self.decide_skin_cache {
+            cached.dispose_skin();
+        }
+        self.decide_skin_cache = None;
+
         // Dispose current state
         if let Some(ref mut current) = self.current {
             current.dispose();

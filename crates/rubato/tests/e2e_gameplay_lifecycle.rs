@@ -489,7 +489,11 @@ fn e2e_ecfn_select_enter_reaches_manual_play_without_stuck_beams() {
 #[test]
 fn e2e_play_keyboard_input_reaches_input_processor() {
     let bms_path = test_bms_path();
-    assert!(bms_path.exists(), "Test BMS not found: {}", bms_path.display());
+    assert!(
+        bms_path.exists(),
+        "Test BMS not found: {}",
+        bms_path.display()
+    );
 
     let shared_state = SharedKeyState::new();
     set_shared_key_state(shared_state.clone());
