@@ -2,7 +2,7 @@ use crate::skin::reexports::{MainState, TextureRegion};
 use crate::skin::sources::skin_source::SkinSource;
 
 #[cfg(feature = "ffmpeg")]
-use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 #[cfg(feature = "ffmpeg")]
 use std::sync::{Arc, Mutex, mpsc};
 #[cfg(feature = "ffmpeg")]
@@ -202,18 +202,19 @@ fn movie_decode_main(
         let time = requested_time.load(Ordering::Acquire);
 
         // Only decode if time has changed
-        if time != last_decoded_time && time >= 0 {
-            if let Some((pixels, width, height)) = decoder.decode_frame(time) {
-                let frame = DecodedFrame {
-                    rgba_data: Arc::new(pixels),
-                    width,
-                    height,
-                };
-                if let Ok(mut guard) = shared_frame.lock() {
-                    *guard = Some(frame);
-                }
-                last_decoded_time = time;
+        if time != last_decoded_time
+            && time >= 0
+            && let Some((pixels, width, height)) = decoder.decode_frame(time)
+        {
+            let frame = DecodedFrame {
+                rgba_data: Arc::new(pixels),
+                width,
+                height,
+            };
+            if let Ok(mut guard) = shared_frame.lock() {
+                *guard = Some(frame);
             }
+            last_decoded_time = time;
         }
 
         // Sleep briefly to avoid spinning
@@ -356,18 +357,18 @@ impl SkinSource for SkinSourceMovie {
             #[cfg(feature = "ffmpeg")]
             {
                 // Send halt command and drop the sender
-                if let Ok(mut guard) = self.cmd_tx.lock() {
-                    if let Some(tx) = guard.take() {
-                        let _ = tx.send(MovieCommand::Halt);
-                    }
+                if let Ok(mut guard) = self.cmd_tx.lock()
+                    && let Some(tx) = guard.take()
+                {
+                    let _ = tx.send(MovieCommand::Halt);
                 }
                 // Join the decode thread for clean shutdown (matches FFmpegProcessor pattern).
                 // The decode loop checks for Halt every iteration (~8ms sleep + one frame decode),
                 // so join should complete quickly.
-                if let Ok(mut guard) = self.thread_handle.lock() {
-                    if let Some(handle) = guard.take() {
-                        let _ = handle.join();
-                    }
+                if let Ok(mut guard) = self.thread_handle.lock()
+                    && let Some(handle) = guard.take()
+                {
+                    let _ = handle.join();
                 }
             }
             self.disposed = true;

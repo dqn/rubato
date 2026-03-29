@@ -67,12 +67,11 @@ fn main() -> Result<()> {
 
     // Canonicalize BMS path before any CWD change so relative paths resolve
     // against the original working directory.
-    if let Some(ref bms) = args.bms_path {
-        if bms.is_relative() {
-            if let Ok(abs) = bms.canonicalize() {
-                args.bms_path = Some(abs);
-            }
-        }
+    if let Some(ref bms) = args.bms_path
+        && bms.is_relative()
+        && let Ok(abs) = bms.canonicalize()
+    {
+        args.bms_path = Some(abs);
     }
 
     // Determine player mode from arguments
