@@ -571,3 +571,299 @@ pub fn compute_analog_diff(old_value: f32, new_value: f32) -> i32 {
         analog_diff.floor() as i32
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct TestCallback {
+        key_events: Vec<(usize, i64, usize, bool)>,
+        start_events: Vec<bool>,
+        select_events: Vec<bool>,
+        analog_events: Vec<(usize, bool, f32)>,
+    }
+
+    impl BMControllerCallback for TestCallback {
+        fn key_changed_from_controller(
+            &mut self,
+            device_index: usize,
+            microtime: i64,
+            key: usize,
+            pressed: bool,
+        ) {
+            self.key_events
+                .push((device_index, microtime, key, pressed));
+        }
+        fn start_changed(&mut self, pressed: bool) {
+            self.start_events.push(pressed);
+        }
+        fn set_select_pressed(&mut self, pressed: bool) {
+            self.select_events.push(pressed);
+        }
+        fn set_analog_state(&mut self, key: usize, is_analog: bool, value: f32) {
+            self.analog_events.push((key, is_analog, value));
+        }
+    }
+
+    fn make_processor(
+        analog_scratch: bool,
+        analog_scratch_mode: i32,
+        threshold: i32,
+    ) -> BMControllerInputProcessor {
+        let controller = GdxController::with_state("test".to_string(), 32, 8);
+        let config = ControllerConfig {
+            name: String::new(),
+            keys: vec![
+                BMKeys::BUTTON_4,
+                BMKeys::BUTTON_7,
+                BMKeys::BUTTON_3,
+                BMKeys::BUTTON_8,
+                BMKeys::BUTTON_2,
+                BMKeys::BUTTON_5,
+                BMKeys::AXIS2_PLUS,
+                BMKeys::AXIS1_PLUS,
+                BMKeys::AXIS1_MINUS,
+            ],
+            start: BMKeys::BUTTON_9,
+            select: BMKeys::BUTTON_10,
+            duration: 0,
+            jkoc_hack: false,
+            analog_scratch,
+            analog_scratch_mode,
+            analog_scratch_threshold: threshold,
+        };
+        let mut proc = BMControllerInputProcessor::new("test".to_string(), controller, &config);
+        proc.enabled = true;
+        proc
+    }
+
+    // --- compute_analog_diff ---
+
+    #[test]
+    fn test_analog_diff_no_movement() {
+        assert_eq!(compute_analog_diff(0.5, 0.5), 0);
+    }
+
+    #[test]
+    fn test_analog_diff_small_positive() {
+        assert_eq!(compute_analog_diff(0.0, 0.009), 1);
+    }
+
+    #[test]
+    fn test_analog_diff_small_negative() {
+        assert_eq!(compute_analog_diff(0.009, 0.0), -1);
+    }
+
+    #[test]
+    fn test_analog_diff_wrap_around_positive() {
+        let result = compute_analog_diff(0.99, -0.99);
+        assert!(
+            result > 0 && result < 10,
+            "expected small positive, got {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_analog_diff_wrap_around_negative() {
+        let result = compute_analog_diff(-0.99, 0.99);
+        assert!(
+            result < 0 && result > -10,
+            "expected small negative, got {}",
+            result
+        );
+    }
+
+    #[test]
+    fn test_analog_diff_large_movement() {
+        assert_eq!(compute_analog_diff(0.0, 0.5), 56);
+    }
+
+    // --- AnalogScratch V1 ---
+
+    #[test]
+    fn test_v1_initial_returns_false() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_1, 10);
+        proc.controller.axis_state[0] = 0.5;
+        let mut cb = TestCallback::default();
+        proc.poll(1_000_000, &mut cb, 0);
+        let axis_press: Vec<_> = cb.key_events.iter().filter(|e| e.2 == 7 && e.3).collect();
+        assert!(axis_press.is_empty());
+    }
+
+    #[test]
+    fn test_v1_movement_activates() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_1, 10);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.5;
+        proc.poll(2_000_000, &mut cb, 0);
+        assert!(
+            cb.key_events.iter().any(|e| e.2 == 7 && e.3),
+            "expected AXIS1_PLUS press"
+        );
+    }
+
+    #[test]
+    fn test_v1_threshold_deactivates() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_1, 20);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        proc.controller.axis_state[0] = 0.5;
+        proc.poll(2_000_000, &mut cb, 0);
+        let mut released = false;
+        for i in 0..15 {
+            cb = TestCallback::default();
+            proc.poll(3_000_000 + i * 1_000_000, &mut cb, 0);
+            if cb.key_events.iter().any(|e| e.2 == 7 && !e.3) {
+                released = true;
+                break;
+            }
+        }
+        assert!(released, "expected AXIS1_PLUS release after threshold");
+    }
+
+    #[test]
+    fn test_v1_direction_reversal() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_1, 100);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        proc.controller.axis_state[0] = 0.1;
+        proc.poll(2_000_000, &mut cb, 0);
+        cb = TestCallback::default();
+        proc.controller.axis_state[0] = -0.1;
+        proc.poll(3_000_000, &mut cb, 0);
+        assert!(
+            cb.key_events.iter().any(|e| e.2 == 8 && e.3),
+            "expected AXIS1_MINUS press"
+        );
+    }
+
+    // --- AnalogScratch V2 ---
+
+    #[test]
+    fn test_v2_single_tick_does_not_activate() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_2, 10);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.009;
+        proc.poll(2_000_000, &mut cb, 0);
+        assert!(cb.key_events.iter().filter(|e| e.2 == 7 && e.3).count() == 0);
+    }
+
+    #[test]
+    fn test_v2_two_ticks_activates() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_2, 10);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.018;
+        proc.poll(2_000_000, &mut cb, 0);
+        assert!(
+            cb.key_events.iter().any(|e| e.2 == 7 && e.3),
+            "V2 should activate with 2 ticks"
+        );
+    }
+
+    #[test]
+    fn test_v2_double_threshold_deactivates() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_2, 10);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        proc.controller.axis_state[0] = 0.05;
+        proc.poll(2_000_000, &mut cb, 0);
+        let mut released = false;
+        for i in 0..15 {
+            cb = TestCallback::default();
+            proc.poll(3_000_000 + i * 1_000_000, &mut cb, 0);
+            if cb.key_events.iter().any(|e| e.2 == 7 && !e.3) {
+                released = true;
+                break;
+            }
+        }
+        assert!(released, "V2 should deactivate after 2*threshold");
+    }
+
+    #[test]
+    fn test_v2_direction_reversal_resets() {
+        let mut proc = make_processor(true, ANALOG_SCRATCH_VER_2, 100);
+        let mut cb = TestCallback::default();
+        proc.controller.axis_state[0] = 0.0;
+        proc.poll(1_000_000, &mut cb, 0);
+        proc.controller.axis_state[0] = 0.05;
+        proc.poll(2_000_000, &mut cb, 0);
+        cb = TestCallback::default();
+        proc.controller.axis_state[0] = -0.05;
+        proc.poll(3_000_000, &mut cb, 0);
+        assert!(
+            cb.key_events.iter().any(|e| e.2 == 7 && !e.3),
+            "expected release on reversal"
+        );
+    }
+
+    // --- poll() integration ---
+
+    #[test]
+    fn test_poll_button_press_triggers_callback() {
+        let mut proc = make_processor(false, 0, 50);
+        let mut cb = TestCallback::default();
+        proc.controller.button_state[3] = true;
+        proc.poll(1_000_000, &mut cb, 0);
+        let press: Vec<_> = cb.key_events.iter().filter(|e| e.2 == 0 && e.3).collect();
+        assert_eq!(press.len(), 1);
+        assert_eq!(press[0].1, 1_000_000);
+    }
+
+    #[test]
+    fn test_poll_disabled_does_nothing() {
+        let mut proc = make_processor(false, 0, 50);
+        proc.enabled = false;
+        let mut cb = TestCallback::default();
+        proc.controller.button_state[3] = true;
+        proc.poll(1_000_000, &mut cb, 0);
+        assert!(cb.key_events.is_empty());
+    }
+
+    #[test]
+    fn test_poll_duration_debounce() {
+        let mut proc = make_processor(false, 0, 50);
+        proc.duration = 16;
+        proc.clear();
+        let mut cb = TestCallback::default();
+        proc.controller.button_state[3] = true;
+        proc.poll(1_000_000, &mut cb, 0);
+        assert!(cb.key_events.iter().any(|e| e.2 == 0 && e.3));
+        cb = TestCallback::default();
+        proc.controller.button_state[3] = false;
+        proc.poll(1_005_000, &mut cb, 0);
+        assert!(cb.key_events.iter().filter(|e| e.2 == 0 && !e.3).count() == 0);
+        cb = TestCallback::default();
+        proc.poll(1_017_000, &mut cb, 0);
+        assert!(
+            cb.key_events.iter().any(|e| e.2 == 0 && !e.3),
+            "should release after debounce"
+        );
+    }
+
+    #[test]
+    fn test_poll_start_select_triggers_callback() {
+        let mut proc = make_processor(false, 0, 50);
+        let mut cb = TestCallback::default();
+        proc.controller.button_state[8] = true;
+        proc.poll(1_000_000, &mut cb, 0);
+        assert_eq!(cb.start_events, vec![true]);
+        cb = TestCallback::default();
+        proc.controller.button_state[9] = true;
+        proc.poll(2_000_000, &mut cb, 0);
+        assert_eq!(cb.select_events, vec![true]);
+    }
+}

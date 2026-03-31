@@ -434,3 +434,225 @@ impl BMSPlayerInputDevice for MidiInputProcessor {
         self.clear_impl();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms::model::mode::Mode;
+
+    const NOTE_OFF: i32 = 0x80;
+    const NOTE_ON: i32 = 0x90;
+    const CONTROL_CHANGE: i32 = 0xB0;
+    const PITCH_BEND: i32 = 0xE0;
+
+    #[derive(Default)]
+    struct TestCallback {
+        key_events: Vec<(i64, usize, bool)>,
+        start_events: Vec<bool>,
+        select_events: Vec<bool>,
+        analog_events: Vec<(usize, bool, f32)>,
+    }
+
+    impl MidiCallback for TestCallback {
+        fn key_changed_from_midi(&mut self, microtime: i64, key: usize, pressed: bool) {
+            self.key_events.push((microtime, key, pressed));
+        }
+        fn start_changed(&mut self, pressed: bool) {
+            self.start_events.push(pressed);
+        }
+        fn set_select_pressed(&mut self, pressed: bool) {
+            self.select_events.push(pressed);
+        }
+        fn set_analog_state(&mut self, key: usize, is_analog: bool, value: f32) {
+            self.analog_events.push((key, is_analog, value));
+        }
+    }
+
+    fn make_beat_7k_processor() -> MidiInputProcessor {
+        let mut proc = MidiInputProcessor::new();
+        proc.set_config(&MidiConfig::new(Mode::BEAT_7K, true));
+        proc
+    }
+
+    fn make_keyboard_24k_processor() -> MidiInputProcessor {
+        let mut proc = MidiInputProcessor::new();
+        proc.set_config(&MidiConfig::new(Mode::KEYBOARD_24K, true));
+        proc
+    }
+
+    fn encode_pitch_bend(pitch: i32) -> (i32, i32) {
+        let raw = (pitch + 0x2000) as u16;
+        ((raw & 0x7f) as i32, ((raw >> 7) & 0x7f) as i32)
+    }
+
+    // --- Note dispatch ---
+
+    #[test]
+    fn test_note_on_dispatches() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 53, 127, &mut cb);
+        assert_eq!(cb.key_events.len(), 1);
+        assert_eq!(cb.key_events[0].1, 0);
+        assert!(cb.key_events[0].2);
+    }
+
+    #[test]
+    fn test_note_off_dispatches() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_OFF, 53, 0, &mut cb);
+        assert_eq!(cb.key_events.len(), 1);
+        assert!(!cb.key_events[0].2);
+    }
+
+    #[test]
+    fn test_note_on_velocity_zero_is_note_off() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 53, 0, &mut cb);
+        assert!(!cb.key_events[0].2);
+    }
+
+    #[test]
+    fn test_unregistered_note_no_callback() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 99, 127, &mut cb);
+        assert!(cb.key_events.is_empty());
+    }
+
+    // --- Pitch bend ---
+
+    #[test]
+    fn test_pitch_above_threshold_triggers_up() {
+        let mut proc = make_keyboard_24k_processor();
+        let mut cb = TestCallback::default();
+        let (d1, d2) = encode_pitch_bend(384);
+        proc.on_short_message(PITCH_BEND, d1, d2, &mut cb);
+        assert!(cb.key_events.iter().any(|e| e.1 == 24 && e.2));
+    }
+
+    #[test]
+    fn test_pitch_below_neg_threshold_triggers_down() {
+        let mut proc = make_keyboard_24k_processor();
+        let mut cb = TestCallback::default();
+        let (d1, d2) = encode_pitch_bend(-384);
+        proc.on_short_message(PITCH_BEND, d1, d2, &mut cb);
+        assert!(cb.key_events.iter().any(|e| e.1 == 25 && e.2));
+    }
+
+    #[test]
+    fn test_pitch_within_deadzone_deactivates() {
+        let mut proc = make_keyboard_24k_processor();
+        let mut cb = TestCallback::default();
+        let (d1, d2) = encode_pitch_bend(384);
+        proc.on_short_message(PITCH_BEND, d1, d2, &mut cb);
+        cb = TestCallback::default();
+        let (d1, d2) = encode_pitch_bend(0);
+        proc.on_short_message(PITCH_BEND, d1, d2, &mut cb);
+        assert!(cb.key_events.iter().any(|e| e.1 == 24 && !e.2));
+    }
+
+    #[test]
+    fn test_pitch_transition_up_to_down() {
+        let mut proc = make_keyboard_24k_processor();
+        let mut cb = TestCallback::default();
+        let (d1, d2) = encode_pitch_bend(384);
+        proc.on_short_message(PITCH_BEND, d1, d2, &mut cb);
+        cb = TestCallback::default();
+        let (d1, d2) = encode_pitch_bend(-384);
+        proc.on_short_message(PITCH_BEND, d1, d2, &mut cb);
+        assert!(
+            cb.key_events.iter().any(|e| e.1 == 24 && !e.2),
+            "expected up release"
+        );
+        assert!(
+            cb.key_events.iter().any(|e| e.1 == 25 && e.2),
+            "expected down press"
+        );
+    }
+
+    #[test]
+    fn test_pitch_raw_decoding() {
+        let mut proc = make_keyboard_24k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(PITCH_BEND, 0, 64, &mut cb);
+        assert!(cb.key_events.is_empty());
+    }
+
+    // --- CC ignored ---
+
+    #[test]
+    fn test_cc_ignored() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(CONTROL_CHANGE, 7, 127, &mut cb);
+        assert!(cb.key_events.is_empty());
+        assert!(cb.start_events.is_empty());
+    }
+
+    // --- Start/select ---
+
+    #[test]
+    fn test_start_dispatches() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 47, 127, &mut cb);
+        assert_eq!(cb.start_events, vec![true]);
+    }
+
+    #[test]
+    fn test_select_dispatches() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 48, 127, &mut cb);
+        assert_eq!(cb.select_events, vec![true]);
+    }
+
+    // --- Last pressed key ---
+
+    #[test]
+    fn test_note_on_updates_last_pressed() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        assert!(!proc.has_last_pressed_key());
+        proc.on_short_message(NOTE_ON, 53, 127, &mut cb);
+        assert!(proc.has_last_pressed_key());
+        let last = proc.last_pressed_key().unwrap();
+        assert_eq!(last.input_type, MidiInputType::NOTE);
+        assert_eq!(last.value, 53);
+    }
+
+    #[test]
+    fn test_clear_last_pressed() {
+        let mut proc = make_beat_7k_processor();
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 53, 127, &mut cb);
+        proc.clear_last_pressed_key();
+        assert!(!proc.has_last_pressed_key());
+    }
+
+    // --- set_config ---
+
+    #[test]
+    fn test_set_config_registers_handlers() {
+        let mut proc = MidiInputProcessor::new();
+        proc.set_config(&MidiConfig::new(Mode::BEAT_7K, true));
+        let mut cb = TestCallback::default();
+        proc.on_short_message(NOTE_ON, 53, 127, &mut cb);
+        assert_eq!(cb.key_events.len(), 1);
+        assert_eq!(cb.key_events[0].1, 0);
+    }
+
+    #[test]
+    fn test_set_config_replaces_handlers() {
+        let mut proc = MidiInputProcessor::new();
+        proc.set_config(&MidiConfig::new(Mode::BEAT_7K, true));
+        proc.set_config(&MidiConfig::new(Mode::POPN_9K, true));
+        let mut cb = TestCallback::default();
+        // POPN_9K: note 53 -> key 1 (not 0 like BEAT_7K)
+        proc.on_short_message(NOTE_ON, 53, 127, &mut cb);
+        assert_eq!(cb.key_events[0].1, 1);
+    }
+}

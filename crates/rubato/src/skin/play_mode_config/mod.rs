@@ -187,3 +187,168 @@ fn validate_exclusive(keys: &mut [i32], exclusive: &mut [bool]) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_beat_7k() {
+        let config = PlayModeConfig::new(Mode::BEAT_7K);
+        assert_eq!(config.keyboard.keys.len(), 9);
+        assert_ne!(config.keyboard.keys[0], -1);
+        assert_eq!(config.controller.len(), 1);
+        assert!(config.midi.keys.iter().all(|k| k.is_none()));
+        assert_eq!(config.version, 0);
+    }
+
+    #[test]
+    fn test_new_keyboard_24k() {
+        let config = PlayModeConfig::new(Mode::KEYBOARD_24K);
+        assert!(config.keyboard.keys.iter().all(|k| *k == -1));
+        assert_eq!(config.midi.keys.len(), 26);
+        assert!(config.midi.keys[0].is_some());
+        assert_eq!(config.controller.len(), 1);
+    }
+
+    #[test]
+    fn test_new_beat_14k_two_controllers() {
+        let config = PlayModeConfig::new(Mode::BEAT_14K);
+        assert_eq!(config.controller.len(), 2);
+        assert_eq!(config.keyboard.keys.len(), 18);
+    }
+
+    #[test]
+    fn test_validate_resizes_keyboard_keys() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.keyboard.keys.clear();
+        config.validate(9);
+        assert_eq!(config.keyboard.keys.len(), 9);
+        assert_eq!(config.keyboard.keys[0], gdx_keys::Z);
+    }
+
+    #[test]
+    fn test_validate_resizes_controller_keys() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.keyboard.keys = vec![-1; 9];
+        config.controller[0].keys = vec![BMKeys::BUTTON_4, BMKeys::BUTTON_7];
+        config.validate(9);
+        assert_eq!(config.controller[0].keys.len(), 9);
+        assert_eq!(config.controller[0].keys[0], BMKeys::BUTTON_4);
+        assert_eq!(config.controller[0].keys[1], BMKeys::BUTTON_7);
+    }
+
+    #[test]
+    fn test_validate_resizes_midi_keys() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.midi.keys.clear();
+        config.validate(9);
+        assert_eq!(config.midi.keys.len(), 9);
+    }
+
+    #[test]
+    fn test_validate_exclusive_keyboard_claims_slot() {
+        let mut config = PlayModeConfig::new_with_configs(
+            KeyboardConfig::new(Mode::BEAT_7K, true),
+            vec![ControllerConfig::new_with_mode(Mode::BEAT_7K, 0, true)],
+            MidiConfig::new(Mode::BEAT_7K, false),
+        );
+        assert_ne!(config.keyboard.keys[0], -1);
+        assert_ne!(config.controller[0].keys[0], -1);
+        config.validate(9);
+        assert_ne!(config.keyboard.keys[0], -1);
+        assert_eq!(config.controller[0].keys[0], -1);
+    }
+
+    #[test]
+    fn test_validate_exclusive_midi_cleared_when_kb_claims() {
+        let mut config = PlayModeConfig::new_with_configs(
+            KeyboardConfig::new(Mode::BEAT_7K, true),
+            vec![ControllerConfig::new_with_mode(Mode::BEAT_7K, 0, false)],
+            MidiConfig::new(Mode::BEAT_7K, true),
+        );
+        assert_ne!(config.keyboard.keys[0], -1);
+        assert!(config.midi.keys[0].is_some());
+        config.validate(9);
+        assert!(config.midi.keys[0].is_none());
+    }
+
+    #[test]
+    fn test_validate_exclusive_unbound_slots_passthrough() {
+        let mut config = PlayModeConfig::new_with_configs(
+            KeyboardConfig::new(Mode::BEAT_7K, false),
+            vec![ControllerConfig::new_with_mode(Mode::BEAT_7K, 0, false)],
+            MidiConfig::new(Mode::BEAT_7K, true),
+        );
+        config.validate(9);
+        assert!(config.midi.keys[0].is_some());
+    }
+
+    #[test]
+    fn test_validate_exclusive_fn_directly() {
+        let mut keys = vec![5, -1, 3];
+        let mut exclusive = vec![false, false, false];
+        validate_exclusive(&mut keys, &mut exclusive);
+        assert_eq!(keys, vec![5, -1, 3]);
+        assert_eq!(exclusive, vec![true, false, true]);
+
+        let mut keys2 = vec![5, 7, -1];
+        validate_exclusive(&mut keys2, &mut exclusive);
+        assert_eq!(keys2, vec![-1, 7, -1]);
+        assert_eq!(exclusive, vec![true, true, true]);
+    }
+
+    #[test]
+    fn test_validate_v0_migrates_button17_to_axis_range() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.version = 0;
+        config.keyboard.keys = vec![-1; 9];
+        config.controller[0].keys = vec![BMKeys::BUTTON_17; 9];
+        config.validate(9);
+        assert_eq!(config.controller[0].keys[0], BMKeys::AXIS1_PLUS);
+        assert_eq!(config.version, 1);
+    }
+
+    #[test]
+    fn test_validate_v1_no_migration() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.version = 1;
+        config.keyboard.keys = vec![-1; 9];
+        config.controller[0].keys = vec![BMKeys::BUTTON_17; 9];
+        config.validate(9);
+        assert_eq!(config.controller[0].keys[0], BMKeys::BUTTON_17);
+    }
+
+    #[test]
+    fn test_validate_clamps_keyboard_duration() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.keyboard.duration = 200;
+        config.validate(9);
+        assert_eq!(config.keyboard.duration, 100);
+        config.keyboard.duration = -5;
+        config.validate(9);
+        assert_eq!(config.keyboard.duration, 0);
+    }
+
+    #[test]
+    fn test_validate_clamps_mouse_scratch_fields() {
+        let mut config = PlayModeConfig::new(Mode::BEAT_7K);
+        config.keyboard.mouse_scratch_config.mouse_scratch_distance = 0;
+        config
+            .keyboard
+            .mouse_scratch_config
+            .mouse_scratch_time_threshold = 0;
+        config.validate(9);
+        assert_eq!(
+            config.keyboard.mouse_scratch_config.mouse_scratch_distance,
+            1
+        );
+        assert_eq!(
+            config
+                .keyboard
+                .mouse_scratch_config
+                .mouse_scratch_time_threshold,
+            1
+        );
+    }
+}

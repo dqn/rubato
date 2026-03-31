@@ -90,3 +90,96 @@ impl MouseScratchConfig {
         self.mouse_scratch_distance = if value > 0 { value } else { 1 };
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms::model::mode::Mode;
+
+    #[test]
+    fn test_key_lengths_per_mode() {
+        let cases = [
+            (Mode::BEAT_5K, 7),
+            (Mode::BEAT_7K, 9),
+            (Mode::BEAT_10K, 14),
+            (Mode::BEAT_14K, 18),
+            (Mode::POPN_5K, 9),
+            (Mode::POPN_9K, 9),
+            (Mode::KEYBOARD_24K, 26),
+            (Mode::KEYBOARD_24K_DOUBLE, 52),
+        ];
+        for (mode, expected_len) in cases {
+            let config = MouseScratchConfig::new(mode);
+            assert_eq!(config.keys.len(), expected_len, "mode: {:?}", mode);
+        }
+    }
+
+    #[test]
+    fn test_all_keys_initialized_to_negative_one() {
+        let config = MouseScratchConfig::new(Mode::BEAT_7K);
+        assert!(config.keys.iter().all(|&k| k == -1));
+        assert_eq!(config.start, -1);
+        assert_eq!(config.select, -1);
+    }
+
+    #[test]
+    fn test_key_string_valid() {
+        let mut config = MouseScratchConfig::new(Mode::BEAT_7K);
+        config.keys[0] = 0;
+        assert_eq!(config.key_string(0), Some("MOUSE RIGHT"));
+        config.keys[0] = 1;
+        assert_eq!(config.key_string(0), Some("MOUSE LEFT"));
+        config.keys[0] = 2;
+        assert_eq!(config.key_string(0), Some("MOUSE DOWN"));
+        config.keys[0] = 3;
+        assert_eq!(config.key_string(0), Some("MOUSE UP"));
+    }
+
+    #[test]
+    fn test_key_string_out_of_range() {
+        let mut config = MouseScratchConfig::new(Mode::BEAT_7K);
+        config.keys[0] = 4;
+        assert_eq!(config.key_string(0), None);
+        config.keys[0] = -1;
+        assert_eq!(config.key_string(0), None);
+    }
+
+    #[test]
+    fn test_start_select_string() {
+        let mut config = MouseScratchConfig::new(Mode::BEAT_7K);
+        config.start = 0;
+        assert_eq!(config.start_string(), Some("MOUSE RIGHT"));
+        assert_eq!(config.select_string(), None);
+    }
+
+    #[test]
+    fn test_time_threshold_clamp() {
+        let mut config = MouseScratchConfig::new(Mode::BEAT_7K);
+        config.set_mouse_scratch_time_threshold(0);
+        assert_eq!(config.mouse_scratch_time_threshold, 1);
+        config.set_mouse_scratch_time_threshold(-5);
+        assert_eq!(config.mouse_scratch_time_threshold, 1);
+        config.set_mouse_scratch_time_threshold(500);
+        assert_eq!(config.mouse_scratch_time_threshold, 500);
+    }
+
+    #[test]
+    fn test_distance_clamp() {
+        let mut config = MouseScratchConfig::new(Mode::BEAT_7K);
+        config.set_mouse_scratch_distance(0);
+        assert_eq!(config.mouse_scratch_distance, 1);
+        config.set_mouse_scratch_distance(-5);
+        assert_eq!(config.mouse_scratch_distance, 1);
+        config.set_mouse_scratch_distance(500);
+        assert_eq!(config.mouse_scratch_distance, 500);
+    }
+
+    #[test]
+    fn test_defaults() {
+        let config = MouseScratchConfig::new(Mode::BEAT_7K);
+        assert!(!config.mouse_scratch_enabled);
+        assert_eq!(config.mouse_scratch_time_threshold, 150);
+        assert_eq!(config.mouse_scratch_distance, 12);
+        assert_eq!(config.mouse_scratch_mode, 0);
+    }
+}

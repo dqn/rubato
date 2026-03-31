@@ -291,3 +291,92 @@ impl ControllerConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bms::model::mode::Mode;
+
+    #[test]
+    fn test_beat_7k_player0_9_keys() {
+        let config = ControllerConfig::new_with_mode(Mode::BEAT_7K, 0, true);
+        assert_eq!(config.keys, iidx_ps2_keys());
+    }
+
+    #[test]
+    fn test_beat_14k_player0_18_keys_with_p2_padding() {
+        let config = ControllerConfig::new_with_mode(Mode::BEAT_14K, 0, true);
+        let preset = iidx_ps2_keys();
+        assert_eq!(config.keys.len(), 18);
+        assert_eq!(&config.keys[..9], &preset[..]);
+        assert!(config.keys[9..].iter().all(|&k| k == -1));
+    }
+
+    #[test]
+    fn test_beat_14k_player1_p2_keys() {
+        let config = ControllerConfig::new_with_mode(Mode::BEAT_14K, 1, true);
+        let preset = iidx_ps2_keys();
+        assert_eq!(config.keys.len(), 18);
+        assert!(config.keys[..9].iter().all(|&k| k == -1));
+        assert_eq!(&config.keys[9..], &preset[..]);
+    }
+
+    #[test]
+    fn test_beat_7k_player1_all_disabled() {
+        let config = ControllerConfig::new_with_mode(Mode::BEAT_7K, 1, true);
+        assert!(config.keys.iter().all(|&k| k == -1));
+    }
+
+    #[test]
+    fn test_disabled_all_keys_negative_one() {
+        let config = ControllerConfig::new_with_mode(Mode::BEAT_7K, 0, false);
+        assert!(config.keys.iter().all(|&k| k == -1));
+        assert_eq!(config.start, iidx_ps2_start());
+        assert_eq!(config.select, iidx_ps2_select());
+    }
+
+    #[test]
+    fn test_analog_scratch_threshold_clamp() {
+        let mut config = ControllerConfig::default();
+        config.set_analog_scratch_threshold(0);
+        assert_eq!(config.analog_scratch_threshold, 1);
+        config.set_analog_scratch_threshold(-5);
+        assert_eq!(config.analog_scratch_threshold, 1);
+        config.set_analog_scratch_threshold(1001);
+        assert_eq!(config.analog_scratch_threshold, 1000);
+        config.set_analog_scratch_threshold(500);
+        assert_eq!(config.analog_scratch_threshold, 500);
+    }
+
+    #[test]
+    fn test_default_analog_scratch_threshold_50() {
+        assert_eq!(ControllerConfig::default().analog_scratch_threshold, 50);
+    }
+
+    #[test]
+    fn test_name_empty_returns_none() {
+        assert!(ControllerConfig::default().name().is_none());
+    }
+
+    #[test]
+    fn test_name_set_returns_some() {
+        let mut config = ControllerConfig::default();
+        config.name = "IIDX Controller".to_string();
+        assert_eq!(config.name(), Some("IIDX Controller"));
+    }
+
+    #[test]
+    fn test_serde_roundtrip() {
+        let mut config = ControllerConfig::default();
+        config.jkoc_hack = true;
+        config.analog_scratch = true;
+        config.analog_scratch_mode = ANALOG_SCRATCH_VER_1;
+        config.analog_scratch_threshold = 75;
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(json.contains("jkocHack"));
+        assert!(json.contains("analogScratchThreshold"));
+        let d: ControllerConfig = serde_json::from_str(&json).unwrap();
+        assert!(d.jkoc_hack);
+        assert_eq!(d.analog_scratch_threshold, 75);
+    }
+}
