@@ -357,7 +357,14 @@ impl MainController {
                     let preloaded = self.preloaded_play_skin.take().and_then(
                         |(preloaded_type_id, handle)| {
                             if preloaded_type_id == skin_type.id() {
-                                handle.join().ok().flatten()
+                                if handle.is_finished() {
+                                    handle.join().ok().flatten()
+                                } else {
+                                    log::info!(
+                                        "Preloaded play skin not ready yet; loading synchronously"
+                                    );
+                                    None
+                                }
                             } else {
                                 log::info!(
                                     "Preloaded skin type {} != requested {}; loading synchronously",

@@ -475,6 +475,10 @@ impl MainController {
         }
         self.decide_skin_cache = None;
 
+        // Drop the preloaded play skin thread handle. Dropping the JoinHandle
+        // detaches the background thread (intentional: "drop handle, don't join").
+        self.preloaded_play_skin = None;
+
         // Dispose current state
         if let Some(ref mut current) = self.current {
             current.dispose();
