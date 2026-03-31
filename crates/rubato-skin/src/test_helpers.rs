@@ -7,6 +7,8 @@ use crate::reexports::{MainState, SkinOffset, Timer};
 pub struct MockMainState {
     pub timer: Timer,
     pub offsets: std::collections::HashMap<i32, SkinOffset>,
+    pub mouse_x: f32,
+    pub mouse_y: f32,
 }
 
 impl Default for MockMainState {
@@ -14,6 +16,8 @@ impl Default for MockMainState {
         Self {
             timer: Timer::default(),
             offsets: std::collections::HashMap::new(),
+            mouse_x: 0.0,
+            mouse_y: 0.0,
         }
     }
 }
@@ -42,6 +46,14 @@ impl rubato_types::timer_access::TimerAccess for MockMainState {
 impl rubato_types::skin_render_context::SkinRenderContext for MockMainState {
     fn get_offset_value(&self, id: i32) -> Option<&SkinOffset> {
         self.offsets.get(&id)
+    }
+
+    fn mouse_x(&self) -> f32 {
+        self.mouse_x
+    }
+
+    fn mouse_y(&self) -> f32 {
+        self.mouse_y
     }
 }
 

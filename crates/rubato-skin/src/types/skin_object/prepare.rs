@@ -453,4 +453,909 @@ mod tests {
             data.rate
         );
     }
+
+    // ---------------------------------------------------------------
+    // Phase 1: Multi-destination interpolation tests
+    // ---------------------------------------------------------------
+
+    fn make_data_two_dst(
+        r1: Rectangle,
+        c1: Color,
+        a1: i32,
+        r2: Rectangle,
+        c2: Color,
+        a2: i32,
+        acc: i32,
+    ) -> crate::skin_object::SkinObjectData {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst
+            .push(SkinObjectDestination::new(0, r1, c1, a1, acc));
+        data.dst
+            .push(SkinObjectDestination::new(100, r2, c2, a2, acc));
+        data.acc = acc;
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data
+    }
+
+    #[test]
+    fn test_multi_dst_linear_interpolation_midpoint() {
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        );
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        assert!((data.region.x - 50.0).abs() < 0.01);
+        assert!((data.region.y - 50.0).abs() < 0.01);
+        assert!((data.region.width - 150.0).abs() < 0.01);
+        assert!((data.region.height - 150.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_multi_dst_linear_interpolation_quarter() {
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        );
+        data.prepare_region(25, None);
+        assert!(data.draw);
+        assert!((data.region.x - 25.0).abs() < 0.01);
+        assert!((data.region.y - 25.0).abs() < 0.01);
+        assert!((data.region.width - 125.0).abs() < 0.01);
+        assert!((data.region.height - 125.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_multi_dst_three_destinations() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            200,
+            Rectangle::new(200.0, 200.0, 300.0, 300.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 200;
+        data.draw = true;
+
+        // time=150 is between DST[1] (time=100) and DST[2] (time=200), midpoint
+        data.prepare_region(150, None);
+        assert!(data.draw);
+        assert!((data.region.x - 150.0).abs() < 0.01);
+        assert!((data.region.y - 150.0).abs() < 0.01);
+        assert!((data.region.width - 250.0).abs() < 0.01);
+        assert!((data.region.height - 250.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_multi_dst_acc1_ease_in() {
+        // acc=1: rate = rate^2. At time=50/100, raw rate=0.5, eased rate=0.25
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            1, // ease-in
+        );
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        // x = 0 + (100-0) * 0.25 = 25.0
+        assert!((data.region.x - 25.0).abs() < 0.01);
+        assert!((data.region.y - 25.0).abs() < 0.01);
+        // w = 100 + (200-100) * 0.25 = 125.0
+        assert!((data.region.width - 125.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_multi_dst_acc2_ease_out() {
+        // acc=2: rate = 1 - (rate-1)^2. At time=50/100, raw rate=0.5,
+        // eased rate = 1 - (0.5-1)^2 = 1 - 0.25 = 0.75
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            2, // ease-out
+        );
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        // x = 0 + (100-0) * 0.75 = 75.0
+        assert!((data.region.x - 75.0).abs() < 0.01);
+        assert!((data.region.y - 75.0).abs() < 0.01);
+        assert!((data.region.width - 175.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_multi_dst_acc3_step() {
+        // acc=3: step function -- no interpolation, snaps to DST[idx]
+        let mut data = make_data_two_dst(
+            Rectangle::new(10.0, 20.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(200.0, 300.0, 400.0, 500.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            3, // step
+        );
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        // Should snap to DST[0] values (index=0 since time=50 is between DST[0] and DST[1])
+        assert_eq!(data.region.x, 10.0);
+        assert_eq!(data.region.y, 20.0);
+        assert_eq!(data.region.width, 100.0);
+        assert_eq!(data.region.height, 100.0);
+    }
+
+    #[test]
+    fn test_color_linear_interpolation() {
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 0.0, 0.0, 1.0), // red
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(0.0, 0.0, 1.0, 1.0), // blue
+            0,
+            0,
+        );
+        // prepare_region to set rate and index
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        // Now call prepare_color (already called by internal flow, but let's verify)
+        // Rate was set by prepare_region; re-invoke prepare_color
+        data.rate = -1.0; // reset to force recalculation
+        data.prepare_color();
+        assert!((data.color.r - 0.5).abs() < 0.01);
+        assert!((data.color.g - 0.0).abs() < 0.01);
+        assert!((data.color.b - 0.5).abs() < 0.01);
+        assert!((data.color.a - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_color_acc3_step() {
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 0.0, 0.0, 1.0), // red
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(0.0, 0.0, 1.0, 1.0), // blue
+            0,
+            3, // step
+        );
+        data.prepare_region(50, None);
+        data.rate = -1.0;
+        data.prepare_color();
+        // acc=3: snaps to DST[0] color (red), no interpolation
+        assert!((data.color.r - 1.0).abs() < 0.01);
+        assert!((data.color.g - 0.0).abs() < 0.01);
+        assert!((data.color.b - 0.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_angle_linear_interpolation() {
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            90,
+            0,
+        );
+        data.prepare_region(50, None);
+        data.rate = -1.0;
+        data.prepare_angle();
+        assert_eq!(data.angle, 45);
+    }
+
+    #[test]
+    fn test_angle_acc3_step() {
+        let mut data = make_data_two_dst(
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            90,
+            3, // step
+        );
+        data.prepare_region(50, None);
+        data.rate = -1.0;
+        data.prepare_angle();
+        // acc=3: snaps to DST[0] angle (0)
+        assert_eq!(data.angle, 0);
+    }
+
+    // ---------------------------------------------------------------
+    // Phase 2: Loop, timer, draw condition tests
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_dstloop_normal_cycling() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            200,
+            Rectangle::new(200.0, 200.0, 300.0, 300.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 200;
+        data.dstloop = 100; // cycle starts at time=100
+        data.draw = true;
+
+        // time=250: cycle = endtime - dstloop = 200 - 100 = 100
+        // wrapped = (250 - 100) % 100 + 100 = 150 % 100 + 100 = 50 + 100 = 150
+        // time=150 interpolates between DST[1](100) and DST[2](200) at rate=0.5
+        data.prepare_region(250, None);
+        assert!(data.draw);
+        assert!((data.region.x - 150.0).abs() < 0.01);
+        assert!((data.region.y - 150.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_dstloop_minus_one_hides_after_end() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.dstloop = -1;
+        data.draw = true;
+
+        // time=150 > endtime=100 with dstloop=-1 -> time becomes -1 -> starttime(0) > -1 -> draw=false
+        data.prepare_region(150, None);
+        assert!(!data.draw);
+    }
+
+    #[test]
+    fn test_dstloop_minus_one_visible_before_end() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(10.0, 20.0, 30.0, 40.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.dstloop = -1;
+        data.draw = true;
+
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        assert_eq!(data.region.x, 10.0);
+    }
+
+    #[test]
+    fn test_dsttimer_off_hides_object() {
+        use crate::property::timer_property::TimerPropertyEnum;
+        use crate::property::timer_property_factory::TimerPropertyImpl;
+        use crate::test_helpers::MockMainState;
+        use rubato_types::timer_id::TimerId;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.dsttimer = Some(TimerPropertyEnum::Impl(TimerPropertyImpl {
+            timer_id: TimerId(42),
+        }));
+
+        // Timer 42 is OFF (default: i64::MIN) -> draw=false
+        let state = MockMainState::default();
+        data.prepare_region(50, Some(&state));
+        assert!(!data.draw);
+    }
+
+    #[test]
+    fn test_dsttimer_on_subtracts_timer_value() {
+        use crate::property::timer_property::TimerPropertyEnum;
+        use crate::property::timer_property_factory::TimerPropertyImpl;
+        use crate::test_helpers::MockMainState;
+        use rubato_types::timer_id::TimerId;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(100.0, 100.0, 200.0, 200.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.dsttimer = Some(TimerPropertyEnum::Impl(TimerPropertyImpl {
+            timer_id: TimerId(42),
+        }));
+
+        let mut state = MockMainState::default();
+        // Timer 42 activated at 100_000 micro -> timer() returns 100_000/1000 = 100
+        state.timer.set_timer_value(42, 100_000);
+        state.timer.now_micro_time = 200_000;
+
+        // time=150, timer.get() = 100 -> effective time = 150 - 100 = 50
+        // rate at time=50 between DST[0](0) and DST[1](100) = 0.5
+        data.prepare_region(150, Some(&state));
+        assert!(data.draw);
+        assert!((data.region.x - 50.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_draw_condition_false_skips() {
+        use crate::property::boolean_property::BooleanProperty;
+        use crate::test_helpers::MockMainState;
+
+        struct AlwaysFalse;
+        impl BooleanProperty for AlwaysFalse {
+            fn is_static(&self, _: &dyn crate::reexports::MainState) -> bool {
+                true
+            }
+            fn get(&self, _: &dyn crate::reexports::MainState) -> bool {
+                false
+            }
+        }
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.dstdraw.push(Box::new(AlwaysFalse));
+
+        let state = MockMainState::default();
+        data.prepare_with_offset(50, &state, 0.0, 0.0);
+        assert!(!data.draw);
+    }
+
+    #[test]
+    fn test_draw_condition_true_allows() {
+        use crate::property::boolean_property::BooleanProperty;
+        use crate::test_helpers::MockMainState;
+
+        struct AlwaysTrue;
+        impl BooleanProperty for AlwaysTrue {
+            fn is_static(&self, _: &dyn crate::reexports::MainState) -> bool {
+                true
+            }
+            fn get(&self, _: &dyn crate::reexports::MainState) -> bool {
+                true
+            }
+        }
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(5.0, 10.0, 15.0, 20.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.dstdraw.push(Box::new(AlwaysTrue));
+
+        let state = MockMainState::default();
+        data.prepare_with_offset(50, &state, 0.0, 0.0);
+        assert!(data.draw);
+        assert_eq!(data.region.x, 5.0);
+    }
+
+    #[test]
+    fn test_mouse_rect_inside_draws() {
+        use crate::test_helpers::MockMainState;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(100.0, 100.0, 50.0, 50.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        // mouse_rect is relative to region position
+        data.mouse_rect = Some(Rectangle::new(0.0, 0.0, 50.0, 50.0));
+
+        let mut state = MockMainState::default();
+        // Mouse at (125, 125) -> relative to region (100,100) = (25, 25) -> inside mouse_rect
+        state.mouse_x = 125.0;
+        state.mouse_y = 125.0;
+
+        data.prepare_with_offset(50, &state, 0.0, 0.0);
+        assert!(data.draw);
+    }
+
+    #[test]
+    fn test_mouse_rect_outside_hides() {
+        use crate::test_helpers::MockMainState;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(100.0, 100.0, 50.0, 50.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.mouse_rect = Some(Rectangle::new(0.0, 0.0, 50.0, 50.0));
+
+        let mut state = MockMainState::default();
+        // Mouse at (300, 300) -> relative to region (100,100) = (200, 200) -> outside
+        state.mouse_x = 300.0;
+        state.mouse_y = 300.0;
+
+        data.prepare_with_offset(50, &state, 0.0, 0.0);
+        assert!(!data.draw);
+    }
+
+    // ---------------------------------------------------------------
+    // Phase 3: SkinOffset adjustment tests
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_offset_adjusts_region_xy() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(50.0, 50.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.offset = vec![5];
+        data.off = vec![None];
+
+        let mut state = MockMainState::default();
+        state.offsets.insert(
+            5,
+            SkinOffset {
+                x: 10.0,
+                y: 20.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        assert!(data.draw);
+        // region.x = 50 + (10 - 0/2) = 60
+        assert!((data.region.x - 60.0).abs() < 0.01);
+        // region.y = 50 + (20 - 0/2) = 70
+        assert!((data.region.y - 70.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_offset_adjusts_wh() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.offset = vec![1];
+        data.off = vec![None];
+
+        let mut state = MockMainState::default();
+        state.offsets.insert(
+            1,
+            SkinOffset {
+                x: 0.0,
+                y: 0.0,
+                w: 30.0,
+                h: 40.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        assert!(data.draw);
+        // region.x = 0 + (0 - 30/2) = -15
+        assert!((data.region.x - (-15.0)).abs() < 0.01);
+        // region.width = 100 + 30 = 130
+        assert!((data.region.width - 130.0).abs() < 0.01);
+        // region.height = 100 + 40 = 140
+        assert!((data.region.height - 140.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_offset_relative_skips_xy() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(50.0, 50.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.relative = true; // skip x/y offset adjustment
+        data.offset = vec![1];
+        data.off = vec![None];
+
+        let mut state = MockMainState::default();
+        state.offsets.insert(
+            1,
+            SkinOffset {
+                x: 10.0,
+                y: 20.0,
+                w: 30.0,
+                h: 40.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        assert!(data.draw);
+        // x/y unchanged due to relative=true
+        assert_eq!(data.region.x, 50.0);
+        assert_eq!(data.region.y, 50.0);
+        // w/h still adjusted
+        assert!((data.region.width - 130.0).abs() < 0.01);
+        assert!((data.region.height - 140.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_multiple_offsets_accumulate() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.offset = vec![1, 2];
+        data.off = vec![None, None];
+
+        let mut state = MockMainState::default();
+        state.offsets.insert(
+            1,
+            SkinOffset {
+                x: 10.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        );
+        state.offsets.insert(
+            2,
+            SkinOffset {
+                x: 5.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        assert!(data.draw);
+        // x = 0 + 10 + 5 = 15
+        assert!((data.region.x - 15.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_offset_alpha_clamps() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 0.5), // alpha=0.5
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.offset = vec![1];
+        data.off = vec![None];
+
+        let mut state = MockMainState::default();
+        // a=255 -> offset = 255/255 = 1.0 -> 0.5 + 1.0 = 1.5 -> clamped to 1.0
+        state.offsets.insert(
+            1,
+            SkinOffset {
+                x: 0.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 255.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        data.prepare_color();
+        assert!(
+            (data.color.a - 1.0).abs() < 0.01,
+            "alpha should be clamped to 1.0"
+        );
+    }
+
+    #[test]
+    fn test_offset_rotation() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            45,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.offset = vec![1];
+        data.off = vec![None];
+
+        let mut state = MockMainState::default();
+        state.offsets.insert(
+            1,
+            SkinOffset {
+                x: 0.0,
+                y: 0.0,
+                w: 0.0,
+                h: 0.0,
+                r: 15.0,
+                a: 0.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        data.prepare_angle();
+        // angle = 45 + 15 = 60
+        assert_eq!(data.angle, 60);
+    }
+
+    // ---------------------------------------------------------------
+    // Phase 4: fixr/fixc/fixa bypass tests
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn test_fixr_bypasses_interpolation() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 100.0, 100.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(200.0, 200.0, 300.0, 300.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.fixr = Some(Rectangle::new(77.0, 88.0, 99.0, 111.0));
+
+        data.prepare_region(50, None);
+        assert!(data.draw);
+        // Should use fixr, not interpolate between DSTs
+        assert_eq!(data.region.x, 77.0);
+        assert_eq!(data.region.y, 88.0);
+        assert_eq!(data.region.width, 99.0);
+        assert_eq!(data.region.height, 111.0);
+    }
+
+    #[test]
+    fn test_fixc_bypasses_color_interpolation() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 0.0, 0.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(0.0, 0.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.fixc = Some(Color::new(0.3, 0.4, 0.5, 0.6));
+
+        data.prepare_region(50, None);
+        data.prepare_color();
+        // Should use fixc
+        assert!((data.color.r - 0.3).abs() < 0.01);
+        assert!((data.color.g - 0.4).abs() < 0.01);
+        assert!((data.color.b - 0.5).abs() < 0.01);
+        assert!((data.color.a - 0.6).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_fixa_bypasses_angle_interpolation() {
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.dst.push(SkinObjectDestination::new(
+            100,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            180,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.fixa = 42;
+
+        data.prepare_region(50, None);
+        data.prepare_angle();
+        assert_eq!(data.angle, 42);
+    }
+
+    #[test]
+    fn test_fixr_with_offset() {
+        use crate::test_helpers::MockMainState;
+        use rubato_types::skin_offset::SkinOffset;
+
+        let mut data = crate::skin_object::SkinObjectData::new();
+        data.dst.push(SkinObjectDestination::new(
+            0,
+            Rectangle::new(0.0, 0.0, 10.0, 10.0),
+            Color::new(1.0, 1.0, 1.0, 1.0),
+            0,
+            0,
+        ));
+        data.starttime = 0;
+        data.endtime = 100;
+        data.draw = true;
+        data.fixr = Some(Rectangle::new(50.0, 50.0, 100.0, 100.0));
+        data.offset = vec![1];
+        data.off = vec![None];
+
+        let mut state = MockMainState::default();
+        state.offsets.insert(
+            1,
+            SkinOffset {
+                x: 10.0,
+                y: 20.0,
+                w: 0.0,
+                h: 0.0,
+                r: 0.0,
+                a: 0.0,
+            },
+        );
+
+        data.prepare_region(50, Some(&state));
+        assert!(data.draw);
+        // fixr base + offset
+        assert!((data.region.x - 60.0).abs() < 0.01);
+        assert!((data.region.y - 70.0).abs() < 0.01);
+        assert_eq!(data.region.width, 100.0);
+        assert_eq!(data.region.height, 100.0);
+    }
 }
