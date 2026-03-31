@@ -38,9 +38,10 @@ pub fn score_data_with_exscore(exscore: i32) -> ScoreData {
 
 /// Create a default FolderData with the given name.
 pub fn folder_data_with_name(name: &str) -> FolderData {
-    let mut f = FolderData::default();
-    f.title = name.to_string();
-    f
+    FolderData {
+        title: name.to_string(),
+        ..Default::default()
+    }
 }
 
 /// Create a default ReplayData.
@@ -50,7 +51,8 @@ pub fn replay_data_default() -> ReplayData {
 
 /// Create a default CourseData with the given name.
 pub fn course_data_with_name(name: &str) -> CourseData {
-    let mut c = CourseData::default();
-    c.name = Some(name.to_string());
-    c
+    CourseData {
+        name: Some(name.to_string()),
+        ..Default::default()
+    }
 }

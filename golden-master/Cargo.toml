@@ -11,7 +11,7 @@ serde.workspace = true
 serde_json.workspace = true
 
 # Needed by pending modules (src/pending/ and tests/pending/)
-rubato.workspace = true
+rubato = { workspace = true, features = ["test-support"] }
 
 [dev-dependencies]
 tempfile.workspace = true

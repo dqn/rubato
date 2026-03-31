@@ -184,7 +184,7 @@ fn make_ctx(all_timelines: &[TimeLine]) -> DrawLaneContext {
         bad_judge_time: 0,
         model_bpm: 120.0,
         // Safety: all_timelines outlives the DrawLaneContext in all test uses.
-        all_timelines: unsafe { TimelinesRef::from_slice(all_timelines) },
+        all_timelines: unsafe { TimelinesRef::from_slice_for_test(all_timelines) },
         forced_cn_endings: false,
     }
 }

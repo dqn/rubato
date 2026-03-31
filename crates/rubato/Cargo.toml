@@ -124,6 +124,10 @@ proptest = { workspace = true }
 name = "e2e_behavioral"
 required-features = ["test-support"]
 
+[[test]]
+name = "texture_wiring"
+required-features = ["test-support"]
+
 [[bench]]
 name = "modifier_bench"
 harness = false

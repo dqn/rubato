@@ -285,7 +285,7 @@ fn compute_note_draw_commands_produces_commands() {
     // 4. Build a DrawLaneContext with TIMER_PLAY active.
     // Safety: model.timelines outlives the DrawLaneContext (consumed synchronously below).
     let all_timelines =
-        unsafe { rubato::play::lane_renderer::TimelinesRef::from_slice(&model.timelines) };
+        unsafe { rubato::play::lane_renderer::TimelinesRef::from_slice_for_test(&model.timelines) };
     let draw_ctx = DrawLaneContext {
         time: 1000,
         timer_play: Some(0), // TIMER_PLAY started at time 0

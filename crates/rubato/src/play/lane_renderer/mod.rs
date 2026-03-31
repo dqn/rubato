@@ -39,7 +39,7 @@ impl TimelinesRef {
     ///
     /// # Safety
     /// The caller must ensure the slice outlives every use of the returned handle.
-    pub unsafe fn from_slice(slice: &[TimeLine]) -> Self {
+    pub(crate) unsafe fn from_slice(slice: &[TimeLine]) -> Self {
         Self {
             ptr: slice.as_ptr(),
             len: slice.len(),
@@ -51,13 +51,28 @@ impl TimelinesRef {
     /// # Safety
     /// Only valid while the original slice is alive (guaranteed by the contract
     /// on [`TimelinesRef::from_slice`]).
-    pub unsafe fn as_slice(&self) -> &[TimeLine] {
+    pub(super) unsafe fn as_slice(&self) -> &[TimeLine] {
         if self.len == 0 {
             &[]
         } else {
             // Safety: caller guarantees the source slice is still alive.
             unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
         }
+    }
+}
+
+/// Test-only public constructor so that external test crates (golden-master, integration
+/// tests) can build `TimelinesRef` values without exposing the unsafe constructor to the
+/// general public API.
+#[cfg(any(test, feature = "test-support"))]
+impl TimelinesRef {
+    /// Public wrapper around [`TimelinesRef::from_slice`] for test code.
+    ///
+    /// # Safety
+    /// The caller must ensure the slice outlives every use of the returned handle.
+    pub unsafe fn from_slice_for_test(slice: &[TimeLine]) -> Self {
+        // Safety: forwarded verbatim; same contract as `from_slice`.
+        unsafe { Self::from_slice(slice) }
     }
 }
 
