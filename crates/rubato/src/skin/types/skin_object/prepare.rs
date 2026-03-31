@@ -466,8 +466,8 @@ mod tests {
         c2: Color,
         a2: i32,
         acc: i32,
-    ) -> crate::skin_object::SkinObjectData {
-        let mut data = crate::skin_object::SkinObjectData::new();
+    ) -> crate::skin::skin_object::SkinObjectData {
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst
             .push(SkinObjectDestination::new(0, r1, c1, a1, acc));
         data.dst
@@ -519,7 +519,7 @@ mod tests {
 
     #[test]
     fn test_multi_dst_three_destinations() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
@@ -702,7 +702,7 @@ mod tests {
 
     #[test]
     fn test_dstloop_normal_cycling() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
@@ -740,7 +740,7 @@ mod tests {
 
     #[test]
     fn test_dstloop_minus_one_hides_after_end() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -760,7 +760,7 @@ mod tests {
 
     #[test]
     fn test_dstloop_minus_one_visible_before_end() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(10.0, 20.0, 30.0, 40.0),
@@ -780,12 +780,12 @@ mod tests {
 
     #[test]
     fn test_dsttimer_off_hides_object() {
-        use crate::property::timer_property::TimerPropertyEnum;
-        use crate::property::timer_property_factory::TimerPropertyImpl;
-        use crate::test_helpers::MockMainState;
-        use rubato_types::timer_id::TimerId;
+        use crate::skin::property::timer_property::TimerPropertyEnum;
+        use crate::skin::property::timer_property_factory::TimerPropertyImpl;
+        use crate::skin::test_helpers::MockMainState;
+        use crate::skin::timer_id::TimerId;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -808,12 +808,12 @@ mod tests {
 
     #[test]
     fn test_dsttimer_on_subtracts_timer_value() {
-        use crate::property::timer_property::TimerPropertyEnum;
-        use crate::property::timer_property_factory::TimerPropertyImpl;
-        use crate::test_helpers::MockMainState;
-        use rubato_types::timer_id::TimerId;
+        use crate::skin::property::timer_property::TimerPropertyEnum;
+        use crate::skin::property::timer_property_factory::TimerPropertyImpl;
+        use crate::skin::test_helpers::MockMainState;
+        use crate::skin::timer_id::TimerId;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
@@ -849,20 +849,20 @@ mod tests {
 
     #[test]
     fn test_draw_condition_false_skips() {
-        use crate::property::boolean_property::BooleanProperty;
-        use crate::test_helpers::MockMainState;
+        use crate::skin::property::boolean_property::BooleanProperty;
+        use crate::skin::test_helpers::MockMainState;
 
         struct AlwaysFalse;
         impl BooleanProperty for AlwaysFalse {
-            fn is_static(&self, _: &dyn crate::reexports::MainState) -> bool {
+            fn is_static(&self, _: &dyn crate::skin::reexports::MainState) -> bool {
                 true
             }
-            fn get(&self, _: &dyn crate::reexports::MainState) -> bool {
+            fn get(&self, _: &dyn crate::skin::reexports::MainState) -> bool {
                 false
             }
         }
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -882,20 +882,20 @@ mod tests {
 
     #[test]
     fn test_draw_condition_true_allows() {
-        use crate::property::boolean_property::BooleanProperty;
-        use crate::test_helpers::MockMainState;
+        use crate::skin::property::boolean_property::BooleanProperty;
+        use crate::skin::test_helpers::MockMainState;
 
         struct AlwaysTrue;
         impl BooleanProperty for AlwaysTrue {
-            fn is_static(&self, _: &dyn crate::reexports::MainState) -> bool {
+            fn is_static(&self, _: &dyn crate::skin::reexports::MainState) -> bool {
                 true
             }
-            fn get(&self, _: &dyn crate::reexports::MainState) -> bool {
+            fn get(&self, _: &dyn crate::skin::reexports::MainState) -> bool {
                 true
             }
         }
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(5.0, 10.0, 15.0, 20.0),
@@ -916,9 +916,9 @@ mod tests {
 
     #[test]
     fn test_mouse_rect_inside_draws() {
-        use crate::test_helpers::MockMainState;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(100.0, 100.0, 50.0, 50.0),
@@ -943,9 +943,9 @@ mod tests {
 
     #[test]
     fn test_mouse_rect_outside_hides() {
-        use crate::test_helpers::MockMainState;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(100.0, 100.0, 50.0, 50.0),
@@ -973,10 +973,10 @@ mod tests {
 
     #[test]
     fn test_offset_adjusts_region_xy() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(50.0, 50.0, 100.0, 100.0),
@@ -1013,10 +1013,10 @@ mod tests {
 
     #[test]
     fn test_offset_adjusts_wh() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
@@ -1055,10 +1055,10 @@ mod tests {
 
     #[test]
     fn test_offset_relative_skips_xy() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(50.0, 50.0, 100.0, 100.0),
@@ -1098,10 +1098,10 @@ mod tests {
 
     #[test]
     fn test_multiple_offsets_accumulate() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
@@ -1147,10 +1147,10 @@ mod tests {
 
     #[test]
     fn test_offset_alpha_clamps() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -1188,10 +1188,10 @@ mod tests {
 
     #[test]
     fn test_offset_rotation() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -1230,7 +1230,7 @@ mod tests {
 
     #[test]
     fn test_fixr_bypasses_interpolation() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 100.0, 100.0),
@@ -1261,7 +1261,7 @@ mod tests {
 
     #[test]
     fn test_fixc_bypasses_color_interpolation() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -1292,7 +1292,7 @@ mod tests {
 
     #[test]
     fn test_fixa_bypasses_angle_interpolation() {
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
@@ -1319,10 +1319,10 @@ mod tests {
 
     #[test]
     fn test_fixr_with_offset() {
-        use crate::test_helpers::MockMainState;
-        use rubato_types::skin_offset::SkinOffset;
+        use crate::skin::skin_offset::SkinOffset;
+        use crate::skin::test_helpers::MockMainState;
 
-        let mut data = crate::skin_object::SkinObjectData::new();
+        let mut data = crate::skin::skin_object::SkinObjectData::new();
         data.dst.push(SkinObjectDestination::new(
             0,
             Rectangle::new(0.0, 0.0, 10.0, 10.0),
