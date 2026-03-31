@@ -559,9 +559,12 @@ impl crate::skin::skin_render_context::SkinRenderContext for DecideRenderContext
     }
 
     fn set_float_value(&mut self, id: i32, value: f32) {
-        if (17..=19).contains(&id)
-            && let Some(mut audio) = self.config.audio.clone()
-        {
+        if (17..=19).contains(&id) {
+            let mut audio = self
+                .pending_audio_config
+                .clone()
+                .or_else(|| self.config.audio.clone())
+                .unwrap_or_default();
             let clamped = value.clamp(0.0, 1.0);
             match id {
                 17 => audio.systemvolume = clamped,
@@ -1094,9 +1097,12 @@ impl crate::skin::skin_render_context::SkinRenderContext for DecideMouseContext<
     }
 
     fn set_float_value(&mut self, id: i32, value: f32) {
-        if (17..=19).contains(&id)
-            && let Some(mut audio) = self.config.audio.clone()
-        {
+        if (17..=19).contains(&id) {
+            let mut audio = self
+                .pending_audio_config
+                .clone()
+                .or_else(|| self.config.audio.clone())
+                .unwrap_or_default();
             let clamped = value.clamp(0.0, 1.0);
             match id {
                 17 => audio.systemvolume = clamped,
@@ -1271,6 +1277,8 @@ impl MusicDecide {
         }
 
         // Float writes (volume sliders) -- apply to pending audio config
+        // and update self.config.audio so subsequent build_snapshot() calls
+        // read the new volume (prevents slider snap-back).
         for (id, value) in actions.float_writes.drain(..) {
             if (17..=19).contains(&id) {
                 let mut audio = self
@@ -1285,6 +1293,7 @@ impl MusicDecide {
                     19 => audio.bgvolume = clamped,
                     _ => {}
                 }
+                self.config.audio = Some(audio.clone());
                 self.pending_audio_config = Some(audio);
             }
         }
@@ -4392,5 +4401,167 @@ mod tests {
             ps.mouse_y, 0.0,
             "mouse_y defaults to 0.0 without input_snapshot"
         );
+    }
+
+    // ============================================================
+    // W1: drain_actions must update self.config.audio after volume slider writes
+    // ============================================================
+
+    #[test]
+    fn drain_actions_updates_config_audio_from_float_writes() {
+        let mut decide = make_decide();
+        // Set initial audio config
+        let mut audio = crate::skin::audio_config::AudioConfig::default();
+        audio.systemvolume = 0.5;
+        audio.keyvolume = 0.5;
+        audio.bgvolume = 0.5;
+        decide.config.audio = Some(audio);
+
+        // Simulate a volume slider change via float_writes
+        let mut actions = crate::skin::skin_action_queue::SkinActionQueue::new();
+        actions.float_writes.push((17, 0.75)); // systemvolume
+
+        let mut timer = TimerManager::new();
+        decide.drain_actions(&mut actions, &mut timer);
+
+        // self.config.audio must reflect the new value so subsequent
+        // build_snapshot() calls do not snap back to 0.5
+        assert_eq!(
+            decide.config.audio.as_ref().map(|a| a.systemvolume),
+            Some(0.75),
+            "drain_actions must update self.config.audio after volume float write"
+        );
+        // pending_audio_config should also be set for outbox consumption
+        assert_eq!(
+            decide.pending_audio_config.as_ref().map(|a| a.systemvolume),
+            Some(0.75),
+        );
+    }
+
+    #[test]
+    fn drain_actions_volume_change_persists_across_snapshots() {
+        let mut decide = make_decide();
+        let mut audio = crate::skin::audio_config::AudioConfig::default();
+        audio.systemvolume = 0.3;
+        decide.config.audio = Some(audio);
+
+        // First drain: set systemvolume to 0.8
+        let mut actions = crate::skin::skin_action_queue::SkinActionQueue::new();
+        actions.float_writes.push((17, 0.8));
+        let mut timer = TimerManager::new();
+        decide.drain_actions(&mut actions, &mut timer);
+
+        // Simulate outbox consumption (MainController takes pending_audio_config)
+        let _ = decide.pending_audio_config.take();
+
+        // Now build_snapshot should still see 0.8 in config
+        let snapshot = decide.build_snapshot(&timer);
+        let snapshot_audio = snapshot
+            .config
+            .as_ref()
+            .and_then(|c| c.audio.as_ref())
+            .map(|a| a.systemvolume);
+        assert_eq!(
+            snapshot_audio,
+            Some(0.8),
+            "build_snapshot must read updated config.audio after volume slider change"
+        );
+    }
+
+    #[test]
+    fn drain_actions_multiple_volume_ids_in_same_pass() {
+        let mut decide = make_decide();
+        let mut audio = crate::skin::audio_config::AudioConfig::default();
+        audio.systemvolume = 0.1;
+        audio.keyvolume = 0.1;
+        audio.bgvolume = 0.1;
+        decide.config.audio = Some(audio);
+
+        // Set two volume IDs in the same drain pass
+        let mut actions = crate::skin::skin_action_queue::SkinActionQueue::new();
+        actions.float_writes.push((17, 0.6)); // systemvolume
+        actions.float_writes.push((18, 0.7)); // keyvolume
+
+        let mut timer = TimerManager::new();
+        decide.drain_actions(&mut actions, &mut timer);
+
+        // Both values must be preserved (second write must chain through pending)
+        let audio_ref = decide.config.audio.as_ref().unwrap();
+        assert_eq!(
+            audio_ref.systemvolume, 0.6,
+            "systemvolume must be 0.6 after drain"
+        );
+        assert_eq!(
+            audio_ref.keyvolume, 0.7,
+            "keyvolume must be 0.7 after drain"
+        );
+        // bgvolume should remain unchanged
+        assert_eq!(
+            audio_ref.bgvolume, 0.1,
+            "bgvolume must remain 0.1 (unchanged)"
+        );
+    }
+
+    // ============================================================
+    // I3: DecideRenderContext/DecideMouseContext set_float_value must chain
+    //     through pending_audio_config
+    // ============================================================
+
+    #[test]
+    fn render_context_set_float_value_chains_through_pending() {
+        let config = {
+            let mut c = crate::skin::config::Config::default();
+            let mut audio = crate::skin::audio_config::AudioConfig::default();
+            audio.systemvolume = 0.3;
+            audio.keyvolume = 0.3;
+            audio.bgvolume = 0.3;
+            c.audio = Some(audio);
+            c
+        };
+        let mut resource = CorePlayerResource::new(
+            crate::skin::config::Config::default(),
+            crate::skin::player_config::PlayerConfig::default(),
+        );
+        let mut timer = TimerManager::new();
+        let score_data_property = crate::skin::score_data_property::ScoreDataProperty::new();
+        let mut pending_audio_path_plays = Vec::new();
+        let mut pending_audio_path_stops = Vec::new();
+        let mut pending_state_change = None;
+        let mut pending_audio_config: Option<crate::skin::audio_config::AudioConfig> = None;
+        let mut pending_sounds = Vec::new();
+
+        {
+            let mut ctx = DecideRenderContext {
+                timer: &mut timer,
+                resource: &mut resource,
+                config: &config,
+                score_data_property: &score_data_property,
+                offsets: &EMPTY_OFFSETS,
+                pending_events: Vec::new(),
+                pending_audio_path_plays: &mut pending_audio_path_plays,
+                pending_audio_path_stops: &mut pending_audio_path_stops,
+                pending_state_change: &mut pending_state_change,
+                pending_audio_config: &mut pending_audio_config,
+                pending_sounds: &mut pending_sounds,
+            };
+
+            use crate::skin::skin_render_context::SkinRenderContext;
+            // Set systemvolume first
+            ctx.set_float_value(17, 0.9);
+            // Set keyvolume second -- must chain through pending, not clone from original
+            ctx.set_float_value(18, 0.8);
+        }
+
+        let audio = pending_audio_config.unwrap();
+        assert_eq!(
+            audio.systemvolume, 0.9,
+            "systemvolume must be preserved after second set_float_value"
+        );
+        assert_eq!(
+            audio.keyvolume, 0.8,
+            "keyvolume must reflect the second set_float_value"
+        );
+        // bgvolume should remain at original value
+        assert_eq!(audio.bgvolume, 0.3, "bgvolume must remain unchanged at 0.3");
     }
 }
