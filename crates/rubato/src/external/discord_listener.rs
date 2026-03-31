@@ -174,6 +174,7 @@ impl DiscordListener {
     /// Drains to the latest `Update` before processing so that rapid state
     /// transitions don't queue stale updates behind slow IPC calls.
     fn ipc_loop(mut rp: RichPresence, rx: std::sync::mpsc::Receiver<DiscordCommand>) {
+        let mut consecutive_failures: u32 = 0;
         loop {
             match rx.recv() {
                 Ok(DiscordCommand::Update(mut data)) => {
@@ -189,7 +190,15 @@ impl DiscordListener {
                         }
                     }
                     if let Err(e) = rp.update(*data) {
+                        consecutive_failures += 1;
                         log::warn!("Failed to update Discord Rich Presence: {}", e);
+                        if consecutive_failures >= 3 {
+                            log::warn!("Discord RPC connection appears dead, stopping updates");
+                            rp.close();
+                            return;
+                        }
+                    } else {
+                        consecutive_failures = 0;
                     }
                     if shutdown_after {
                         rp.close();
@@ -360,6 +369,75 @@ mod tests {
         assert!(result.is_some());
         assert!(start_ts > 0);
         assert_eq!(last_screen, Some(ScreenType::MusicSelector));
+    }
+
+    /// A mock connection that lets the handshake write succeed but fails all
+    /// subsequent writes, simulating a dead Discord socket.
+    struct FailingConnection {
+        /// Number of write calls to allow before failing. The handshake
+        /// consumes one write, so `succeed_writes: 1` means only the
+        /// handshake succeeds.
+        remaining_ok_writes: i32,
+    }
+
+    impl IPCConnection for FailingConnection {
+        fn connect(&mut self) -> anyhow::Result<()> {
+            Ok(())
+        }
+        fn write(&mut self, _buffer: &[u8]) -> anyhow::Result<()> {
+            if self.remaining_ok_writes > 0 {
+                self.remaining_ok_writes -= 1;
+                return Ok(());
+            }
+            anyhow::bail!("socket dead")
+        }
+        fn read(&mut self, size: usize) -> anyhow::Result<Vec<u8>> {
+            if size == 8 {
+                let mut header = Vec::new();
+                header.extend_from_slice(&1_i32.to_le_bytes());
+                header.extend_from_slice(&2_i32.to_le_bytes());
+                Ok(header)
+            } else {
+                Ok(vec![0u8; size])
+            }
+        }
+        fn close(&mut self) {}
+    }
+
+    #[test]
+    fn test_ipc_loop_exits_after_consecutive_failures() {
+        // Allow 1 write for the handshake; all subsequent writes fail.
+        let mock = FailingConnection {
+            remaining_ok_writes: 1,
+        };
+
+        let mut rp = RichPresence::with_connection(APPLICATION_ID.to_string(), Box::new(mock));
+        rp.connect().unwrap();
+
+        // Rendezvous channel (capacity 0): each send blocks until the
+        // receiver picks it up, so every update is processed individually
+        // rather than being drained as a batch.
+        let (tx, rx) = std::sync::mpsc::sync_channel::<DiscordCommand>(0);
+
+        let handle = std::thread::spawn(move || {
+            DiscordListener::ipc_loop(rp, rx);
+        });
+
+        // Send more than 3 updates. The loop should exit after 3 consecutive
+        // failures. Remaining sends will fail (receiver disconnected) -- that
+        // is expected.
+        for _ in 0..5 {
+            let data = RichPresenceData::new().set_state("Test".to_string());
+            if tx.send(DiscordCommand::Update(Box::new(data))).is_err() {
+                break;
+            }
+        }
+
+        // The thread should exit on its own (not hang) because the consecutive
+        // failure threshold is reached.
+        handle
+            .join()
+            .expect("IPC thread should exit after consecutive failures");
     }
 
     #[test]
