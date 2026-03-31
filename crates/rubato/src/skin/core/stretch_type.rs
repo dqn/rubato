@@ -497,6 +497,137 @@ mod tests {
         }
     }
 
+    // ---------------------------------------------------------------
+    // Phase 5: Functional correctness tests for each StretchType variant
+    // ---------------------------------------------------------------
+
+    fn make_image(w: i32, h: i32) -> TextureRegion {
+        TextureRegion {
+            region_width: w,
+            region_height: h,
+            ..TextureRegion::default()
+        }
+    }
+
+    #[test]
+    fn test_stretch_preserves_rectangle() {
+        let mut rect = Rectangle::new(10.0, 20.0, 100.0, 200.0);
+        let image = make_image(50, 80);
+        let mut trimmed = TextureRegion::default();
+        let (orig_x, orig_y, orig_w, orig_h) = (rect.x, rect.y, rect.width, rect.height);
+
+        StretchType::Stretch.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        assert_eq!(rect.x, orig_x);
+        assert_eq!(rect.y, orig_y);
+        assert_eq!(rect.width, orig_w);
+        assert_eq!(rect.height, orig_h);
+    }
+
+    #[test]
+    fn test_fit_inner_landscape_in_square() {
+        // 200x100 image in 100x100 rect
+        // scale_x = 100/200 = 0.5, scale_y = 100/100 = 1.0
+        // scale_x < scale_y -> fit_height(100 * 0.5 = 50)
+        let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let image = make_image(200, 100);
+        let mut trimmed = TextureRegion::default();
+
+        StretchType::KeepAspectRatioFitInner.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        // height centered: cy=50, new_h=50 -> y = 50 - 25 = 25
+        assert!((rect.height - 50.0).abs() < 0.01);
+        assert!((rect.y - 25.0).abs() < 0.01);
+        // width unchanged
+        assert!((rect.width - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_fit_outer_landscape_in_square() {
+        // 200x100 image in 100x100 rect
+        // scale_x = 100/200 = 0.5, scale_y = 100/100 = 1.0
+        // scale_x < scale_y -> fit_width(200 * 1.0 = 200)
+        let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let image = make_image(200, 100);
+        let mut trimmed = TextureRegion::default();
+
+        StretchType::KeepAspectRatioFitOuter.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        // width centered: cx=50, new_w=200 -> x = 50 - 100 = -50
+        assert!((rect.width - 200.0).abs() < 0.01);
+        assert!((rect.x - (-50.0)).abs() < 0.01);
+        // height unchanged
+        assert!((rect.height - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_fit_width_preserves_aspect() {
+        // 200x100 image in 100x100 rect
+        // height = 100 * (100/200) = 50, centered
+        let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let image = make_image(200, 100);
+        let mut trimmed = TextureRegion::default();
+
+        StretchType::KeepAspectRatioFitWidth.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        assert!((rect.height - 50.0).abs() < 0.01);
+        // cy=50, new_h=50 -> y = 50 - 25 = 25
+        assert!((rect.y - 25.0).abs() < 0.01);
+        assert!((rect.width - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_fit_height_preserves_aspect() {
+        // 200x100 image in 100x100 rect
+        // width = 200 * (100/100) = 200, centered
+        let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let image = make_image(200, 100);
+        let mut trimmed = TextureRegion::default();
+
+        StretchType::KeepAspectRatioFitHeight.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        assert!((rect.width - 200.0).abs() < 0.01);
+        // cx=50, new_w=200 -> x = 50 - 100 = -50
+        assert!((rect.x - (-50.0)).abs() < 0.01);
+        assert!((rect.height - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_no_expanding_caps_at_1x() {
+        // 50x50 image in 100x100 rect
+        // scale = min(1.0, min(100/50, 100/50)) = min(1.0, 2.0) = 1.0
+        // width = 50*1 = 50, height = 50*1 = 50
+        let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let image = make_image(50, 50);
+        let mut trimmed = TextureRegion::default();
+
+        StretchType::KeepAspectRatioNoExpanding.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        assert!((rect.width - 50.0).abs() < 0.01);
+        assert!((rect.height - 50.0).abs() < 0.01);
+        // centered: cx=50, x=50-25=25; cy=50, y=50-25=25
+        assert!((rect.x - 25.0).abs() < 0.01);
+        assert!((rect.y - 25.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_no_resize_uses_image_dimensions() {
+        // 200x100 image in 100x100 rect
+        // NoResize: width=200, height=100, centered on original rect center
+        let mut rect = Rectangle::new(0.0, 0.0, 100.0, 100.0);
+        let image = make_image(200, 100);
+        let mut trimmed = TextureRegion::default();
+
+        StretchType::NoResize.stretch_rect(&mut rect, &mut trimmed, &image);
+
+        assert!((rect.width - 200.0).abs() < 0.01);
+        assert!((rect.height - 100.0).abs() < 0.01);
+        // cx=50, new_w=200 -> x = 50 - 100 = -50
+        assert!((rect.x - (-50.0)).abs() < 0.01);
+        // cy=50, new_h=100 -> y = 50 - 50 = 0
+        assert!((rect.y - 0.0).abs() < 0.01);
+    }
+
     #[test]
     fn fit_width_trimmed_zero_scale_is_noop() {
         let mut rect = Rectangle::new(10.0, 20.0, 100.0, 200.0);
